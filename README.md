@@ -47,6 +47,20 @@ npx wrangler r2 bucket create tools-transfer
 
 打开 `wrangler.jsonc`，将 `kv_namespaces[0].id` 替换为上面创建返回的 id。
 
+### 2a. 设置全站访问密码（必需）
+
+全站在 Worker 层做密码保护：未验证一律返回极简密码页，验证通过后写入 **30 天有效
+HttpOnly Cookie**（SameSite=Lax，HTTPS 下带 Secure）。密码**只存在环境变量，不写死在代码**：
+
+```bash
+# 生产：把密码设为 secret（部署前执行，非 vars）
+npx wrangler secret put SITE_PASSWORD
+```
+
+> ⚠️ **未设置 `SITE_PASSWORD` 时全站拒绝访问**（安全兜底，不会裸奔）。
+> 密码保存在本地即可，无需写进任何仓库文件。
+> 本地开发：`npx wrangler dev --var SITE_PASSWORD:你的密码`。
+
 ### 2b. 配置 R2 生命周期（建议，物理清理兜底）
 
 业务层已按 TTL 判断过期（返回 410），但 R2 对象本身没有原生 TTL——
