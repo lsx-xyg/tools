@@ -7,7 +7,7 @@ import { tools, GITHUB_REPO } from "@/lib/tools";
 import { Brand } from "./brand";
 import { useTheme } from "./theme-provider";
 import { SearchPalette } from "./search-palette";
-import { IconBase64, IconChevronsLeft, IconChevronsRight, IconCron, IconGithub, IconHome, IconJson, IconMenu, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTransfer, IconX } from "./icons";
+import { IconBase64, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck, IconFileDiff, IconFingerprint, IconGithub, IconHash, IconHome, IconJson, IconKey, IconLink, IconMenu, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
 import { Button } from "@/components/ui/button";
 
 const ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
@@ -17,6 +17,15 @@ const ICONS: Record<string, (p: { width?: number; height?: number }) => React.Re
   json: IconJson,
   cron: IconCron,
   convert: IconRepeat,
+  ts: IconClock,
+  hash: IconHash,
+  uuid: IconFingerprint,
+  diff: IconFileDiff,
+  regex: IconTextSearch,
+  text: IconDocText,
+  url: IconLink,
+  jwt: IconKey,
+  "file-hash": IconFileCheck,
 };
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

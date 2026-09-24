@@ -16,7 +16,11 @@ import {
   Download,
   ExternalLink,
   File,
+  FileCheck,
+  FileDiff,
   FileText,
+  Fingerprint,
+  Hash,
   Home,
   KeyRound,
   Link,
@@ -32,6 +36,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sun,
+  TextSearch,
   Trash2,
   Upload,
   Wifi,
@@ -76,6 +81,10 @@ export const IconDocText = wrap(FileText);
 export const IconDownload = wrap(Download);
 export const IconExternal = wrap(ExternalLink);
 export const IconFile = wrap(File);
+export const IconFileCheck = wrap(FileCheck);
+export const IconFileDiff = wrap(FileDiff);
+export const IconFingerprint = wrap(Fingerprint);
+export const IconHash = wrap(Hash);
 /** GitHub 品牌 mark（lucide 主包已移除品牌图标，保留手绘路径） */
 export const IconGithub = (p: P) => (
   <svg
@@ -108,6 +117,7 @@ export const IconServer = wrap(Server);
 export const IconShield = wrap(ShieldCheck);
 export const IconSliders = wrap(SlidersHorizontal);
 export const IconSun = wrap(Sun);
+export const IconTextSearch = wrap(TextSearch);
 export const IconTransfer = wrap(ArrowLeftRight);
 export const IconTrash = wrap(Trash2);
 export const IconUpload = wrap(Upload);

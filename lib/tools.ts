@@ -1,6 +1,21 @@
 /** 工具注册表：新增工具 = 在这里加一项 + 加一个页面 */
 
-export type ToolId = "transfer" | "qr" | "base64" | "json" | "cron" | "convert";
+export type ToolId =
+  | "transfer"
+  | "qr"
+  | "base64"
+  | "json"
+  | "cron"
+  | "convert"
+  | "ts"
+  | "hash"
+  | "uuid"
+  | "diff"
+  | "regex"
+  | "text"
+  | "url"
+  | "jwt"
+  | "file-hash";
 
 export interface Tool {
   id: ToolId;
@@ -9,7 +24,22 @@ export interface Tool {
   tagline: string;
   description: string;
   path: string;
-  icon: "transfer" | "qr" | "base64" | "json" | "cron" | "convert";
+  icon:
+    | "transfer"
+    | "qr"
+    | "base64"
+    | "json"
+    | "cron"
+    | "convert"
+    | "ts"
+    | "hash"
+    | "uuid"
+    | "diff"
+    | "regex"
+    | "text"
+    | "url"
+    | "jwt"
+    | "file-hash";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -88,11 +118,116 @@ export const tools: Tool[] = [
     lamp: "ok",
     tags: ["YAML", "XML", "CSV", "INI", "TOML", "Properties"],
   },
+  {
+    id: "ts",
+    index: "T-07",
+    name: "时间戳转换",
+    tagline: "Unix 时间 ↔ 日期时间",
+    description:
+      "当前时间戳实时展示；输入时间戳（自动识别秒 / 毫秒）或日期时间，双向转换，带 UTC、ISO、相对时间。",
+    path: "/tools/ts",
+    icon: "ts",
+    lamp: "ok",
+    tags: ["Unix 时间", "日期互转", "自动识别"],
+  },
+  {
+    id: "hash",
+    index: "T-08",
+    name: "Hash 计算",
+    tagline: "MD5 / SHA 系列 / HMAC",
+    description:
+      "对文本计算 MD5、SHA-1、SHA-256、SHA-512，支持 HMAC 带密钥签名。全部本地计算，一键复制任一结果。",
+    path: "/tools/hash",
+    icon: "hash",
+    lamp: "ok",
+    tags: ["MD5", "SHA-256", "HMAC"],
+  },
+  {
+    id: "uuid",
+    index: "T-09",
+    name: "UUID 生成",
+    tagline: "批量 v4，本地随机",
+    description:
+      "一次生成 1~20 个 UUID v4，支持大写 / 无横线格式，逐条或全部复制。",
+    path: "/tools/uuid",
+    icon: "uuid",
+    lamp: "ok",
+    tags: ["UUID v4", "批量", "本地随机"],
+  },
+  {
+    id: "diff",
+    index: "T-10",
+    name: "文本 Diff 对比",
+    tagline: "两栏对比，差异高亮",
+    description:
+      "粘贴原文本与新文本，行级对比差异，新增 / 删除 / 未变一目了然，带增删统计。",
+    path: "/tools/diff",
+    icon: "diff",
+    lamp: "ok",
+    tags: ["行级对比", "高亮", "增删统计"],
+  },
+  {
+    id: "regex",
+    index: "T-11",
+    name: "正则测试器",
+    tagline: "匹配预览与捕获组",
+    description:
+      "输入正则与测试文本，实时高亮所有匹配，查看起止位置与捕获组，支持 g / i / m / s 标志。",
+    path: "/tools/regex",
+    icon: "regex",
+    lamp: "ok",
+    tags: ["匹配预览", "捕获组", "标志位"],
+  },
+  {
+    id: "text",
+    index: "T-12",
+    name: "文本处理合集",
+    tagline: "大小写 / 排序 / 去重等",
+    description:
+      "转大小写、去空格、排序、去重、提取数字、反转等十余种操作，可叠加成管线依次应用。",
+    path: "/tools/text",
+    icon: "text",
+    lamp: "ok",
+    tags: ["大小写", "排序", "去重", "管线"],
+  },
+  {
+    id: "url",
+    index: "T-13",
+    name: "URL 编码 / 解码",
+    tagline: "encodeURIComponent 安全转换",
+    description:
+      "文本与 URL 编码互相转换，UTF-8 安全（中文、emoji 不乱码），支持编码 / 解码双向切换。",
+    path: "/tools/url",
+    icon: "url",
+    lamp: "ok",
+    tags: ["编码", "解码", "UTF-8 安全"],
+  },
+  {
+    id: "jwt",
+    index: "T-14",
+    name: "JWT 解析",
+    tagline: "解码 Header / Payload",
+    description:
+      "粘贴 JWT 自动解码 Header 与 Payload（UTF-8 安全），查看签名与过期时间剩余。仅本地解析，不校验签名。",
+    path: "/tools/jwt",
+    icon: "jwt",
+    lamp: "ok",
+    tags: ["JWT", "Header", "Payload", "过期时间"],
+  },
+  {
+    id: "file-hash",
+    index: "T-15",
+    name: "文件哈希校验",
+    tagline: "本地文件的 MD5 / SHA 摘要",
+    description:
+      "选择或拖拽文件，计算 MD5、SHA-1、SHA-256、SHA-512 摘要，用于校验下载文件的完整性。",
+    path: "/tools/file-hash",
+    icon: "file-hash",
+    lamp: "ok",
+    tags: ["文件摘要", "完整性校验", "拖拽"],
+  },
 ];
 
-export const soonTools = [
-  { name: "正则测试", hint: "正则匹配 / 替换预览" },
-  { name: "时间戳转换", hint: "Unix 时间 ↔ 日期" },
-];
+export const soonTools: { name: string; hint: string }[] = [];
 
 export const GITHUB_REPO = "https://github.com/lsx-xyg/tools";
