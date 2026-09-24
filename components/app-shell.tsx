@@ -158,11 +158,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
               title={collapsed ? "展开侧边栏" : "收起侧边栏"}
             >
-              {collapsed ? (
-                <IconChevronsRight width={15} height={15} />
-              ) : (
-                <IconChevronsLeft width={15} height={15} />
-              )}
+              <span className="collapse-ic" aria-hidden="true">
+                <IconChevronsLeft width={15} height={15} className="ic-expand" />
+                <IconChevronsRight width={15} height={15} className="ic-collapse" />
+              </span>
               <span className="nav-text">{collapsed ? "展开" : "收起侧边栏"}</span>
             </button>
           </div>

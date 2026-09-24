@@ -72,6 +72,13 @@ export default function QrPage() {
         }
       />
 
+      <div className="info-hint">
+        <IconShield width={13} height={13} />
+        <span>
+          微信扫码：网址（https 链接）可正常打开；纯文本、Wi-Fi 等非网址内容微信可能提示「暂不支持展示」——这是微信内置扫码器的限制，请改用系统相机、支付宝或浏览器扫码。
+        </span>
+      </div>
+
       <div className="transfer-grid qr-grid">
         <section className="panel">
           <div className="panel-head">

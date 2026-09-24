@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { CronExpressionParser } from "cron-parser";
 import { ToolHead } from "@/components/tool-head";
-import { IconClock, IconShield } from "@/components/icons";
+import { CronBuilder } from "@/components/cron-builder";
+import { IconClock, IconShield, IconSliders } from "@/components/icons";
 
 const EXAMPLES: { label: string; expr: string }[] = [
   { label: "每 5 分钟", expr: "*/5 * * * *" },
@@ -30,6 +31,7 @@ function fmt(d: Date): string {
 
 export default function CronPage() {
   const [expr, setExpr] = useState("*/5 * * * *");
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const { times, error, fieldCount } = useMemo(() => {
     const q = expr.trim();
@@ -86,6 +88,15 @@ export default function CronPage() {
               spellCheck={false}
               aria-label="Cron 表达式"
             />
+            <button
+              className="btn btn-ghost"
+              onClick={() => setBuilderOpen(true)}
+              type="button"
+              title="选择年月日时分生成表达式"
+            >
+              <IconSliders width={14} height={14} />
+              可视化生成
+            </button>
             {times.length > 0 && (
               <span className="count-hint ok-chip">
                 <span className="lamp ok" aria-hidden="true" />
@@ -145,6 +156,14 @@ export default function CronPage() {
           )}
         </div>
       </section>
+
+      <CronBuilder
+        key={String(builderOpen)}
+        open={builderOpen}
+        initial={expr}
+        onClose={() => setBuilderOpen(false)}
+        onApply={(e) => setExpr(e)}
+      />
     </div>
   );
 }

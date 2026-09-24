@@ -123,17 +123,38 @@ export default function JsonPage() {
             </span>
           </div>
           <div className="panel-body">
-            <textarea
-              className="input textarea tall mono"
-              value={result.output}
-              readOnly
-              placeholder={result.error ? "" : "结果在这里…"}
-            />
-            {result.error ? (
-              <p className="count-hint warn" style={{ marginTop: 10 }}>{result.error}</p>
+            {mode === "validate" ? (
+              <div className="json-verdict">
+                {!input.trim() ? (
+                  <p className="count-hint">输入 JSON 后自动校验</p>
+                ) : result.error ? (
+                  <>
+                    <p className="json-verdict-title err">
+                      <span className="lamp err" aria-hidden="true" />
+                      语法错误
+                    </p>
+                    <p className="count-hint warn">{result.error}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="json-verdict-title ok">
+                      <span className="lamp ok" aria-hidden="true" />
+                      语法正确
+                    </p>
+                    <p className="count-hint" style={{ color: "var(--ok)" }}>{result.meta}</p>
+                  </>
+                )}
+              </div>
             ) : (
-              mode === "validate" &&
-              result.meta && <p className="count-hint" style={{ color: "var(--ok)", marginTop: 10 }}>{result.meta}</p>
+              <>
+                <textarea
+                  className="input textarea tall mono"
+                  value={result.output}
+                  readOnly
+                  placeholder={result.error ? "" : "结果在这里…"}
+                />
+                {result.error && <p className="count-hint warn" style={{ marginTop: 10 }}>{result.error}</p>}
+              </>
             )}
           </div>
         </section>

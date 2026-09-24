@@ -227,7 +227,9 @@ textarea {
   transition:
     border-color var(--dur) var(--ease-out),
     color var(--dur) var(--ease-out),
-    background var(--dur) var(--ease-out);
+    background var(--dur) var(--ease-out),
+    gap 0.26s var(--ease-out),
+    padding 0.26s var(--ease-out);
 }
 .search-trigger:hover {
   border-color: var(--line-strong);
@@ -259,30 +261,83 @@ kbd {
   color: var(--ink-3);
   font-size: 12.5px;
   cursor: pointer;
-  transition: color var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+  transition:
+    color var(--dur) var(--ease-out),
+    background var(--dur) var(--ease-out),
+    gap 0.26s var(--ease-out),
+    padding 0.26s var(--ease-out);
 }
 .collapse-btn:hover {
   color: var(--ink);
   background: var(--bg-subtle);
 }
+.collapse-ic {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.collapse-ic svg {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.22s var(--ease-out), transform 0.26s var(--ease-out);
+}
+.ic-collapse {
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+.sidebar.collapsed .ic-expand {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+.sidebar.collapsed .ic-collapse {
+  opacity: 1;
+  transform: none;
+}
 
-/* ---------- 侧边栏折叠态 ---------- */
+/* ---------- 侧边栏折叠态（平滑动画） ---------- */
+/* 文字元素：淡出 + 收窄，替代 display:none 的一闪 */
+.brand-name,
+.nav-text,
+.nav-group-label,
+.nav-soon-note,
+.search-trigger kbd,
+.sidebar-foot .row > span {
+  transition:
+    opacity 0.24s var(--ease-out),
+    max-width 0.26s var(--ease-out);
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.nav-item,
+.brand {
+  transition:
+    gap 0.26s var(--ease-out),
+    padding 0.26s var(--ease-out);
+}
 .sidebar.collapsed {
   width: 66px;
   padding: 20px 11px 16px;
 }
 .sidebar.collapsed .brand-row .brand {
   justify-content: center;
+  gap: 0;
   padding: 6px 0 14px;
 }
-.sidebar.collapsed .nav-group-label,
+.sidebar.collapsed .brand-name,
 .sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-group-label,
 .sidebar.collapsed .nav-soon-note,
-.sidebar.collapsed .search-trigger kbd {
-  display: none;
+.sidebar.collapsed .search-trigger kbd,
+.sidebar.collapsed .sidebar-foot .row > span {
+  opacity: 0;
+  max-width: 0;
+  pointer-events: none;
 }
 .sidebar.collapsed .nav-item {
   justify-content: center;
+  gap: 0;
   padding: 10px 0;
 }
 .sidebar.collapsed .nav-item .lamp {
@@ -290,20 +345,21 @@ kbd {
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
+  opacity: 0.9;
 }
 .sidebar.collapsed .search-trigger {
   justify-content: center;
+  gap: 0;
   padding: 9px 0;
 }
 .sidebar.collapsed .sidebar-foot .row {
   justify-content: center;
+  gap: 0;
   padding: 6px 0;
-}
-.sidebar.collapsed .sidebar-foot .row > span {
-  display: none;
 }
 .sidebar.collapsed .collapse-btn {
   justify-content: center;
+  gap: 0;
   padding: 6px 0;
 }
 .main-col {
@@ -1826,4 +1882,119 @@ a.module:hover {
   font-size: 13px;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- JSON 校验结果卡 ---------- */
+.json-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 260px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-inset);
+}
+.json-verdict-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 650;
+}
+.json-verdict-title.ok {
+  color: var(--ok);
+}
+.json-verdict-title.err {
+  color: var(--err);
+}
+
+/* ---------- 工具页信息提示条 ---------- */
+.info-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg-subtle);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.65;
+  margin-bottom: 14px;
+}
+.info-hint svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--ink-3);
+}
+
+/* ---------- Cron 可视化生成弹窗 ---------- */
+.cb-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.cb-presets .cron-example {
+  font-size: 12px;
+}
+.cb-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cb-label {
+  width: 34px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.cb-row .seg {
+  flex-shrink: 0;
+}
+.cb-row .seg button {
+  height: 28px;
+  padding: 0 9px;
+  font-size: 12.5px;
+}
+.cb-input {
+  width: 118px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.cb-range {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.cb-preview {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
