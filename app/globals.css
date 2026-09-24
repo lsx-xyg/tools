@@ -227,6 +227,9 @@ textarea {
   height: 100dvh;
   padding: 20px 14px 16px;
   gap: 4px;
+  transition:
+    width 0.28s var(--ease-out),
+    padding 0.28s var(--ease-out);
   transition: width 0.28s var(--ease-out);
 }
 .brand-row {
@@ -564,6 +567,7 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transition: padding 0.28s var(--ease-out);
 }
 .sidebar-foot .row {
   display: flex;
