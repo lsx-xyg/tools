@@ -80,13 +80,13 @@ export const tools: Tool[] = [
     id: "convert",
     index: "T-06",
     name: "格式互转",
-    tagline: "YAML / XML / CSV / INI ↔ JSON",
+    tagline: "YAML / XML / CSV / INI / TOML ↔ JSON",
     description:
-      "把 YAML、XML、CSV、INI、Properties 等格式统一解析成 JSON，再输出成任意目标格式。双向互转、纯本地运行，不经过服务器。",
+      "把 YAML、XML、CSV、INI、TOML、Properties 等格式统一解析成 JSON，再输出成任意目标格式。双向互转、纯本地运行，不经过服务器。",
     path: "/tools/convert",
     icon: "convert",
     lamp: "ok",
-    tags: ["YAML", "XML", "CSV", "INI", "Properties"],
+    tags: ["YAML", "XML", "CSV", "INI", "TOML", "Properties"],
   },
 ];
 
