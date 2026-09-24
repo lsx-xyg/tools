@@ -7,7 +7,7 @@ import { tools, GITHUB_REPO } from "@/lib/tools";
 import { Brand } from "./brand";
 import { useTheme } from "./theme-provider";
 import { SearchPalette } from "./search-palette";
-import { IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck, IconFileDiff, IconFileType, IconFingerprint, IconGithub, IconHash, IconHome, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
+import { IconActivity, IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck, IconFileDiff, IconFileType, IconFingerprint, IconGithub, IconHash, IconHome, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
 import { Button } from "@/components/ui/button";
 
 export const ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
@@ -29,6 +29,7 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   "device-info": IconMonitor,
   case: IconCase,
   mime: IconFileType,
+  "http-status": IconActivity,
 };
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

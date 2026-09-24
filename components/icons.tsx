@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 import {
+  Activity,
   ArrowLeftRight,
   Binary,
   CaseSensitive,
@@ -68,6 +69,7 @@ function wrap(C: LucideIcon) {
   };
 }
 
+export const IconActivity = wrap(Activity);
 export const IconBase = wrap(Binary);
 export const IconBase64 = IconBase;
 export const IconBolt = wrap(Zap);

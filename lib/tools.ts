@@ -18,7 +18,8 @@ export type ToolId =
   | "file-hash"
   | "device-info"
   | "case"
-  | "mime";
+  | "mime"
+  | "http-status";
 
 export interface Tool {
   id: ToolId;
@@ -45,7 +46,8 @@ export interface Tool {
     | "file-hash"
     | "device-info"
     | "case"
-    | "mime";
+    | "mime"
+    | "http-status";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -267,6 +269,18 @@ export const tools: Tool[] = [
     icon: "mime",
     lamp: "ok",
     tags: ["MIME", "扩展名", "双向查询"],
+  },
+  {
+    id: "http-status",
+    index: "T-19",
+    name: "HTTP 状态码",
+    tagline: "状态码速查 · 数字 / 英文 / 中文",
+    description:
+      "内置 1xx~5xx 常用 HTTP 状态码表，支持按数字、英文名或中文含义搜索，按类别分组展示，点击一键复制。全部本地查询，不上传。",
+    path: "/tools/http-status",
+    icon: "http-status",
+    lamp: "ok",
+    tags: ["HTTP", "状态码", "404", "速查"],
   },
 ];
 
