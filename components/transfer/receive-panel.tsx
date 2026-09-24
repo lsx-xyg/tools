@@ -115,6 +115,16 @@ export function ReceivePanel({ autoJoin }: { autoJoin?: { mode?: string; code?: 
     };
   }, []);
 
+  // RTC 直连卡住提示：超过 25s 未建立连接时给出降级建议（同 WiFi 一般数秒内连通）
+  useEffect(() => {
+    if (phase !== "connecting") return;
+    const t = setTimeout(() => {
+      setPhase("error");
+      setError("无法建立点对点连接（可能网络隔离或浏览器限制），可让发送方改用「离线传输」");
+    }, 25_000);
+    return () => clearTimeout(t);
+  }, [phase]);
+
   const join = useCallback(
     async (raw: string) => {
       if (joinedRef.current) return;

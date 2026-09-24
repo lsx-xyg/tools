@@ -33,6 +33,7 @@ function absoluteExpiration(expiresAt: number): number {
 export async function createTransfer(
   input: { kind: "text"; text: string } | { kind: "file"; files: { name: string; size: number; type: string; data: ArrayBuffer }[] },
   code: string,
+  opts?: { ttlMs?: number; maxDownloads?: number },
 ): Promise<TransferRecord> {
   const { kv, obj } = await getStorage();
   const now = Date.now();
@@ -41,8 +42,8 @@ export async function createTransfer(
     code,
     kind: input.kind,
     createdAt: now,
-    expiresAt: now + LIMITS.offlineTtlMs,
-    maxDownloads: LIMITS.offlineMaxDownloads,
+    expiresAt: now + (opts?.ttlMs ?? LIMITS.offlineTtlMs),
+    maxDownloads: opts?.maxDownloads ?? LIMITS.offlineMaxDownloads,
     downloads: 0,
   };
 

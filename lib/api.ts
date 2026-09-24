@@ -5,6 +5,13 @@ export interface OfflineTransferMeta {
   mode: "offline";
   expiresIn: number;
   expiresAt: number;
+  maxDownloads: number;
+}
+
+/** 离线传输自定义参数：时长 1h～7 天，下载次数 1～100（服务端会 clamp） */
+export interface OfflineOptions {
+  ttlHours?: number;
+  maxDownloads?: number;
 }
 
 export interface OfflineFileInfo {
@@ -42,18 +49,20 @@ export class ApiError extends Error {
   }
 }
 
-export async function createTextTransfer(text: string): Promise<OfflineTransferMeta> {
+export async function createTextTransfer(text: string, opts?: OfflineOptions): Promise<OfflineTransferMeta> {
   return j(await fetch("/api/transfer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind: "text", text }),
+    body: JSON.stringify({ kind: "text", text, ...(opts?.ttlHours !== undefined ? { ttlHours: opts.ttlHours } : {}), ...(opts?.maxDownloads !== undefined ? { maxDownloads: opts.maxDownloads } : {}) }),
   }));
 }
 
-export async function createFileTransfer(files: File[]): Promise<OfflineTransferMeta> {
+export async function createFileTransfer(files: File[], opts?: OfflineOptions): Promise<OfflineTransferMeta> {
   const fd = new FormData();
   for (const f of files) fd.append("files", f);
   fd.append("kind", "file");
+  if (opts?.ttlHours !== undefined) fd.append("ttlHours", String(opts.ttlHours));
+  if (opts?.maxDownloads !== undefined) fd.append("maxDownloads", String(opts.maxDownloads));
   return j(await fetch("/api/transfer", { method: "POST", body: fd }));
 }
 

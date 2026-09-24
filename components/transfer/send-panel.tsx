@@ -13,7 +13,7 @@ import {
 } from "@/lib/api";
 import { startSender, type RtcPhase } from "@/lib/rtc-client";
 import { copyText } from "@/lib/clipboard";
-import { countChars, fmtBytes, LIMITS, validateFiles } from "@/lib/limits";
+import { countChars, fmtBytes, fmtTtlHours, LIMITS, OFFLINE_DOWNLOAD_OPTIONS, OFFLINE_TTL_OPTIONS, validateFiles } from "@/lib/limits";
 import { useCountdown } from "@/lib/use-countdown";
 import { CodeDisplay } from "./code-display";
 import {
@@ -100,6 +100,7 @@ function ReadyView({
   code,
   mode,
   expiresAt,
+  ttlHours,
   onReset,
   onDelete,
   extra,
@@ -107,6 +108,7 @@ function ReadyView({
   code: string;
   mode: SendMode;
   expiresAt?: number;
+  ttlHours?: number;
   onReset(): void;
   onDelete?(): void;
   extra?: React.ReactNode;
@@ -147,7 +149,7 @@ function ReadyView({
         <div className="state-line">
           <IconServer width={14} height={14} />
           <span className="mono" style={{ fontSize: 12 }}>
-            24h 自动清除 · 剩余 {cd}
+            {ttlHours ? `${fmtTtlHours(ttlHours)} 自动清除 · 剩余 ${cd}` : `24h 自动清除 · 剩余 ${cd}`}
           </span>
         </div>
       )}
@@ -183,6 +185,8 @@ export function SendPanel() {
   const [expiresAt, setExpiresAt] = useState<number>(0);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null);
+  const [offlineTtl, setOfflineTtl] = useState<number>(24);
+  const [offlineDownloads, setOfflineDownloads] = useState<number>(10);
   const senderRef = useRef<{ cancel(): void } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const doneRef = useRef(false);
@@ -262,10 +266,11 @@ export function SendPanel() {
     // 离线模式
     setPhase("creating");
     try {
+      const opts = { ttlHours: offlineTtl, maxDownloads: offlineDownloads };
       const meta =
         contentMode === "text"
-          ? await createTextTransfer(text)
-          : await createFileTransfer(files);
+          ? await createTextTransfer(text, opts)
+          : await createFileTransfer(files, opts);
       setCode(meta.code);
       setExpiresAt(meta.expiresAt);
       setPhase("waiting");
@@ -340,7 +345,7 @@ export function SendPanel() {
             </button>
             <button value="offline">
               <IconServer width={14} height={14} />
-              离线 24h
+              离线暂存
             </button>
           </Seg>
           <Seg value={contentMode} onChange={(v) => switchContent(v as ContentMode)} disabled={busy} ariaLabel="内容类型">
@@ -358,6 +363,32 @@ export function SendPanel() {
         <div className="panel-swap" key={`tx-${sendMode}-${contentMode}-${phaseGroup}`}>
         {phase === "idle" || phase === "creating" ? (
           <>
+            {sendMode === "offline" && (
+              <div className="offline-opts">
+                <div className="opt-row">
+                  <span className="opt-label">保留时长</span>
+                  <Seg value={String(offlineTtl)} onChange={(v) => setOfflineTtl(Number(v))} disabled={busy} ariaLabel="保留时长">
+                    {OFFLINE_TTL_OPTIONS.map((h) => (
+                      <button key={h} value={String(h)}>
+                        {fmtTtlHours(h)}
+                      </button>
+                    ))}
+                  </Seg>
+                </div>
+                {contentMode === "file" && (
+                  <div className="opt-row">
+                    <span className="opt-label">下载次数</span>
+                    <Seg value={String(offlineDownloads)} onChange={(v) => setOfflineDownloads(Number(v))} disabled={busy} ariaLabel="下载次数">
+                      {OFFLINE_DOWNLOAD_OPTIONS.map((n) => (
+                        <button key={n} value={String(n)}>
+                          {n} 次
+                        </button>
+                      ))}
+                    </Seg>
+                  </div>
+                )}
+              </div>
+            )}
             {contentMode === "text" ? (
               <div className="field">
                 <label className="field-label" htmlFor="send-text">
@@ -529,6 +560,7 @@ export function SendPanel() {
                 code={code}
                 mode="offline"
                 expiresAt={expiresAt}
+                ttlHours={offlineTtl}
                 onReset={reset}
                 onDelete={handleDelete}
               />
@@ -543,7 +575,7 @@ export function SendPanel() {
             <p className="lede" style={{ fontSize: 13.5, textAlign: "center" }}>
               {sendMode === "rtc"
                 ? "文件仅在两台设备间传递，服务器上没有任何内容。"
-                : "内容将保留 24 小时，到期自动清除。"}
+                : `内容将保留 ${fmtTtlHours(offlineTtl)}，到期自动清除。`}
             </p>
             <button className="btn btn-primary" onClick={reset}>
               <IconRefresh width={16} height={16} />

@@ -18,8 +18,10 @@ import {
 import { LIMITS } from "./limits";
 
 const ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
+  // 同局域网/同 WiFi 主要靠 host candidate 直连，STUN 只是拿公网地址的辅助。
+  // 不用 Google STUN（国内不可达）；Cloudflare 在中国大陆一般可达，另配一个公开备用。
   { urls: "stun:stun.cloudflare.com:3478" },
+  { urls: "stun:stun.stunprotocol.org:3478" },
 ];
 
 export type RtcPhase =
@@ -61,6 +63,7 @@ export function startSender(
 ): SenderSession {
   let cancelled = false;
   let completed = false;
+  let payloadSent = false;
   let pc: RTCPeerConnection | null = null;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let remoteDescSet = false;
@@ -139,14 +142,33 @@ export function startSender(
         if (cancelled || completed) return;
         hooks.onPhase("transferring");
         void sendPayload(dc, payload, hooks, () => cancelled, () => {
-          completed = true;
+          payloadSent = true;
         });
       };
+      dc.onmessage = (ev) => {
+        if (cancelled || completed || typeof ev.data !== "string") return;
+        try {
+          const msg = JSON.parse(ev.data) as { t?: string };
+          // 接收端回执：收到 ack 才真正判定送达，避免单向误报成功
+          if (msg.t === "ack") {
+            completed = true;
+            hooks.onPhase("done");
+          }
+        } catch {
+          /* ignore */
+        }
+      };
       dc.onclose = () => {
-        if (!cancelled) cleanup(true);
+        if (cancelled) return;
+        // 数据已写完、对端主动关闭（对端完成接收后 800ms 拆除）→ 兜底判定送达
+        if (payloadSent && !completed) {
+          completed = true;
+          hooks.onPhase("done");
+        }
+        cleanup(true);
       };
       dc.onerror = () => {
-        if (completed) {
+        if (completed || payloadSent) {
           cleanup(true);
           return;
         }
@@ -228,7 +250,8 @@ async function sendPayload(
       sendJson(dc, { t: "done" });
       hooks.onProgress?.(total, total);
     }
-    hooks.onPhase("done");
+    // 不在此判定完成：数据只是写完通道，需等接收端 ack 回执（dc.onmessage）
+    // 或对端完成接收后关闭连接（dc.onclose 兜底），避免单向误报成功。
     onComplete();
   } catch {
     hooks.onPhase("error", "传输失败，请重试");
@@ -367,6 +390,12 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
                 const list = files.filter(Boolean);
                 hooks.onFiles?.(list);
                 hooks.onPhase("done");
+              }
+              // 回执发送方：内容已在本端接收并处理完成
+              try {
+                dc.send(JSON.stringify({ t: "ack" }));
+              } catch {
+                /* ignore：连接可能已关闭 */
               }
               // 优雅收尾：稍等片刻让发送端观察到正常关闭，再拆除本端
               setTimeout(() => cleanup(true), 800);

@@ -126,6 +126,9 @@ let localKv: LocalKv | null = null;
 let localObj: LocalObjectStore | null = null;
 
 async function tryBindings(): Promise<{ kv: KvLike; obj: ObjectLike; rawR2: WorkersEnv["TRANSFER_R2"] } | null> {
+  // next dev：getCloudflareContext 只会给 mock KV/R2（mock R2 不落盘），
+  // 本地全链路验证改用内存 KV + .local-store 目录；生产部署才走真实绑定。
+  if (process.env.NODE_ENV !== "production") return null;
   try {
     const { env } = await getCloudflareContext({ async: true });
     const e = env as WorkersEnv;

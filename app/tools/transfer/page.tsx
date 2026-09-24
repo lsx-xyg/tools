@@ -21,7 +21,7 @@ function TransferPageInner() {
         </Link>
         <h1>文本 / 文件互传</h1>
         <p className="lede">
-          在线直传不落服务器 · 离线 24h 自动清除 · 凭提取码或扫码取回
+          在线直传不落服务器 · 离线到期自动清除 · 凭提取码或扫码取回
           <span className="lede-chip">
             <IconBolt width={12} height={12} />
             在线 P2P
