@@ -7,23 +7,8 @@ import { tools, GITHUB_REPO } from "@/lib/tools";
 import { Brand } from "./brand";
 import { useTheme } from "./theme-provider";
 import { SearchPalette } from "./search-palette";
-import {
-  IconBase64,
-  IconChevronsLeft,
-  IconChevronsRight,
-  IconCron,
-  IconGithub,
-  IconHome,
-  IconJson,
-  IconMenu,
-  IconMoon,
-  IconPlus,
-  IconQr,
-  IconSearch,
-  IconSun,
-  IconTransfer,
-  IconX,
-} from "./icons";
+import { IconBase64, IconChevronsLeft, IconChevronsRight, IconCron, IconGithub, IconHome, IconJson, IconMenu, IconMoon, IconPlus, IconQr, IconSearch, IconSun, IconTransfer, IconX } from "./icons";
+import { Button } from "@/components/ui/button";
 
 const ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
   transfer: IconTransfer,
@@ -89,14 +74,15 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 function ThemeButton() {
   const { theme, toggle } = useTheme();
   return (
-    <button
-      className="icon-btn"
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={toggle}
       aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
       title={theme === "dark" ? "浅色模式" : "深色模式"}
     >
       {theme === "dark" ? <IconSun /> : <IconMoon />}
-    </button>
+    </Button>
   );
 }
 
@@ -147,12 +133,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="nav-text">主题</span>
             <ThemeButton />
           </div>
-          <div className="row">
-            <a href={GITHUB_REPO} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <IconGithub width={15} height={15} />
-              <span className="nav-text">开源在 GitHub</span>
-            </a>
-          </div>
+          <a
+            className="nav-item github-link"
+            href={GITHUB_REPO}
+            target="_blank"
+            rel="noreferrer"
+            title="开源在 GitHub"
+          >
+            <IconGithub className="nav-icon" />
+            <span className="nav-text">开源在 GitHub</span>
+          </a>
           <div className="row">
             <button
               className="collapse-btn"
@@ -173,22 +163,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="main-col">
         <header className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <button
-              className="icon-btn"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setOpen(true)}
               aria-label="打开菜单"
               aria-expanded={open}
             >
               <IconMenu />
-            </button>
-            <button
-              className="icon-btn"
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => window.dispatchEvent(new CustomEvent("toolbox:open-search"))}
               aria-label="搜索工具"
               title="搜索工具（Ctrl K）"
             >
               <IconSearch />
-            </button>
+            </Button>
           </div>
           <Link href="/" aria-label="返回仪表台">
             <Brand compact />
