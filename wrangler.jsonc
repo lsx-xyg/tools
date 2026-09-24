@@ -1,0 +1,43 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "tools",
+	"compatibility_date": "2026-09-24",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			// Self-reference service binding, the service name must match the worker name
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "tools"
+		}
+	],
+	"images": {
+		// Enable Next.js image optimization (optional)
+		"binding": "IMAGES"
+	},
+	"kv_namespaces": [
+		{
+			// 离线传输记录 + P2P 信令（SDP/ICE）存储，内容 24h 内自动清除
+			// 部署前执行: npx wrangler kv namespace create TRANSFER_KV
+			// 然后把返回的 id 填到这里
+			"binding": "TRANSFER_KV",
+			"id": "00000000000000000000000000000000"
+		}
+	],
+	"r2_buckets": [
+		{
+			// 离线传输的文件对象存储（在线 P2P 传输不经过它）
+			// 部署前执行: npx wrangler r2 bucket create tools-transfer
+			"binding": "TRANSFER_R2",
+			"bucket_name": "tools-transfer"
+		}
+	]
+}
