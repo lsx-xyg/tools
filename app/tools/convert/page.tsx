@@ -114,6 +114,7 @@ export default function ConvertPage() {
               <IconZap width={14} height={14} />
               填充示例
             </button>
+            <span className="spacer" />
             <span className="count-hint">{input.length} 字符 · {dataDesc}</span>
           </div>
         </div>
@@ -161,7 +162,7 @@ export default function ConvertPage() {
                     转换成功
                   </span>
                 )}
-                <span style={{ flex: 1 }} />
+                <span className="spacer" />
                 <button className="btn btn-ghost btn-sm" onClick={download} type="button" disabled={!result.output}>
                   <IconDownload width={14} height={14} />
                   下载

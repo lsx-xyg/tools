@@ -1,8 +1,16 @@
 /**
  * 格式互转核心：YAML / XML / CSV / INI / Properties ↔ JSON
+ * 依赖选型（参考社区成熟方案）：
+ *   JSON → 原生 JSON.parse / JSON.stringify
+ *   YAML → js-yaml（最成熟，支持注释、锚点）
+ *   XML  → fast-xml-parser（快，支持保留属性）
+ *   CSV  → papaparse（引号 / 换行 / 分隔符处理最稳）
+ *   INI  → ini（轻量）
  * 全部纯本地计算，零网络请求。
  */
-import YAML from "yaml";
+import { dump as yamlDump, load as yamlLoad } from "js-yaml";
+import Papa from "papaparse";
+import ini from "ini";
 import { XMLBuilder, XMLParser } from "fast-xml-parser";
 
 export type Format = "json" | "yaml" | "xml" | "csv" | "ini" | "properties";
@@ -26,47 +34,18 @@ function normalize(v: unknown): unknown {
   }
 }
 
-/* ---------------- CSV（RFC4180 基础实现） ---------------- */
+/* ---------------- CSV（papaparse） ---------------- */
 export function parseCsv(text: string): unknown {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ",") {
-      row.push(field);
-      field = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(field);
-      field = "";
-      if (row.some((f) => f !== "")) rows.push(row);
-      row = [];
-    } else field += c;
-  }
-  if (field !== "" || row.length > 0) {
-    row.push(field);
-    if (row.some((f) => f !== "")) rows.push(row);
-  }
-  if (rows.length === 0) return [];
-  const header = rows[0].map((h) => h.trim());
-  return rows.slice(1).map((r) => {
-    const o: Record<string, string> = {};
-    header.forEach((h, i) => {
-      o[h] = r[i] ?? "";
-    });
-    return o;
+  const result = Papa.parse<Record<string, string>>(text, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim(),
   });
+  if (result.errors.length > 0) {
+    const e = result.errors[0];
+    throw new Error(`CSV 第 ${e.row ?? "?"} 行解析失败：${e.message}`);
+  }
+  return result.data;
 }
 
 export function stringifyCsv(data: unknown): string {
@@ -75,57 +54,23 @@ export function stringifyCsv(data: unknown): string {
     (v): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v),
   );
   if (objs.length === 0) throw new Error("CSV 输出需要对象或对象数组（如 [{a:1},{a:2}]）");
-  const keys = [...new Set(objs.flatMap((o) => Object.keys(o)))];
-  const esc = (v: unknown) => {
-    const s = v === null || v === undefined ? "" : String(v);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  return [keys.join(","), ...objs.map((o) => keys.map((k) => esc(o[k])).join(","))].join("\n");
+  // 对象 / 数组值预转 JSON 字符串，避免 papaparse 输出 "[object Object]"
+  const rows = objs.map((o) =>
+    Object.fromEntries(Object.entries(o).map(([k, v]) => [k, toText(v)])),
+  );
+  return Papa.unparse(rows);
 }
 
-/* ---------------- INI ---------------- */
+/* ---------------- INI（ini 包） ---------------- */
 export function parseIni(text: string): unknown {
-  const out: Record<string, Record<string, string> | string> = {};
-  let section: string | null = null;
-  for (const line of text.split(/\r?\n/)) {
-    const t = line.trim();
-    if (!t || t.startsWith(";") || t.startsWith("#")) continue;
-    const m = t.match(/^\[(.+)\]$/);
-    if (m) {
-      section = m[1].trim();
-      out[section] = out[section] ?? {};
-      continue;
-    }
-    const eq = t.indexOf("=");
-    if (eq < 0) continue;
-    const k = t.slice(0, eq).trim();
-    let v = t.slice(eq + 1).trim();
-    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-      v = v.slice(1, -1);
-    }
-    if (section) (out[section] as Record<string, string>)[k] = v;
-    else out[k] = v;
-  }
-  return out;
+  return ini.parse(text);
 }
 
 export function stringifyIni(data: unknown): string {
-  const o = (data ?? {}) as Record<string, unknown>;
-  const lines: string[] = [];
-  const scalars = Object.entries(o).filter(([, v]) => v === null || typeof v !== "object");
-  const sections = Object.entries(o).filter(
-    ([, v]) => !!v && typeof v === "object" && !Array.isArray(v),
-  );
-  scalars.forEach(([k, v]) => lines.push(`${k}=${v ?? ""}`));
-  sections.forEach(([k, v]) => {
-    lines.push(`[${k}]`);
-    const flat = flatten(v as Record<string, unknown>);
-    Object.entries(flat).forEach(([fk, fv]) => lines.push(`${fk}=${fv ?? ""}`));
-  });
-  return lines.join("\n");
+  return ini.stringify((data ?? {}) as Record<string, unknown>);
 }
 
-/* ---------------- Properties ---------------- */
+/* ---------------- Properties（Java properties，无成熟专用包，手写） ---------------- */
 export function parseProperties(text: string): unknown {
   const out: Record<string, string> = {};
   for (const line of text.split(/\r?\n/)) {
@@ -148,19 +93,26 @@ export function stringifyProperties(data: unknown): string {
     .join("\n");
 }
 
+/** 对象拍平为点号键；数组 / 对象值转 JSON 字符串（避免 "[object Object]"） */
 function flatten(obj: Record<string, unknown>, prefix = ""): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v && typeof v === "object" && !Array.isArray(v)) {
       Object.assign(out, flatten(v as Record<string, unknown>, prefix + k + "."));
     } else {
-      out[prefix + k] = v === null ? "" : String(v);
+      out[prefix + k] = toText(v);
     }
   }
   return out;
 }
 
-/* ---------------- XML ---------------- */
+function toText(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+/* ---------------- XML（fast-xml-parser） ---------------- */
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -188,7 +140,7 @@ export function parseText(text: string, format: Format): unknown {
     case "json":
       return normalize(JSON.parse(text));
     case "yaml":
-      return normalize(YAML.parse(text));
+      return normalize(yamlLoad(text));
     case "xml":
       return normalize(parseXml(text));
     case "csv":
@@ -205,7 +157,7 @@ export function stringifyData(data: unknown, format: Format): string {
     case "json":
       return JSON.stringify(data, null, 2);
     case "yaml":
-      return YAML.stringify(data);
+      return yamlDump(data, { lineWidth: -1, noRefs: true });
     case "xml":
       return stringifyXml(data);
     case "csv":

@@ -1779,6 +1779,15 @@ a.module:hover {
   }
 }
 /* ---------- 通用工具页 ---------- */
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+.tool-row .spacer {
+  flex: 1;
+}
 .textarea {
   width: 100%;
   resize: vertical;
