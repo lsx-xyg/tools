@@ -7,7 +7,7 @@ import { tools, GITHUB_REPO } from "@/lib/tools";
 import { Brand } from "./brand";
 import { useTheme } from "./theme-provider";
 import { SearchPalette } from "./search-palette";
-import { IconBase64, IconChevronsLeft, IconChevronsRight, IconCron, IconGithub, IconHome, IconJson, IconMenu, IconMoon, IconPlus, IconQr, IconSearch, IconSun, IconTransfer, IconX } from "./icons";
+import { IconBase64, IconChevronsLeft, IconChevronsRight, IconCron, IconGithub, IconHome, IconJson, IconMenu, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTransfer, IconX } from "./icons";
 import { Button } from "@/components/ui/button";
 
 const ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
@@ -16,6 +16,7 @@ const ICONS: Record<string, (p: { width?: number; height?: number }) => React.Re
   base64: IconBase64,
   json: IconJson,
   cron: IconCron,
+  convert: IconRepeat,
 };
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {

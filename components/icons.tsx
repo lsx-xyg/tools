@@ -25,6 +25,7 @@ import {
   Plus,
   QrCode,
   RefreshCw,
+  Repeat,
   ScanLine,
   Search,
   Server,
@@ -110,6 +111,7 @@ export const IconSun = wrap(Sun);
 export const IconTransfer = wrap(ArrowLeftRight);
 export const IconTrash = wrap(Trash2);
 export const IconUpload = wrap(Upload);
+export const IconRepeat = wrap(Repeat);
 export const IconWifi = wrap(Wifi);
 export const IconX = wrap(X);
 export const IconZap = wrap(Zap);

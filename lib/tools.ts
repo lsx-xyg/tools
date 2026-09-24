@@ -1,6 +1,6 @@
 /** 工具注册表：新增工具 = 在这里加一项 + 加一个页面 */
 
-export type ToolId = "transfer" | "qr" | "base64" | "json" | "cron";
+export type ToolId = "transfer" | "qr" | "base64" | "json" | "cron" | "convert";
 
 export interface Tool {
   id: ToolId;
@@ -9,7 +9,7 @@ export interface Tool {
   tagline: string;
   description: string;
   path: string;
-  icon: "transfer" | "qr" | "base64" | "json" | "cron";
+  icon: "transfer" | "qr" | "base64" | "json" | "cron" | "convert";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -75,6 +75,18 @@ export const tools: Tool[] = [
     icon: "cron",
     lamp: "ok",
     tags: ["5 / 6 段", "下次执行", "本地时区"],
+  },
+  {
+    id: "convert",
+    index: "T-06",
+    name: "格式互转",
+    tagline: "YAML / XML / CSV / INI ↔ JSON",
+    description:
+      "把 YAML、XML、CSV、INI、Properties 等格式统一解析成 JSON，再输出成任意目标格式。双向互转、纯本地运行，不经过服务器。",
+    path: "/tools/convert",
+    icon: "convert",
+    lamp: "ok",
+    tags: ["YAML", "XML", "CSV", "INI", "Properties"],
   },
 ];
 
