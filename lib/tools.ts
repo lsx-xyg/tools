@@ -15,7 +15,10 @@ export type ToolId =
   | "text"
   | "url"
   | "jwt"
-  | "file-hash";
+  | "file-hash"
+  | "device-info"
+  | "case"
+  | "mime";
 
 export interface Tool {
   id: ToolId;
@@ -39,7 +42,10 @@ export interface Tool {
     | "text"
     | "url"
     | "jwt"
-    | "file-hash";
+    | "file-hash"
+    | "device-info"
+    | "case"
+    | "mime";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -225,6 +231,42 @@ export const tools: Tool[] = [
     icon: "file-hash",
     lamp: "ok",
     tags: ["文件摘要", "完整性校验", "拖拽"],
+  },
+  {
+    id: "device-info",
+    index: "T-16",
+    name: "设备信息",
+    tagline: "屏幕 / 系统 / 浏览器环境",
+    description:
+      "读取当前设备的屏幕尺寸、像素密度、操作系统、浏览器、语言、时区、在线状态、CPU 核数等信息，窗口或网络变化时自动刷新。全部本地读取，不上传。",
+    path: "/tools/device-info",
+    icon: "device-info",
+    lamp: "ok",
+    tags: ["屏幕", "系统", "浏览器", "环境"],
+  },
+  {
+    id: "case",
+    index: "T-17",
+    name: "Case converter",
+    tagline: "大小写与命名风格转换",
+    description:
+      "把文本转换成 UPPERCASE / lowercase / Title Case / camelCase / PascalCase / snake_case / kebab-case / CONSTANT_CASE / dot.case 等 10 种格式，实时预览一键复制。",
+    path: "/tools/case",
+    icon: "case",
+    lamp: "ok",
+    tags: ["camelCase", "snake_case", "kebab-case", "命名风格"],
+  },
+  {
+    id: "mime",
+    index: "T-18",
+    name: "MIME types",
+    tagline: "MIME ↔ 扩展名互查",
+    description:
+      "查询 MIME 类型对应的文件扩展名（如 image/png → .png），或反向由扩展名查 MIME。内置常用类型表，支持关键词搜索。",
+    path: "/tools/mime",
+    icon: "mime",
+    lamp: "ok",
+    tags: ["MIME", "扩展名", "双向查询"],
   },
 ];
 
