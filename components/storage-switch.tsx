@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconDatabase, IconKey, IconX } from "./icons";
+
+const noopSubscribe = () => () => {};
 
 type Backend = "kv" | "redis";
 
@@ -20,6 +23,8 @@ export function StorageSwitch() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  // SSR 阶段没有 document，portal 只渲染在客户端
+  const isClient = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   // 键盘连敲 "tools" 呼出小按钮（忽略表单输入）
   useEffect(() => {
@@ -106,7 +111,8 @@ export function StorageSwitch() {
     }
   }
 
-  return (
+  // Portal 到 body：避免被页面的 transform 容器（.fade-rise 动画）破坏 fixed 全屏定位
+  const node = (
     <>
       {showBtn && (
         <button
@@ -122,7 +128,7 @@ export function StorageSwitch() {
 
       {open && (
         <div className="modal-scrim" onClick={() => setOpen(false)}>
-          <div className="modal fade-rise" role="dialog" aria-modal="true" aria-label="存储后端切换" onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-pop" role="dialog" aria-modal="true" aria-label="存储后端切换" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <span className="label">
                 <span className={`lamp ${backend === "redis" ? "ok" : ""}`} aria-hidden="true" />
@@ -196,4 +202,7 @@ export function StorageSwitch() {
       )}
     </>
   );
+
+  if (!isClient) return null;
+  return createPortal(node, document.body);
 }

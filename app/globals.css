@@ -990,7 +990,7 @@ a.module:hover {
   height: 44px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--bg-card);
+  background: var(--bg-elev);
   color: var(--ink-2);
   box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
   cursor: pointer;
@@ -1012,9 +1012,7 @@ a.module:hover {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgb(0 0 0 / 0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgb(0 0 0 / 0.4);
 }
 .modal {
   width: 100%;
@@ -1022,8 +1020,21 @@ a.module:hover {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  background: var(--bg-card);
-  box-shadow: 0 24px 80px rgb(0 0 0 / 0.35);
+  background: var(--bg-elev);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.16);
+}
+.modal-pop {
+  animation: modal-pop 0.28s var(--ease-out);
+}
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .modal-head {
   display: flex;
