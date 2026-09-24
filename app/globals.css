@@ -576,6 +576,11 @@ kbd {
   align-items: center;
   gap: 5px;
 }
+.lede-chip > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 .lede-chip svg {
   width: 12px;
   height: 12px;
