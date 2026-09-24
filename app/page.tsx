@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GITHUB_REPO, soonTools, tools } from "@/lib/tools";
+import { SettingsStorage } from "@/components/settings-storage";
 import {
   IconBolt,
   IconChevronRight,
@@ -91,6 +92,9 @@ export default function Home() {
           </div>
         ))}
       </div>
+
+      <div className="section-label label">系统</div>
+      <SettingsStorage />
 
       <footer className="footer-strip">
         <span>
