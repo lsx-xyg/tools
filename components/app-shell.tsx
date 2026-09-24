@@ -10,7 +10,7 @@ import { SearchPalette } from "./search-palette";
 import { IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck, IconFileDiff, IconFileType, IconFingerprint, IconGithub, IconHash, IconHome, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
 import { Button } from "@/components/ui/button";
 
-const ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
+export const ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
   transfer: IconTransfer,
   qr: IconQr,
   base64: IconBase64,

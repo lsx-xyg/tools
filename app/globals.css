@@ -2563,3 +2563,31 @@ mark.re-match {
 .mime-chip .count-hint {
   margin-left: auto;
 }
+
+/* ---------- MIME 类型表滚动 ---------- */
+.mime-list {
+  scrollbar-width: none;
+}
+.mime-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- MIME chip 复制态 ---------- */
+.chip-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--ok, #2e7d32);
+  flex-shrink: 0;
+}
+.chip-copy {
+  margin-left: auto;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  transition: color 0.2s var(--ease-out);
+}
+.mime-chip:hover .chip-copy {
+  color: var(--accent-strong);
+}

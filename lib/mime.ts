@@ -103,8 +103,8 @@ export function lookupMime(input: string): { mime: string; exts: string[] }[] {
 
 export function searchTable(q: string): { mime: string; exts: string[] }[] {
   const s = q.trim().toLowerCase();
-  if (!s) return [];
+  if (!s) return TABLE.map((e) => ({ mime: e.mime, exts: [...e.exts] }));
   return TABLE.filter(
     (e) => e.mime.includes(s) || e.exts.some((x) => x.includes(s.replace(/^\./, ""))),
-  );
+  ).map((e) => ({ mime: e.mime, exts: [...e.exts] }));
 }

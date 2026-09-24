@@ -4,17 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { tools, soonTools } from "@/lib/tools";
-import { IconSearch, IconQr, IconBase64, IconJson, IconCron, IconTransfer, IconHome } from "./icons";
+import { IconSearch, IconHome } from "./icons";
+import { ICONS } from "./app-shell";
 
 const noopSubscribe = () => () => {};
-
-const RESULT_ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
-  transfer: IconTransfer,
-  qr: IconQr,
-  base64: IconBase64,
-  json: IconJson,
-  cron: IconCron,
-};
 
 interface Entry {
   key: string;
@@ -155,7 +148,7 @@ export function SearchPalette() {
             </li>
           )}
           {results.map(({ e }, i) => {
-            const Tag = e.key === "home" ? IconHome : RESULT_ICONS[e.key];
+            const Tag = e.key === "home" ? IconHome : ICONS[e.key];
             return (
               <li key={e.key}>
                 <button
