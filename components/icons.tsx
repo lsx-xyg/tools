@@ -210,3 +210,13 @@ export const IconScan = (p: P) => (
     <path d="M3 12h18" />
   </svg>
 );
+
+/** 钥匙（密码） */
+export const IconKey = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="M10.85 12.15 19 4" />
+    <path d="M17 6l2 2" />
+    <path d="M14 9l2 2" />
+  </svg>
+);

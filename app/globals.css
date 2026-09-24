@@ -977,6 +977,60 @@ a.module:hover {
   font-size: 13px;
 }
 
+/* ---------- 存储后端设置卡 ---------- */
+.settings-panel {
+  margin-top: 4px;
+}
+.settings-panel .panel-title {
+  margin-bottom: 14px;
+}
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 22px;
+}
+@media (max-width: 900px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.settings-backend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.backend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  transition: border-color 0.25s var(--ease), color 0.25s var(--ease);
+}
+.backend-pill.active {
+  border-color: var(--accent);
+  color: var(--ink-1);
+}
+.tag-now {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+.settings-actions {
+  min-width: 0;
+}
+.settings-actions .input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
 /* ---------- Transfer grid ---------- */
 .transfer-grid {
   display: grid;

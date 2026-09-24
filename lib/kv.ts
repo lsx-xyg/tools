@@ -1,13 +1,59 @@
 /**
  * 存储抽象层：
+ * - 键值后端可切换：Cloudflare KV（默认）或 Redis（Upstash REST，需配置 REDIS_URL/REDIS_TOKEN）
  * - 生产（Cloudflare Workers）：KV / R2 绑定（经 getCloudflareContext 获取）
  * - 本地开发（next dev）：内存 Map + 本地文件目录 .local-store/
  * 内容语义保持一致，让前后端流程可在本地完整跑通。
+ *
+ * 「当前用哪个后端」的开关存在 KV 本身（key: config:storage，值 "kv" | "redis"），
+ * 带 30s 模块级缓存；切换请求会主动失效缓存。
  */
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { redisStoreFromEnv } from "./redis-store";
+
+/** 存储后端开关的 KV key + 缓存 TTL */
+export const CONFIG_STORAGE_KEY = "config:storage";
+
+export type StorageBackend = "kv" | "redis";
+
+let backendCache: { backend: StorageBackend; at: number } | null = null;
+const BACKEND_CACHE_TTL = 30_000;
+
+export function invalidateBackendCache(): void {
+  backendCache = null;
+}
+
+/**
+ * 配置专用 KV：读写「存储后端开关 + 切换密码哈希」，
+ * 始终指向绑定 KV（或本地内存 KV），不随后端切换变化——
+ * 否则切到 Redis 后就读不到密码/开关了。
+ */
+let configKvCache: KvLike | null = null;
+
+export async function getConfigKv(): Promise<KvLike> {
+  if (configKvCache) return configKvCache;
+  const b = await tryBindings();
+  configKvCache = b ? b.kv : (localKv ??= new LocalKv());
+  return configKvCache;
+}
+
+export async function readBackendConfig(kv: KvLike): Promise<StorageBackend> {
+  if (backendCache && Date.now() - backendCache.at < BACKEND_CACHE_TTL) {
+    return backendCache.backend;
+  }
+  let backend: StorageBackend = "kv";
+  try {
+    const raw = await kv.get(CONFIG_STORAGE_KEY);
+    if (raw === "redis") backend = "redis";
+  } catch {
+    backend = "kv";
+  }
+  backendCache = { backend, at: Date.now() };
+  return backend;
+}
 
 export interface KvLike {
   get(key: string): Promise<string | null>;
@@ -172,10 +218,25 @@ export async function getStorage(): Promise<{
   obj: ObjectLike | null;
   rawR2: WorkersEnv["TRANSFER_R2"] | null;
   isLocal: boolean;
+  backend: StorageBackend;
 }> {
   const b = await tryBindings();
-  if (b) return { kv: b.kv, obj: b.obj, rawR2: b.rawR2, isLocal: false };
+  if (b) {
+    const backend = await readBackendConfig(b.kv);
+    if (backend === "redis") {
+      const rk = redisStoreFromEnv();
+      if (rk) return { kv: rk, obj: b.obj, rawR2: b.rawR2, isLocal: false, backend: "redis" };
+      // Redis 未配置环境变量 → 回退 KV
+      return { kv: b.kv, obj: b.obj, rawR2: b.rawR2, isLocal: false, backend: "kv" };
+    }
+    return { kv: b.kv, obj: b.obj, rawR2: b.rawR2, isLocal: false, backend: "kv" };
+  }
   localKv ??= new LocalKv();
   localObj ??= new LocalObjectStore();
-  return { kv: localKv, obj: localObj, rawR2: null, isLocal: true };
+  const backend = await readBackendConfig(localKv);
+  if (backend === "redis") {
+    const rk = redisStoreFromEnv();
+    if (rk) return { kv: rk, obj: localObj, rawR2: null, isLocal: true, backend: "redis" };
+  }
+  return { kv: localKv, obj: localObj, rawR2: null, isLocal: true, backend };
 }

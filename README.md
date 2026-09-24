@@ -100,9 +100,28 @@ npm run deploy
 | POST | `/api/rtc/:code/answer` | 接收方提交 SDP answer |
 | POST | `/api/rtc/:code/candidate` | 提交 ICE candidate（body `{ role, sdp, seq }`，seq 为单调递增序号） |
 | DELETE | `/api/rtc/:code` | 关闭信令房间 |
+| GET | `/api/settings/storage` | 查询存储后端（kv/redis）与密码状态 |
+| POST | `/api/settings/storage` | 切换后端 / 设置修改密码（见下方「存储后端切换」） |
 
 > 在线直传原理：浏览器 WebRTC 点对点直连，信令仅中转 SDP/ICE 不承载内容；
 > 文件/文本只在两台设备间传输，服务器不落盘。
+
+## 存储后端切换（KV / Redis）
+
+默认使用 Cloudflare KV；可一键切到 Redis（Upstash），用于降低 KV 免费额度消耗或做信令加速。
+
+- **为什么是 Upstash REST**：Cloudflare Workers 免费计划没有 TCP 出站（`connect()` 仅付费），
+  Upstash 提供 HTTPS REST 接口（标准 Redis 命令走 URL），免费计划可直接调用。
+- **启用 Redis**：部署环境变量配置两个值后，首页「存储后端 · 管理员」卡片即可切换：
+  - `REDIS_URL`：Upstash REST 端点，如 `https://xxx.upstash.io`
+  - `REDIS_TOKEN`：Upstash 访问令牌
+- **切换密码**：优先读环境变量 `STORAGE_SWITCH_PASSWORD`（可直接配置）；
+  未配置时可在网页首次「设置密码」（≥6 位，SHA-256 哈希存绑定 KV 的 `config:storage_password`）。
+  切换后端必须输入正确密码。
+- **开关存储位置**：`config:storage`（值 `kv`/`redis`）存在绑定 KV 中，带 30s 模块缓存；
+  密码与开关不随后端切换变化，始终可读。
+- 切换 Redis 后：P2P 信令与离线传输元数据都走 Redis；离线**文件内容仍存 R2**（Redis 不适合存大文件）。
+- 未配置 REDIS_URL/REDIS_TOKEN 时切换到 Redis 会返回明确错误（防止伪切换）。
 
 ## 限额
 
