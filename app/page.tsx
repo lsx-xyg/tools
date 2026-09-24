@@ -27,7 +27,7 @@ export default function Home() {
           </span>
           <span className="chip">
             <IconServer width={12} height={12} />
-            24h 自动清除
+            到期自动清除
           </span>
           <span className="chip">
             <IconClock width={12} height={12} />
@@ -100,7 +100,7 @@ export default function Home() {
             GitHub
           </a>
         </span>
-        <span>数据 24 小时后自动销毁</span>
+        <span>数据到期自动销毁</span>
         <span>由 Cloudflare Workers 驱动</span>
       </footer>
     </div>

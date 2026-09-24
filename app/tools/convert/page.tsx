@@ -75,7 +75,7 @@ export default function ConvertPage() {
     <div className="fade-rise">
       <ToolHead
         title="格式互转"
-        lede="YAML · XML · CSV · INI · Properties ↔ JSON，统一解析再输出"
+        lede="YAML · XML · CSV · INI · TOML · Properties ↔ JSON，统一解析再输出"
         chip={
           <span>
             <IconShield width={12} height={12} />

@@ -30,9 +30,9 @@
 	// 未设置该 secret 时全站拒绝访问（安全兜底，不会裸奔）
 	"kv_namespaces": [
 		{
-			// 离线传输记录 + P2P 信令（SDP/ICE）存储，内容 24h 内自动清除
+			// 离线传输记录 + P2P 信令（SDP/ICE）存储，内容到期自动清除
 			// 部署前执行: npx wrangler kv namespace create TRANSFER_KV
-			// 然后把返回的 id 填到这里
+			// 然后把返回的 id 填到这里（请勿提交真实 id）
 			"binding": "TRANSFER_KV",
 			"id": "TRANSFER_KV_ID_PLACEHOLDER"
 		}

@@ -62,11 +62,11 @@ export const tools: Tool[] = [
     name: "文本 / 文件互传",
     tagline: "跨设备直传，凭提取码取回",
     description:
-      "在线模式设备间点对点直传，文件不经过服务器；离线模式云端暂存 24 小时后自动清除。发送文本或文件，获得 6 位提取码，另一台设备扫码或输码即可取回。",
+      "在线模式设备间点对点直传，文件不经过服务器；离线模式云端暂存，保留时长与下载次数可自定义，到期自动清除。发送文本或文件，获得 6 位提取码，另一台设备扫码或输码即可取回。",
     path: "/tools/transfer",
     icon: "transfer",
     lamp: "ok",
-    tags: ["在线直传", "免登录", "24h 自动清除"],
+    tags: ["在线直传", "免登录", "到期即焚"],
   },
   {
     id: "qr",
@@ -215,10 +215,10 @@ export const tools: Tool[] = [
   {
     id: "jwt",
     index: "T-14",
-    name: "JWT 解析",
-    tagline: "解码 Header / Payload",
+    name: "JWT 解析 / 生成",
+    tagline: "解码 / 签名验证 / 生成",
     description:
-      "粘贴 JWT 自动解码 Header 与 Payload（UTF-8 安全），查看签名与过期时间剩余。仅本地解析，不校验签名。",
+      "粘贴 JWT 自动解码 Header 与 Payload，支持 HS / RS / ES / PS 系列签名验证与重新生成，密钥支持 String / Hex / Base64 / PEM / JWK。全部本地完成，不上传。",
     path: "/tools/jwt",
     icon: "jwt",
     lamp: "ok",
