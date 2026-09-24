@@ -93,8 +93,23 @@ export async function createRtcRoom(): Promise<{ code: string; mode: "rtc" }> {
   return j(await fetch("/api/rtc", { method: "POST" }));
 }
 
-export async function getRtcRoom(code: string): Promise<RtcRoomState | null> {
-  const res = await fetch(`/api/rtc/${code}`);
+export interface RtcRoomState {
+  code: string;
+  version: number;
+  changed: boolean;
+  offer?: { sdp: string };
+  answer?: { sdp: string };
+  candidates: { sender: string[]; receiver: string[] };
+  expiresAt: number;
+}
+
+/**
+ * 轮询房间状态。带 lastVersion 时服务端在版本未变的情况下只做 1 次 KV read
+ * 即返回（changed=false），显著降低空闲轮询的 KV 请求量。
+ */
+export async function getRtcRoom(code: string, lastVersion?: number): Promise<RtcRoomState | null> {
+  const q = lastVersion !== undefined && lastVersion >= 0 ? `?since=${lastVersion}` : "";
+  const res = await fetch(`/api/rtc/${code}${q}`);
   if (res.status === 404 || res.status === 410) return null;
   return j<RtcRoomState>(res);
 }

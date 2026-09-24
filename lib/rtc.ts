@@ -35,7 +35,7 @@ export interface RtcRoomState {
 }
 
 export type RoomResult =
-  | { ok: true; room: RtcRoomState }
+  | { ok: true; changed: boolean; room: RtcRoomState }
   | { ok: false; reason: "not_found" | "expired" | "conflict" };
 
 export type WriteResult =
@@ -88,13 +88,29 @@ export async function createRoom(code: string): Promise<RtcRoomMeta> {
   return meta;
 }
 
-export async function getRoom(code: string): Promise<RoomResult> {
+export async function getRoom(code: string, sinceVersion?: number): Promise<RoomResult> {
   const { kv } = await getStorage();
   const meta = await metaOf(kv, code);
   if (!meta) return { ok: false, reason: "not_found" };
   if (Date.now() >= meta.expiresAt) {
     await deleteRoom(code);
     return { ok: false, reason: "expired" };
+  }
+
+  // 客户端带 lastVersion 轮询：版本未变说明信令无新增，
+  // 直接返回，省掉 list + 多次 get（空闲轮询从 ~6 次降到 1 次 read）。
+  if (sinceVersion !== undefined && meta.version === sinceVersion) {
+    return {
+      ok: true,
+      changed: false,
+      room: {
+        code,
+        version: meta.version,
+        candidates: { sender: [], receiver: [] },
+        createdAt: meta.createdAt,
+        expiresAt: meta.expiresAt,
+      },
+    };
   }
 
   const keys = await kv.list(P(code));
@@ -122,6 +138,7 @@ export async function getRoom(code: string): Promise<RoomResult> {
 
   return {
     ok: true,
+    changed: true,
     room: {
       code,
       version: meta.version,

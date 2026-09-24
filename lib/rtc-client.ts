@@ -47,7 +47,7 @@ export interface RtcHooks {
   onFiles?(files: ReceivedFile[]): void;
 }
 
-const POLL_MS = 350;
+const POLL_MS = 1000;
 const CHUNK = 16 * 1024;
 const BUFFER_HIGH = 512 * 1024;
 
@@ -70,17 +70,27 @@ export function startSender(
   let remoteDescSet = false;
   let candSeq = 0;
   let lastReceiverCount = 0;
+  let lastVersion = -1;
+  const startedAt = Date.now();
   const pendingCandidates: RTCIceCandidateInit[] = [];
 
   async function poll() {
-    if (cancelled) return;
+    if (cancelled || completed) return;
+    // 发送端也要超时：对方一直不加入时停止轮询并清理房间，避免后台空转消耗 KV
+    if (Date.now() - startedAt > LIMITS.rtcConnectTimeoutMs) {
+      fail("等待对方加入超时，请重试");
+      return;
+    }
     let room = null;
     try {
-      room = await getRtcRoom(code);
+      // 带 lastVersion：版本未变时服务端只做 1 次 KV read，不 list 不逐 key get
+      room = await getRtcRoom(code, lastVersion);
     } catch {
       return;
     }
     if (!room) return;
+    if (!room.changed) return;
+    lastVersion = room.version;
 
     // 新 answer → 设置远端描述
     if (room.answer && !remoteDescSet && pc) {
@@ -141,6 +151,8 @@ export function startSender(
 
       dc.onopen = () => {
         if (cancelled || completed) return;
+        // 连接已建立：停止信令轮询（此后不再有 KV 请求）
+        if (pollTimer) clearInterval(pollTimer);
         hooks.onPhase("transferring");
         void sendPayload(dc, payload, hooks, () => cancelled, () => {
           payloadSent = true;
@@ -294,22 +306,25 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
   let candSeq = 0;
   let lastSenderCount = 0;
   let offerSeen = false;
+  let lastVersion = -1;
   const pendingCandidates: RTCIceCandidateInit[] = [];
   const startedAt = Date.now();
 
   async function poll() {
-    if (cancelled) return;
+    if (cancelled || finished) return;
     if (Date.now() - startedAt > LIMITS.rtcConnectTimeoutMs) {
       fail("等待发送方超时，请确认对方仍在传输页面");
       return;
     }
     let room = null;
     try {
-      room = await getRtcRoom(code);
+      room = await getRtcRoom(code, lastVersion);
     } catch {
       return;
     }
     if (!room) return;
+    if (!room.changed) return;
+    lastVersion = room.version;
 
     // 收到 offer → 创建 answer
     if (room.offer && !offerSeen && !pc) {
@@ -459,6 +474,8 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       if (pc.connectionState === "connected") {
+        // 连接已建立：停止信令轮询（此后不再有 KV 请求）
+        if (pollTimer) clearInterval(pollTimer);
         hooks.onPhase("transferring");
       } else if (pc.connectionState === "failed") {
         if (finished) {

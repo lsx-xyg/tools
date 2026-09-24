@@ -8,12 +8,14 @@ type Params = { params: Promise<{ code: string }> };
  * GET /api/rtc/:code — 轮询房间状态（发送方/接收方信令同步）
  * DELETE /api/rtc/:code — 关闭房间
  */
-export async function GET(_req: NextRequest, { params }: Params) {
+export async function GET(req: NextRequest, { params }: Params) {
   const { code } = await params;
   if (!isCode(code)) {
     return NextResponse.json({ error: "提取码格式不正确" }, { status: 400 });
   }
-  const res = await getRoom(code);
+  const since = Number(req.nextUrl.searchParams.get("since") ?? NaN);
+  const sinceVersion = Number.isInteger(since) && since >= 0 ? since : undefined;
+  const res = await getRoom(code, sinceVersion);
   if (!res.ok) {
     const status = res.reason === "expired" ? 410 : 404;
     return NextResponse.json({ error: res.reason }, { status });
@@ -21,6 +23,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   return NextResponse.json({
     code: res.room.code,
     version: res.room.version,
+    changed: res.changed,
     offer: res.room.offer,
     answer: res.room.answer,
     candidates: res.room.candidates,
