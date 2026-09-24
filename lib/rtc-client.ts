@@ -1,6 +1,11 @@
 /**
  * 在线 P2P 传输客户端（WebRTC DataChannel）
  * 信令经 /api/rtc/* 中转（只传 SDP/ICE，不传内容），内容在两端设备间直传。
+ *
+ * 消费策略：数据驱动（不再依赖服务端 version 去重）——
+ * 每次轮询拿到的完整房间状态里，用「本端已消费的候选数量」取增量，
+ * offer/answer 用一次性标志；候选在远端描述就绪前先排队。
+ * 这样即使 KV 最终一致性导致某次轮询数据缺失，下一次轮询也能补上。
  */
 
 import {
@@ -55,11 +60,13 @@ export function startSender(
   hooks: RtcHooks,
 ): SenderSession {
   let cancelled = false;
+  let completed = false;
   let pc: RTCPeerConnection | null = null;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let remoteDescSet = false;
+  let candSeq = 0;
+  let lastReceiverCount = 0;
   const pendingCandidates: RTCIceCandidateInit[] = [];
-  let lastVersion = 0;
 
   async function poll() {
     if (cancelled) return;
@@ -70,8 +77,6 @@ export function startSender(
       return;
     }
     if (!room) return;
-    if (room.version === lastVersion) return;
-    lastVersion = room.version;
 
     // 新 answer → 设置远端描述
     if (room.answer && !remoteDescSet && pc) {
@@ -82,23 +87,24 @@ export function startSender(
         fail("建立连接失败，请重试");
         return;
       }
-      // 补投排队中的远端候选
       for (const c of pendingCandidates.splice(0)) {
         pc.addIceCandidate(c).catch(() => {});
       }
       hooks.onPhase("connecting");
     }
-    // 新接收方候选 → 逐个 addIceCandidate
-    if (pc && remoteDescSet && room.candidates.receiver.length) {
-      for (const sdp of room.candidates.receiver) {
+    // 新接收方候选 → 取增量逐个添加
+    const rc = room.candidates.receiver;
+    if (pc && rc.length > lastReceiverCount) {
+      for (let i = lastReceiverCount; i < rc.length; i++) {
         try {
-          await pc.addIceCandidate(JSON.parse(sdp));
+          const cand = JSON.parse(rc[i]) as RTCIceCandidateInit;
+          if (!remoteDescSet) pendingCandidates.push(cand);
+          else pc.addIceCandidate(cand).catch(() => {});
         } catch {
           /* ignore */
         }
       }
-      // 防止重复添加：记录已消费的版本即可，这里依赖 version 变化
-      room.candidates.receiver.length = 0;
+      lastReceiverCount = rc.length;
     }
   }
 
@@ -130,18 +136,27 @@ export function startSender(
       dc.binaryType = "arraybuffer";
 
       dc.onopen = () => {
-        if (cancelled) return;
+        if (cancelled || completed) return;
         hooks.onPhase("transferring");
-        void sendPayload(dc, payload, hooks, () => cancelled);
+        void sendPayload(dc, payload, hooks, () => cancelled, () => {
+          completed = true;
+        });
       };
       dc.onclose = () => {
         if (!cancelled) cleanup(true);
       };
-      dc.onerror = () => fail("连接中断，请重试");
+      dc.onerror = () => {
+        if (completed) {
+          cleanup(true);
+          return;
+        }
+        fail("连接中断，请重试");
+      };
 
       pc.onicecandidate = (e) => {
         if (cancelled || !e.candidate) return;
-        void postRtcCandidate(code, "sender", JSON.stringify(e.candidate.toJSON())).catch(
+        const seq = candSeq++;
+        void postRtcCandidate(code, "sender", JSON.stringify(e.candidate.toJSON()), seq).catch(
           () => {},
         );
       };
@@ -149,8 +164,13 @@ export function startSender(
         if (!pc) return;
         const s = pc.connectionState;
         if (s === "connected") {
-          hooks.onPhase("transferring");
+          // 可能晚于 DataChannel onopen 派发，不得覆盖已完成状态
+          if (!completed) hooks.onPhase("transferring");
         } else if (s === "failed") {
+          if (completed) {
+            cleanup(true);
+            return;
+          }
           fail("无法建立点对点连接，可尝试切换到离线传输");
         }
       };
@@ -176,6 +196,7 @@ async function sendPayload(
   payload: { text?: string; files?: File[] },
   hooks: RtcHooks,
   isCancelled: () => boolean,
+  onComplete: () => void,
 ) {
   try {
     if (payload.text !== undefined && payload.text !== "") {
@@ -208,6 +229,7 @@ async function sendPayload(
       hooks.onProgress?.(total, total);
     }
     hooks.onPhase("done");
+    onComplete();
   } catch {
     hooks.onPhase("error", "传输失败，请重试");
   }
@@ -241,12 +263,14 @@ export interface ReceiverSession {
 
 export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
   let cancelled = false;
+  let finished = false;
   let pc: RTCPeerConnection | null = null;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let remoteDescSet = false;
-  const pendingCandidates: RTCIceCandidateInit[] = [];
-  let lastVersion = 0;
+  let candSeq = 0;
+  let lastSenderCount = 0;
   let offerSeen = false;
+  const pendingCandidates: RTCIceCandidateInit[] = [];
   const startedAt = Date.now();
 
   async function poll() {
@@ -262,8 +286,6 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
       return;
     }
     if (!room) return;
-    if (room.version === lastVersion) return;
-    lastVersion = room.version;
 
     // 收到 offer → 创建 answer
     if (room.offer && !offerSeen && !pc) {
@@ -285,20 +307,19 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
         return;
       }
     }
-    // 新发送方候选
-    if (pc && room.candidates.sender.length) {
-      for (const sdp of room.candidates.sender) {
+    // 新发送方候选 → 取增量
+    const sc = room.candidates.sender;
+    if (pc && sc.length > lastSenderCount) {
+      for (let i = lastSenderCount; i < sc.length; i++) {
         try {
-          if (!remoteDescSet) {
-            pendingCandidates.push(JSON.parse(sdp));
-          } else {
-            await pc.addIceCandidate(JSON.parse(sdp));
-          }
+          const cand = JSON.parse(sc[i]) as RTCIceCandidateInit;
+          if (!remoteDescSet) pendingCandidates.push(cand);
+          else pc.addIceCandidate(cand).catch(() => {});
         } catch {
           /* ignore */
         }
       }
-      room.candidates.sender.length = 0;
+      lastSenderCount = sc.length;
     }
   }
 
@@ -338,6 +359,7 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
               break;
             }
             case "done": {
+              finished = true;
               if (meta.mode === "text") {
                 hooks.onText?.(text);
                 hooks.onPhase("done");
@@ -346,7 +368,8 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
                 hooks.onFiles?.(list);
                 hooks.onPhase("done");
               }
-              void cleanup(true);
+              // 优雅收尾：稍等片刻让发送端观察到正常关闭，再拆除本端
+              setTimeout(() => cleanup(true), 800);
               break;
             }
           }
@@ -363,11 +386,18 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
       dc.onclose = () => {
         if (!cancelled) cleanup(true);
       };
-      dc.onerror = () => fail("连接中断，请重试");
+      dc.onerror = () => {
+        if (finished) {
+          cleanup(true);
+          return;
+        }
+        fail("连接中断，请重试");
+      };
     };
     pc.onicecandidate = (e) => {
       if (cancelled || !e.candidate) return;
-      void postRtcCandidate(code, "receiver", JSON.stringify(e.candidate.toJSON())).catch(
+      const seq = candSeq++;
+      void postRtcCandidate(code, "receiver", JSON.stringify(e.candidate.toJSON()), seq).catch(
         () => {},
       );
     };
@@ -376,6 +406,10 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
       if (pc.connectionState === "connected") {
         hooks.onPhase("transferring");
       } else if (pc.connectionState === "failed") {
+        if (finished) {
+          cleanup(true);
+          return;
+        }
         fail("无法建立点对点连接，可尝试让发送方改用离线传输");
       }
     };

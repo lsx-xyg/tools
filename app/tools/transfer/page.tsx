@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SendPanel } from "@/components/transfer/send-panel";
 import { ReceivePanel } from "@/components/transfer/receive-panel";
-import { IconBolt, IconChevronLeft, IconClock, IconServer, IconShield } from "@/components/icons";
+import { IconBolt, IconChevronLeft } from "@/components/icons";
 
 function TransferPageInner() {
   const sp = useSearchParams();
@@ -14,35 +14,20 @@ function TransferPageInner() {
 
   return (
     <div className="fade-rise">
-      <Link href="/" className="back-link">
-        <IconChevronLeft width={15} height={15} />
-        返回仪表台
-      </Link>
-      <header className="page-head">
+      <div className="transfer-head">
+        <Link href="/" className="back-link">
+          <IconChevronLeft width={15} height={15} />
+          仪表台
+        </Link>
         <h1>文本 / 文件互传</h1>
         <p className="lede">
-          在线模式：两台设备点对点直传，内容不经过服务器；离线模式：云端暂存 24
-          小时自动清除。发送端生成 6 位提取码，接收端输入提取码或扫码即可取回。
-        </p>
-        <div className="meta-chips">
-          <span className="chip accent">
+          在线直传不落服务器 · 离线 24h 自动清除 · 凭提取码或扫码取回
+          <span className="lede-chip">
             <IconBolt width={12} height={12} />
-            在线直传 · 不落服务器
+            在线 P2P
           </span>
-          <span className="chip">
-            <IconServer width={12} height={12} />
-            离线 24h 自动清除
-          </span>
-          <span className="chip">
-            <IconClock width={12} height={12} />
-            免登录
-          </span>
-          <span className="chip">
-            <IconShield width={12} height={12} />
-            免费
-          </span>
-        </div>
-      </header>
+        </p>
+      </div>
 
       <div className="transfer-grid">
         <SendPanel />

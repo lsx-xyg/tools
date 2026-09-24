@@ -108,11 +108,12 @@ export async function postRtcCandidate(
   code: string,
   role: "sender" | "receiver",
   sdp: string,
+  seq: number,
 ): Promise<void> {
   await j(await fetch(`/api/rtc/${code}/candidate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ role, sdp }),
+    body: JSON.stringify({ role, sdp, seq }),
   }));
 }
 

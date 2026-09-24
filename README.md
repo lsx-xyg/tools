@@ -86,8 +86,11 @@ npm run deploy
 | GET | `/api/rtc/:code` | 轮询信令状态 |
 | POST | `/api/rtc/:code/offer` | 发送方提交 SDP offer |
 | POST | `/api/rtc/:code/answer` | 接收方提交 SDP answer |
-| POST | `/api/rtc/:code/candidate` | 提交 ICE candidate |
+| POST | `/api/rtc/:code/candidate` | 提交 ICE candidate（body `{ role, sdp, seq }`，seq 为单调递增序号） |
 | DELETE | `/api/rtc/:code` | 关闭信令房间 |
+
+> 在线直传原理：浏览器 WebRTC 点对点直连，信令仅中转 SDP/ICE 不承载内容；
+> 文件/文本只在两台设备间传输，服务器不落盘。
 
 ## 限额
 
@@ -100,7 +103,7 @@ npm run deploy
 
 - 在线直传依赖 NAT 穿透（内置 Google/Cloudflare STUN）。极少数严格 NAT/防火墙网络无法建立 P2P 直连，此时请改用离线 24h 模式。
 - 离线传输内容为明文暂存，到期自动销毁，不保证对抗取证级安全。
-- KV 为最终一致性，跨地区信令偶尔可能延迟几百毫秒到数秒，轮询已做版本去重。
+- KV 为最终一致性，跨地区信令偶尔可能延迟几百毫秒到数秒，客户端按字段增量消费、本地去重。
 
 ## 路线图
 

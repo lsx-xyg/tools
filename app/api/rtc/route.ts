@@ -9,7 +9,7 @@ import { getStorage } from "@/lib/kv";
  */
 export async function POST(_req: NextRequest) {  // eslint-disable-line @typescript-eslint/no-unused-vars -- Next 路由签名
   const { kv } = await getStorage();
-  const code = await genUniqueCode(async (c) => (await kv.get(`rtc:${c}`)) !== null);
+  const code = await genUniqueCode(async (c) => (await kv.get(`rtc:${c}:meta`)) !== null);
   await createRoom(code);
   return NextResponse.json({ code, mode: "rtc" });
 }

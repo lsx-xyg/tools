@@ -87,7 +87,8 @@ export function ReceivePanel({ autoJoin }: { autoJoin?: { mode?: string; code?: 
   const hooks = useMemo(
     () => ({
       onPhase(p: RtcPhase, d?: string) {
-        if (p === "looking" || p === "connecting") setPhase("connecting");
+        if (p === "looking") setPhase("probing");
+        else if (p === "connecting") setPhase("connecting");
         else if (p === "transferring") setPhase("transferring");
         else if (p === "done") setPhase("done");
         else if (p === "error") {
@@ -187,6 +188,10 @@ export function ReceivePanel({ autoJoin }: { autoJoin?: { mode?: string; code?: 
         <span className="right label">T-01 · RX</span>
       </div>
       <div className="panel-body">
+        <div
+          className="panel-swap"
+          key={`rx-${phase}-${detail?.code ?? "none"}-${rtcFiles.length}`}
+        >
         {phase === "idle" || phase === "probing" ? (
           <>
             <div className="field">
@@ -362,6 +367,7 @@ export function ReceivePanel({ autoJoin }: { autoJoin?: { mode?: string; code?: 
             </button>
           </div>
         )}
+        </div>
       </div>
     </section>
   );

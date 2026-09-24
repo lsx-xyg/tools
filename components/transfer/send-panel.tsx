@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   createFileTransfer,
@@ -36,11 +36,52 @@ type SendMode = "rtc" | "offline";
 type ContentMode = "text" | "file";
 type Phase = "idle" | "creating" | "waiting" | "connecting" | "transferring" | "done" | "error";
 
+/** 分段控件：滑动指示块随激活项移动，切换有连续感 */
+function Seg({
+  value,
+  onChange,
+  disabled,
+  ariaLabel,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+  children: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement>>[];
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState({ left: 3, width: 0 });
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const active = wrap.querySelector<HTMLButtonElement>("button[data-active='true']");
+    if (!active) return;
+    const wr = wrap.getBoundingClientRect();
+    const ar = active.getBoundingClientRect();
+    setThumb({ left: ar.left - wr.left, width: ar.width });
+  }, [value]);
+  return (
+    <div className="seg" ref={wrapRef} role="group" aria-label={ariaLabel}>
+      <span className="seg-thumb" style={{ left: thumb.left, width: thumb.width }} aria-hidden="true" />
+      {React.Children.map(children, (child) =>
+        React.cloneElement(child as React.ReactElement<Record<string, unknown>>, {
+          "data-active": child.props.value === value,
+          onClick: () => {
+            if (!disabled && child.props.value !== value) onChange(String(child.props.value));
+          },
+          disabled,
+        }),
+      )}
+    </div>
+  );
+}
+
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [ok, setOk] = useState(false);
   return (
     <button
-      className={`btn ${ok ? "btn-ghost" : "btn-ghost"}`}
+      className="btn btn-ghost"
       onClick={async () => {
         const done = await copyText(text);
         if (done) {
@@ -73,11 +114,11 @@ function ReadyView({
   const link = mode === "rtc" ? rtcLink(code) : offlineLink(code);
   const cd = useCountdown(expiresAt ?? 0);
   return (
-    <div className="rtc-sender-state fade-rise">
+    <div className="rtc-sender-state">
       <span className="label">{mode === "rtc" ? "连接提取码" : "提取码"}</span>
       <CodeDisplay code={code} accent />
       <div className="qr-wrap">
-        <QRCodeSVG value={link} size={148} level="M" marginSize={0} />
+        <QRCodeSVG value={link} size={128} level="M" marginSize={0} />
       </div>
       <div className="state-line">
         <IconLink width={14} height={14} />
@@ -144,6 +185,7 @@ export function SendPanel() {
   const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null);
   const senderRef = useRef<{ cancel(): void } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
 
   const chars = countChars(text);
   const textOver = chars > LIMITS.textMaxChars;
@@ -158,6 +200,7 @@ export function SendPanel() {
   const reset = useCallback(() => {
     senderRef.current?.cancel();
     senderRef.current = null;
+    doneRef.current = false;
     setPhase("idle");
     setCode("");
     setError("");
@@ -167,10 +210,16 @@ export function SendPanel() {
   }, [sendMode, contentMode]);
 
   const onRtcPhase = useCallback((p: RtcPhase, detail?: string) => {
+    if (p === "done") {
+      doneRef.current = true;
+      setPhase("done");
+      return;
+    }
+    // 完成后忽略任何迟到的中间态回调，防止覆盖完成态
+    if (doneRef.current) return;
     if (p === "waiting") setPhase("waiting");
     else if (p === "connecting") setPhase("connecting");
     else if (p === "transferring") setPhase("transferring");
-    else if (p === "done") setPhase("done");
     else if (p === "error") {
       setPhase("error");
       setError(detail || "传输失败，请重试");
@@ -238,15 +287,24 @@ export function SendPanel() {
     });
   }
 
+  function resetSession() {
+    senderRef.current?.cancel();
+    senderRef.current = null;
+    doneRef.current = false;
+    setPhase("idle");
+    setCode("");
+    setError("");
+    setProgress(null);
+  }
+
+  function switchSendMode(mode: SendMode) {
+    setSendMode(mode);
+    if (phase !== "idle") resetSession();
+  }
+
   function switchContent(mode: ContentMode) {
     setContentMode(mode);
-    if (phase !== "idle") {
-      senderRef.current?.cancel();
-      senderRef.current = null;
-      setPhase("idle");
-      setCode("");
-      setError("");
-    }
+    if (phase !== "idle") resetSession();
   }
 
   async function handleDelete() {
@@ -261,6 +319,8 @@ export function SendPanel() {
   }
 
   const busy = phase === "creating" || phase === "connecting" || phase === "transferring";
+  const phaseGroup =
+    phase === "idle" || phase === "creating" ? "form" : phase;
 
   return (
     <section className="panel" aria-labelledby="send-title">
@@ -273,28 +333,29 @@ export function SendPanel() {
       </div>
       <div className="panel-body">
         <div className="input-row" style={{ flexWrap: "wrap" }}>
-          <div className="seg" role="group" aria-label="传输模式">
-            <button className={sendMode === "rtc" ? "active" : ""} onClick={() => setSendMode("rtc")} disabled={busy}>
+          <Seg value={sendMode} onChange={(v) => switchSendMode(v as SendMode)} disabled={busy} ariaLabel="传输模式">
+            <button value="rtc">
               <IconBolt width={14} height={14} />
               在线直传
             </button>
-            <button className={sendMode === "offline" ? "active" : ""} onClick={() => setSendMode("offline")} disabled={busy}>
+            <button value="offline">
               <IconServer width={14} height={14} />
               离线 24h
             </button>
-          </div>
-          <div className="seg" role="group" aria-label="内容类型">
-            <button className={contentMode === "text" ? "active" : ""} onClick={() => switchContent("text")} disabled={busy}>
+          </Seg>
+          <Seg value={contentMode} onChange={(v) => switchContent(v as ContentMode)} disabled={busy} ariaLabel="内容类型">
+            <button value="text">
               <IconDocText width={14} height={14} />
               文本
             </button>
-            <button className={contentMode === "file" ? "active" : ""} onClick={() => switchContent("file")} disabled={busy}>
+            <button value="file">
               <IconFile width={14} height={14} />
               文件
             </button>
-          </div>
+          </Seg>
         </div>
 
+        <div className="panel-swap" key={`tx-${sendMode}-${contentMode}-${phaseGroup}`}>
         {phase === "idle" || phase === "creating" ? (
           <>
             {contentMode === "text" ? (
@@ -305,7 +366,7 @@ export function SendPanel() {
                 <textarea
                   id="send-text"
                   className="textarea"
-                  placeholder="输入要发送的文本：密码、地址、长文、代码片段…（发送端与接收端内容完全一致）"
+                  placeholder="输入要发送的文本：密码、地址、长文、代码片段…"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   disabled={phase === "creating"}
@@ -474,7 +535,7 @@ export function SendPanel() {
             )}
           </>
         ) : phase === "done" ? (
-          <div className="rtc-sender-state fade-rise">
+          <div className="rtc-sender-state">
             <StatusLine lamp="ok">
               <IconCheck width={16} height={16} />
               {sendMode === "rtc" ? "内容已直传到对方设备" : "传输完成"}
@@ -500,6 +561,7 @@ export function SendPanel() {
             </button>
           </div>
         )}
+        </div>
       </div>
     </section>
   );

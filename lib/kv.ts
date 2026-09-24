@@ -13,6 +13,8 @@ export interface KvLike {
   get(key: string): Promise<string | null>;
   put(key: string, value: string, opts?: { expiration?: number }): Promise<void>;
   delete(key: string): Promise<void>;
+  /** 列出指定前缀下的全部 key（含前缀本身） */
+  list(prefix: string): Promise<string[]>;
 }
 
 export interface ObjectLike {
@@ -39,6 +41,19 @@ class LocalKv implements KvLike {
   }
   async delete(key: string): Promise<void> {
     this.map.delete(key);
+  }
+  async list(prefix: string): Promise<string[]> {
+    const out: string[] = [];
+    const now = Date.now() / 1000;
+    for (const [k, e] of this.map) {
+      if (!k.startsWith(prefix)) continue;
+      if (e.exp !== undefined && now >= e.exp) {
+        this.map.delete(k);
+        continue;
+      }
+      out.push(k);
+    }
+    return out.sort();
   }
 }
 
@@ -82,8 +97,15 @@ class LocalObjectStore implements ObjectLike {
 
 // ---------- 绑定获取 ----------
 
+interface RawKvNamespace {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, opts?: { expiration?: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(opts?: { prefix?: string }): Promise<{ keys: Array<{ name: string }> }>;
+}
+
 interface WorkersEnv {
-  TRANSFER_KV?: KvLike;
+  TRANSFER_KV?: RawKvNamespace;
   TRANSFER_R2?: {
     put(key: string, value: ArrayBuffer, opts?: { httpMetadata?: { contentType?: string } }): Promise<void>;
     get(key: string, opts?: { range?: string }): Promise<R2ObjectLike | null>;
@@ -109,6 +131,16 @@ async function tryBindings(): Promise<{ kv: KvLike; obj: ObjectLike; rawR2: Work
     const e = env as WorkersEnv;
     if (!e.TRANSFER_KV || !e.TRANSFER_R2) return null;
     const r2 = e.TRANSFER_R2;
+    const nskv = e.TRANSFER_KV;
+    const kv: KvLike = {
+      get: (k) => nskv.get(k),
+      put: (k, v, o) => nskv.put(k, v, o),
+      delete: (k) => nskv.delete(k),
+      list: async (prefix) => {
+        const res = await nskv.list({ prefix });
+        return res.keys.map((k) => k.name);
+      },
+    };
     const obj: ObjectLike = {
       put: async (key, data, contentType) => {
         await r2.put(key, data, { httpMetadata: { contentType } });
@@ -126,7 +158,7 @@ async function tryBindings(): Promise<{ kv: KvLike; obj: ObjectLike; rawR2: Work
         await r2.delete(key);
       },
     };
-    return { kv: e.TRANSFER_KV, obj, rawR2: r2 };
+    return { kv, obj, rawR2: r2 };
   } catch {
     return null;
   }

@@ -23,5 +23,5 @@ export async function POST(req: NextRequest, { params }: Params) {
     const status = res.reason === "expired" ? 410 : 404;
     return NextResponse.json({ error: res.reason }, { status });
   }
-  return NextResponse.json({ ok: true, version: res.room.version });
+  return NextResponse.json({ ok: true, version: res.version });
 }
