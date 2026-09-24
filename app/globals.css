@@ -350,7 +350,7 @@ kbd {
 .sidebar.collapsed .search-trigger {
   justify-content: center;
   gap: 0;
-  padding: 9px 0;
+  padding: 10px 0;
 }
 .sidebar.collapsed .sidebar-foot .row {
   justify-content: center;

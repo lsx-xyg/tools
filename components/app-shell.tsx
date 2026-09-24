@@ -17,6 +17,7 @@ import {
   IconJson,
   IconMenu,
   IconMoon,
+  IconPlus,
   IconQr,
   IconSearch,
   IconSun,
@@ -68,6 +69,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           <div className="nav-group-label label">更多</div>
           <div className="nav-items">
             <span className="nav-item soon" aria-disabled="true" title="更多工具筹备中">
+              <IconPlus className="nav-icon" />
               <span className="nav-text">更多工具筹备中</span>
               <span className="lamp amber" aria-hidden="true" />
             </span>
@@ -132,7 +134,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label="搜索工具"
             title="搜索工具（Ctrl K）"
           >
-            <IconSearch width={15} height={15} />
+            <IconSearch className="nav-icon" width={18} height={18} />
             <span className="nav-text">搜索工具…</span>
             <kbd>Ctrl K</kbd>
           </button>
