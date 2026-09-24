@@ -29,7 +29,7 @@
 			// 部署前执行: npx wrangler kv namespace create TRANSFER_KV
 			// 然后把返回的 id 填到这里
 			"binding": "TRANSFER_KV",
-			"id": "00000000000000000000000000000000"
+			"id": "TRANSFER_KV_ID_PLACEHOLDER"
 		}
 	],
 	"r2_buckets": [
