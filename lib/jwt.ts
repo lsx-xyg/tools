@@ -9,6 +9,9 @@ export const RS_ALGS = ["RS256", "RS384", "RS512"] as const;
 export const ALL_ALGS = [...HS_ALGS, ...RS_ALGS] as const;
 export type JwtAlg = (typeof ALL_ALGS)[number];
 
+/** HMAC 密钥的编码形式 */
+export type KeyEncoding = "utf8" | "hex" | "base64";
+
 export function b64urlFromStr(s: string): string {
   const bytes = new TextEncoder().encode(s);
   let bin = "";
@@ -35,9 +38,14 @@ export function b64urlToBytes(s: string): Uint8Array {
   return Uint8Array.from(bin, (c) => c.charCodeAt(0));
 }
 
-function hsSign(data: Uint8Array, key: string, alg: JwtAlg): string {
+function hsSign(data: Uint8Array, key: string, alg: JwtAlg, keyEncoding: KeyEncoding = "utf8"): string {
   const wa = CryptoJS.lib.WordArray.create(data);
-  const kwa = CryptoJS.enc.Utf8.parse(key);
+  const kwa =
+    keyEncoding === "hex"
+      ? CryptoJS.enc.Hex.parse(key)
+      : keyEncoding === "base64"
+        ? CryptoJS.enc.Base64.parse(key)
+        : CryptoJS.enc.Utf8.parse(key);
   const sig =
     alg === "HS256"
       ? CryptoJS.HmacSHA256(wa, kwa)
@@ -77,11 +85,14 @@ export async function signToken(
   payload: Record<string, unknown>,
   alg: JwtAlg,
   key: string,
+  keyEncoding: KeyEncoding = "utf8",
 ): Promise<string> {
   const h = b64urlFromStr(JSON.stringify(header));
   const p = b64urlFromStr(JSON.stringify(payload));
   const data = new TextEncoder().encode(`${h}.${p}`);
-  const sig = alg.startsWith("HS") ? hsSign(data, key, alg) : await rsSign(data, key, alg);
+  const sig = alg.startsWith("HS")
+    ? hsSign(data, key, alg, keyEncoding)
+    : await rsSign(data, key, alg);
   return `${h}.${p}.${sig}`;
 }
 
@@ -91,6 +102,7 @@ export type VerifyState = "valid" | "invalid" | "unverified" | "unsupported" | "
 export async function verifyToken(
   token: string,
   key: string,
+  keyEncoding: KeyEncoding = "utf8",
 ): Promise<{ state: VerifyState; detail: string }> {
   const parts = token.trim().split(".");
   if (parts.length !== 3) return { state: "error", detail: "JWT 应包含 3 段" };
@@ -104,7 +116,7 @@ export async function verifyToken(
   const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
   if (alg.startsWith("HS")) {
     if (!key) return { state: "unverified", detail: "HMAC 算法：输入密钥后可验证签名" };
-    const expected = hsSign(data, key, alg as JwtAlg);
+    const expected = hsSign(data, key, alg as JwtAlg, keyEncoding);
     return expected === parts[2]
       ? { state: "valid", detail: "签名有效（HMAC 重算一致）" }
       : { state: "invalid", detail: "签名不匹配：密钥错误或 Token 已被篡改" };

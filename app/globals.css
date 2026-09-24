@@ -2442,3 +2442,47 @@ mark.re-match {
 .form-row.col label {
   width: auto;
 }
+
+/* ---------- JWT 生成：左右布局 + tab 动画 ---------- */
+.jwt-gen-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.jwt-gen-grid .panel-body {
+  display: flex;
+  flex-direction: column;
+}
+.jwt-result .jwt-token {
+  display: block;
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  max-height: 420px;
+  overflow: auto;
+}
+.tab-anim {
+  animation: jwt-tab-in 0.3s var(--ease-out) both;
+}
+@keyframes jwt-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 1023px) {
+  .jwt-gen-grid {
+    grid-template-columns: 1fr;
+  }
+}

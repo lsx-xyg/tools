@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { IconCheck, IconCopy, IconKey, IconShield } from "@/components/icons";
+import { IconCheck, IconCopy, IconKey, IconShield, IconRefresh } from "@/components/icons";
 import {
   ALL_ALGS,
   b64urlDecode,
@@ -10,11 +10,13 @@ import {
   toUnixSeconds,
   verifyToken,
   type JwtAlg,
+  type KeyEncoding,
   type VerifyState,
 } from "@/lib/jwt";
 
 type Mode = "parse" | "generate";
 type Tab = "basic" | "claims" | "data" | "secret";
+type Category = "jws" | "jwe";
 
 const CLAIMS: { key: string; label: string; placeholder: string }[] = [
   { key: "iss", label: "签发人 (iss)", placeholder: "如 https://api.example.com" },
@@ -24,6 +26,13 @@ const CLAIMS: { key: string; label: string; placeholder: string }[] = [
   { key: "nbf", label: "生效时间 (nbf)", placeholder: "在此时间之前不生效" },
   { key: "iat", label: "签发时间 (iat)", placeholder: "留空则自动填当前时间" },
   { key: "jti", label: "编号 (jti)", placeholder: "唯一 Token 标识" },
+];
+
+/** HS 密钥的编码选项（与算法联动） */
+const HS_KEY_TYPES: { id: KeyEncoding; name: string }[] = [
+  { id: "utf8", name: "String" },
+  { id: "hex", name: "Hex" },
+  { id: "base64", name: "Base64" },
 ];
 
 interface Parsed {
@@ -77,15 +86,18 @@ export default function JwtPage() {
   // ---- 解析模式 ----
   const [token, setToken] = useState("");
   const [verifyKey, setVerifyKey] = useState("");
+  const [verifyKeyType, setVerifyKeyType] = useState<KeyEncoding>("utf8");
   const [verifyState, setVerifyState] = useState<VerifyState | "">("");
 
   // ---- 生成模式 ----
   const [tab, setTab] = useState<Tab>("basic");
+  const [category, setCategory] = useState<Category>("jws");
   const [alg, setAlg] = useState<JwtAlg>("HS256");
   const [typ, setTyp] = useState("JWT");
   const [claims, setClaims] = useState<Record<string, string>>({});
-  const [customJson, setCustomJson] = useState("{\n  \"name\": \"John\",\n  \"admin\": true\n}");
-  const [secret, setSecret] = useState("88888888");
+  const [customJson, setCustomJson] = useState("");
+  const [keyType, setKeyType] = useState<KeyEncoding>("utf8");
+  const [secret, setSecret] = useState("");
   const [pem, setPem] = useState("");
   const [genOut, setGenOut] = useState("");
   const [genError, setGenError] = useState("");
@@ -100,7 +112,7 @@ export default function JwtPage() {
   async function doVerify() {
     if (!token.trim()) return;
     setVerifyState("");
-    const r = await verifyToken(token, verifyKey);
+    const r = await verifyToken(token, verifyKey, verifyKeyType);
     setVerifyState(r.state);
   }
 
@@ -136,16 +148,30 @@ export default function JwtPage() {
       }
       const key = alg.startsWith("RS") ? pem : secret;
       if (!key) {
-        setGenError(alg.startsWith("RS") ? "请先在「密钥」填入私钥 PEM" : "请先在「密钥」填入密钥");
+        setGenError(alg.startsWith("RS") ? "请先填入私钥 PEM" : "请先填入密钥");
         return;
       }
-      const out = await signToken({ alg, typ }, payload, alg, key);
+      const out = await signToken({ alg, typ }, payload, alg, key, keyType);
       setGenOut(out);
     } catch (e) {
       setGenError(e instanceof Error ? e.message : "生成失败（检查密钥格式）");
     } finally {
       setGenBusy(false);
     }
+  }
+
+  function resetGen() {
+    setTab("basic");
+    setCategory("jws");
+    setAlg("HS256");
+    setTyp("JWT");
+    setClaims({});
+    setCustomJson("");
+    setKeyType("utf8");
+    setSecret("");
+    setPem("");
+    setGenOut("");
+    setGenError("");
   }
 
   async function copy(v: string, k: string) {
@@ -181,7 +207,7 @@ export default function JwtPage() {
       </div>
 
       {mode === "parse" ? (
-        <div className="single-panel">
+        <div className="single-panel tab-anim" key="parse">
           <textarea
             className="input textarea mono"
             style={{ minHeight: 90 }}
@@ -202,6 +228,16 @@ export default function JwtPage() {
                 </div>
               )}
               <div className="tool-row" style={{ marginTop: 12 }}>
+                <select
+                  className="input"
+                  style={{ width: 110, flexShrink: 0 }}
+                  value={verifyKeyType}
+                  onChange={(e) => setVerifyKeyType(e.target.value as KeyEncoding)}
+                >
+                  {HS_KEY_TYPES.map((t) => (
+                    <option value={t.id} key={t.id}>{t.name}</option>
+                  ))}
+                </select>
                 <input
                   className="input mono"
                   style={{ flex: 1 }}
@@ -262,123 +298,182 @@ export default function JwtPage() {
           )}
         </div>
       ) : (
-        <div className="single-panel">
-          <p className="count-hint" style={{ marginBottom: 12 }}>
-            使用浏览器 API 实现，Token 不会被传输到云端
-          </p>
-
-          <div className="seg seg-wide" role="group" aria-label="生成配置">
-            {(
-              [
-                ["basic", "基础参数"],
-                ["claims", "标准载荷"],
-                ["data", "数据"],
-                ["secret", "密钥"],
-              ] as [Tab, string][]
-            ).map(([id, name]) => (
-              <button data-active={tab === id} onClick={() => setTab(id)} type="button" key={id}>
-                {name}
-              </button>
-            ))}
-          </div>
-
-          {tab === "basic" && (
-            <div className="jwt-form">
-              <div className="form-row">
-                <label>算法 (alg)</label>
-                <select className="input" value={alg} onChange={(e) => setAlg(e.target.value as JwtAlg)}>
-                  {ALL_ALGS.map((a) => (
-                    <option value={a} key={a}>{a}</option>
-                  ))}
-                </select>
-                <span className="count-hint">{alg.startsWith("HS") ? "HMAC 对称密钥" : "RSA 非对称（需 PEM 密钥）"}</span>
+        <div className="jwt-gen-grid tab-anim" key="generate">
+          {/* 左：配置 */}
+          <section className="panel">
+            <div className="panel-head">
+              <span className="label">配置</span>
+              <span className="count-hint">浏览器 API 实现，Token 不上传</span>
+            </div>
+            <div className="panel-body">
+              <div className="seg seg-wide" role="group" aria-label="生成配置">
+                {(
+                  [
+                    ["basic", "基础参数"],
+                    ["claims", "标准载荷"],
+                    ["data", "数据"],
+                    ["secret", "密钥"],
+                  ] as [Tab, string][]
+                ).map(([id, name]) => (
+                  <button data-active={tab === id} onClick={() => setTab(id)} type="button" key={id}>
+                    {name}
+                  </button>
+                ))}
               </div>
-              <div className="form-row">
-                <label>类型 (typ)</label>
-                <input className="input" value={typ} onChange={(e) => setTyp(e.target.value)} spellCheck={false} />
+
+              <div className="tab-anim" key={tab}>
+                {tab === "basic" && (
+                  <div className="jwt-form">
+                    <div className="form-row">
+                      <label>类别</label>
+                      <select className="input" value={category} onChange={(e) => setCategory(e.target.value as Category)}>
+                        <option value="jws">JWT (JWS)</option>
+                        <option value="jwe">Encrypt JWT (JWE)</option>
+                      </select>
+                      {category === "jwe" && (
+                        <span className="count-hint warn">JWE 加密暂未支持，请使用 JWS</span>
+                      )}
+                    </div>
+                    <div className="form-row">
+                      <label>算法 (alg)</label>
+                      <select
+                        className="input"
+                        value={alg}
+                        onChange={(e) => setAlg(e.target.value as JwtAlg)}
+                        disabled={category === "jwe"}
+                      >
+                        {ALL_ALGS.map((a) => (
+                          <option value={a} key={a}>{a}</option>
+                        ))}
+                      </select>
+                      <span className="count-hint">{alg.startsWith("HS") ? "HMAC 对称密钥" : "RSA 非对称（需 PEM 密钥）"}</span>
+                    </div>
+                    <div className="form-row">
+                      <label>类型 (typ)</label>
+                      <input className="input" value={typ} onChange={(e) => setTyp(e.target.value)} spellCheck={false} />
+                    </div>
+                  </div>
+                )}
+
+                {tab === "claims" && (
+                  <div className="jwt-form">
+                    {CLAIMS.map((c) => (
+                      <div className="form-row" key={c.key}>
+                        <label>{c.label}</label>
+                        <input
+                          className="input"
+                          value={claims[c.key] ?? ""}
+                          onChange={(e) => setClaims((prev) => ({ ...prev, [c.key]: e.target.value }))}
+                          placeholder={c.placeholder}
+                          spellCheck={false}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {tab === "data" && (
+                  <div className="jwt-form">
+                    <div className="form-row col">
+                      <label>自定义载荷（JSON）</label>
+                      <textarea
+                        className="input textarea mono"
+                        style={{ minHeight: 180 }}
+                        value={customJson}
+                        onChange={(e) => setCustomJson(e.target.value)}
+                        placeholder='如 {"name": "John", "admin": true}'
+                        spellCheck={false}
+                      />
+                      <p className="count-hint">留空则不附加自定义字段</p>
+                    </div>
+                  </div>
+                )}
+
+                {tab === "secret" && (
+                  <div className="jwt-form">
+                    {alg.startsWith("HS") ? (
+                      <>
+                        <div className="form-row">
+                          <label>密钥类型</label>
+                          <select
+                            className="input"
+                            style={{ width: 140 }}
+                            value={keyType}
+                            onChange={(e) => setKeyType(e.target.value as KeyEncoding)}
+                          >
+                            {HS_KEY_TYPES.map((t) => (
+                              <option value={t.id} key={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                          <span className="count-hint">
+                            {keyType === "hex" ? "十六进制字节" : keyType === "base64" ? "Base64 字节" : "普通字符串"}
+                          </span>
+                        </div>
+                        <div className="form-row">
+                          <label>密钥</label>
+                          <input
+                            className="input mono"
+                            value={secret}
+                            onChange={(e) => setSecret(e.target.value)}
+                            placeholder="请输入密钥"
+                            spellCheck={false}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="form-row col">
+                        <label>私钥 PEM（PKCS#8）</label>
+                        <textarea
+                          className="input textarea mono"
+                          style={{ minHeight: 150 }}
+                          value={pem}
+                          onChange={(e) => setPem(e.target.value)}
+                          placeholder="-----BEGIN PRIVATE KEY-----…"
+                          spellCheck={false}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </section>
 
-          {tab === "claims" && (
-            <div className="jwt-form">
-              {CLAIMS.map((c) => (
-                <div className="form-row" key={c.key}>
-                  <label>{c.label}</label>
-                  <input
-                    className="input"
-                    value={claims[c.key] ?? ""}
-                    onChange={(e) => setClaims((prev) => ({ ...prev, [c.key]: e.target.value }))}
-                    placeholder={c.placeholder}
-                    spellCheck={false}
-                  />
-                </div>
-              ))}
+          {/* 右：结果 */}
+          <section className="panel jwt-result">
+            <div className="panel-head">
+              <span className="label">JSON Web Token</span>
+              <span className="right">
+                {genOut && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => void copy(genOut, "g")} type="button">
+                    {copied === "g" ? <IconCheck width={14} height={14} /> : <IconCopy width={14} height={14} />}
+                    {copied === "g" ? "已复制" : "复制"}
+                  </button>
+                )}
+              </span>
             </div>
-          )}
-
-          {tab === "data" && (
-            <div className="jwt-form">
-              <div className="form-row col">
-                <label>自定义载荷（JSON，可含 name / admin 等任意字段）</label>
-                <textarea
-                  className="input textarea mono"
-                  style={{ minHeight: 180 }}
-                  value={customJson}
-                  onChange={(e) => setCustomJson(e.target.value)}
-                  spellCheck={false}
-                />
+            <div className="panel-body">
+              <div className="tool-row">
+                <button className="btn btn-primary btn-sm" onClick={() => void doGenerate()} type="button" disabled={genBusy}>
+                  <IconKey width={14} height={14} />
+                  {genBusy ? "生成中…" : "生成 Token"}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={resetGen} type="button">
+                  <IconRefresh width={14} height={14} />
+                  重置
+                </button>
+                <span className="count-hint" style={{ marginLeft: "auto" }}>exp / iat 支持日期或时间戳</span>
               </div>
-            </div>
-          )}
-
-          {tab === "secret" && (
-            <div className="jwt-form">
-              {alg.startsWith("HS") ? (
-                <div className="form-row">
-                  <label>密钥</label>
-                  <input
-                    className="input mono"
-                    value={secret}
-                    onChange={(e) => setSecret(e.target.value)}
-                    spellCheck={false}
-                  />
-                  <span className="count-hint">HS{alg.slice(2)} 使用该密钥签名</span>
-                </div>
+              {genError && <p className="count-hint warn" style={{ marginTop: 10 }}>{genError}</p>}
+              {genOut ? (
+                <code className="jwt-token mono">{genOut}</code>
               ) : (
-                <div className="form-row col">
-                  <label>私钥 PEM（PKCS#8）</label>
-                  <textarea
-                    className="input textarea mono"
-                    style={{ minHeight: 150 }}
-                    value={pem}
-                    onChange={(e) => setPem(e.target.value)}
-                    placeholder="-----BEGIN PRIVATE KEY-----…"
-                    spellCheck={false}
-                  />
-                </div>
+                <p className="count-hint" style={{ marginTop: 14 }}>
+                  配置左侧参数后点击「生成 Token」…
+                </p>
               )}
             </div>
-          )}
-
-          <div className="tool-row">
-            <button className="btn btn-primary btn-sm" onClick={() => void doGenerate()} type="button" disabled={genBusy}>
-              <IconKey width={14} height={14} />
-              {genBusy ? "生成中…" : "生成 Token"}
-            </button>
-            {genOut && (
-              <button className="btn btn-ghost btn-sm" onClick={() => void copy(genOut, "g")} type="button">
-                {copied === "g" ? <IconCheck width={14} height={14} /> : <IconCopy width={14} height={14} />}
-                {copied === "g" ? "已复制" : "复制"}
-              </button>
-            )}
-            <span className="count-hint">exp / nbf / iat 支持日期或 10 位时间戳，iat 留空自动填当前时间</span>
-          </div>
-
-          {genError && <p className="count-hint warn" style={{ marginTop: 10 }}>{genError}</p>}
-          {genOut && (
-            <textarea className="input textarea mono" style={{ marginTop: 12, minHeight: 84 }} value={genOut} readOnly spellCheck={false} />
-          )}
+          </section>
         </div>
       )}
     </div>
