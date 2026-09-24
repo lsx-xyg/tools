@@ -19,7 +19,8 @@ export type ToolId =
   | "device-info"
   | "case"
   | "mime"
-  | "http-status";
+  | "http-status"
+  | "pdf";
 
 export interface Tool {
   id: ToolId;
@@ -47,7 +48,8 @@ export interface Tool {
     | "device-info"
     | "case"
     | "mime"
-    | "http-status";
+    | "http-status"
+    | "pdf";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -281,6 +283,18 @@ export const tools: Tool[] = [
     icon: "http-status",
     lamp: "ok",
     tags: ["HTTP", "状态码", "404", "速查"],
+  },
+  {
+    id: "pdf",
+    index: "T-20",
+    name: "PDF 处理",
+    tagline: "合并 / 拆分 / 提取页面",
+    description:
+      "把多个 PDF 按顺序合并成一个；或按页码范围提取指定页、每 N 页拆分打包下载。全部在浏览器本地处理，文件不上传。",
+    path: "/tools/pdf",
+    icon: "pdf",
+    lamp: "ok",
+    tags: ["PDF", "合并", "拆分", "提取页面"],
   },
 ];
 

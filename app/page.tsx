@@ -2,26 +2,14 @@ import Link from "next/link";
 import { GITHUB_REPO, soonTools, tools } from "@/lib/tools";
 import { StorageSwitch } from "@/components/storage-switch";
 import {
-  IconBase64,
   IconBolt,
   IconChevronRight,
   IconClock,
-  IconCron,
-  IconJson,
   IconPlus,
-  IconQr,
   IconServer,
   IconShield,
-  IconTransfer,
 } from "@/components/icons";
-
-const MODULE_ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
-  transfer: IconTransfer,
-  qr: IconQr,
-  base64: IconBase64,
-  json: IconJson,
-  cron: IconCron,
-};
+import { ICONS } from "@/components/icon-map";
 
 export default function Home() {
   return (
@@ -64,7 +52,7 @@ export default function Home() {
               <span className="right label">就绪</span>
             </div>
             <div className="module-body">
-              <div className="module-icon">{MODULE_ICONS[t.icon]?.({ width: 24, height: 24 })}</div>
+              <div className="module-icon">{ICONS[t.icon]?.({ width: 24, height: 24 })}</div>
               <div className="module-name">{t.name}</div>
               <div className="module-desc">{t.description}</div>
               <div className="module-tags">

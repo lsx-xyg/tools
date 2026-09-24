@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { tools, soonTools } from "@/lib/tools";
 import { IconSearch, IconHome } from "./icons";
-import { ICONS } from "./app-shell";
+import { ICONS } from "./icon-map";
 
 const noopSubscribe = () => () => {};
 

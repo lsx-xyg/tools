@@ -1,0 +1,27 @@
+import type { ReactNode } from "react";
+import { IconActivity, IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck,
+  IconFileStack, IconFileDiff, IconFileType, IconFingerprint, IconGithub, IconHash, IconHome, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
+
+export const ICONS: Record<string, (p: { width?: number; height?: number }) => ReactNode> = {
+  transfer: IconTransfer,
+  qr: IconQr,
+  base64: IconBase64,
+  json: IconJson,
+  cron: IconCron,
+  convert: IconRepeat,
+  ts: IconClock,
+  hash: IconHash,
+  uuid: IconFingerprint,
+  diff: IconFileDiff,
+  regex: IconTextSearch,
+  text: IconDocText,
+  url: IconLink,
+  jwt: IconKey,
+  "file-hash": IconFileCheck,
+  IconFileStack,
+  "device-info": IconMonitor,
+  case: IconCase,
+  mime: IconFileType,
+  "http-status": IconActivity,
+  pdf: IconFileStack,
+};

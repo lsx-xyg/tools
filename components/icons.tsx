@@ -1,7 +1,9 @@
 import type { SVGProps } from "react";
 import {
   Activity,
+  ArrowDown,
   ArrowLeftRight,
+  ArrowUp,
   Binary,
   CaseSensitive,
   Braces,
@@ -20,6 +22,7 @@ import {
   File,
   FileCheck,
   FileDiff,
+  FileStack,
   FileText,
   FileType,
   Fingerprint,
@@ -27,6 +30,7 @@ import {
   Home,
   KeyRound,
   Link,
+  LoaderCircle,
   Menu,
   Monitor,
   Moon,
@@ -70,6 +74,8 @@ function wrap(C: LucideIcon) {
 }
 
 export const IconActivity = wrap(Activity);
+export const IconArrowDown = wrap(ArrowDown);
+export const IconArrowUp = wrap(ArrowUp);
 export const IconBase = wrap(Binary);
 export const IconBase64 = IconBase;
 export const IconBolt = wrap(Zap);
@@ -90,6 +96,7 @@ export const IconFile = wrap(File);
 export const IconFileCheck = wrap(FileCheck);
 export const IconFileDiff = wrap(FileDiff);
 export const IconFingerprint = wrap(Fingerprint);
+export const IconFileStack = wrap(FileStack);
 export const IconFileType = wrap(FileType);
 export const IconHash = wrap(Hash);
 /** GitHub 品牌 mark（lucide 主包已移除品牌图标，保留手绘路径） */
@@ -112,6 +119,7 @@ export const IconHome = wrap(Home);
 export const IconJson = wrap(Braces);
 export const IconKey = wrap(KeyRound);
 export const IconLink = wrap(Link);
+export const IconLoader = wrap(LoaderCircle);
 export const IconMenu = wrap(Menu);
 export const IconMonitor = wrap(Monitor);
 export const IconMoon = wrap(Moon);
