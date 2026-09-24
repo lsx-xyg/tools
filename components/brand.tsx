@@ -17,11 +17,11 @@ export function LogoMark({ size = 30 }: { size?: number }) {
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="brand" style={compact ? { border: "none", padding: 0, margin: 0 } : undefined}>
+    <span className="brand">
       <LogoMark />
       <span className="brand-name">
         工具箱
-        {!compact && <span className="en">Toolbox</span>}
+        <span className="en">Toolbox</span>
       </span>
     </span>
   );
