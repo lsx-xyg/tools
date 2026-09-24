@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { IconCheck, IconCopy, IconKey, IconShield, IconRefresh } from "@/components/icons";
+import { IconCheck, IconCopy, IconRefresh, IconShield } from "@/components/icons";
 import {
   ALL_ALGS,
   b64urlDecode,
@@ -28,12 +28,26 @@ const CLAIMS: { key: string; label: string; placeholder: string }[] = [
   { key: "jti", label: "编号 (jti)", placeholder: "唯一 Token 标识" },
 ];
 
-/** HS 密钥的编码选项（与算法联动） */
-const HS_KEY_TYPES: { id: KeyEncoding; name: string }[] = [
+/** 密钥类型选项（jwt.io 风格） */
+const ALL_KEY_TYPES: { id: KeyEncoding; name: string }[] = [
   { id: "utf8", name: "String" },
   { id: "hex", name: "Hex" },
   { id: "base64", name: "Base64" },
+  { id: "pkcs8", name: "PKCS8_PEM" },
+  { id: "spki", name: "SPKI_PEM" },
+  { id: "jwk", name: "JWK" },
 ];
+
+function keyTypesFor(alg: JwtAlg, mode: Mode): { id: KeyEncoding; name: string }[] {
+  if (alg === "none") return [];
+  if (alg.startsWith("HS")) return ALL_KEY_TYPES.slice(0, 3);
+  if (mode === "generate") return [ALL_KEY_TYPES[3], ALL_KEY_TYPES[5]];
+  return [ALL_KEY_TYPES[4], ALL_KEY_TYPES[5]];
+}
+
+function isAsym(alg: JwtAlg): boolean {
+  return !alg.startsWith("HS") && alg !== "none";
+}
 
 interface Parsed {
   header: Record<string, unknown>;
@@ -101,7 +115,6 @@ export default function JwtPage() {
   const [pem, setPem] = useState("");
   const [genOut, setGenOut] = useState("");
   const [genError, setGenError] = useState("");
-  const [genBusy, setGenBusy] = useState(false);
 
   const parsed = useMemo(() => (token.trim() ? parseJwt(token) : null), [token]);
   const exp = useMemo(
@@ -109,56 +122,92 @@ export default function JwtPage() {
     [parsed],
   );
 
-  async function doVerify() {
-    if (!token.trim()) return;
-    setVerifyState("");
-    const r = await verifyToken(token, verifyKey, verifyKeyType);
-    setVerifyState(r.state);
+  const genKeyTypes = keyTypesFor(alg, "generate");
+  const parsedAlg = (parsed && "header" in parsed ? String(parsed.header.alg ?? "HS256") : "HS256") as JwtAlg;
+  const verifyKeyTypes = keyTypesFor(parsedAlg, "parse");
+
+  /** 组装 payload；返回 null 表示有错误（错误已写进 genError） */
+  function buildPayload(): Record<string, unknown> | null {
+    const payload: Record<string, unknown> = {};
+    for (const { key } of CLAIMS) {
+      const raw = claims[key]?.trim();
+      if (!raw) continue;
+      if (key === "exp" || key === "nbf" || key === "iat") {
+        const sec = toUnixSeconds(raw);
+        if (sec === undefined) {
+          setGenError(`「${key}」不是有效时间：支持 10 位时间戳或可解析日期`);
+          return null;
+        }
+        payload[key] = sec;
+      } else {
+        payload[key] = raw;
+      }
+    }
+    if (payload.iat === undefined) payload.iat = Math.floor(Date.now() / 1000);
+    if (customJson.trim()) {
+      try {
+        const extra = JSON.parse(customJson) as Record<string, unknown>;
+        Object.assign(payload, extra);
+      } catch {
+        setGenError("「数据」不是合法 JSON");
+        return null;
+      }
+    }
+    return payload;
   }
 
-  async function doGenerate() {
-    setGenOut("");
-    setGenError("");
-    setGenBusy(true);
-    try {
-      const payload: Record<string, unknown> = {};
-      for (const { key } of CLAIMS) {
-        const raw = claims[key]?.trim();
-        if (!raw) continue;
-        if (key === "exp" || key === "nbf" || key === "iat") {
-          const sec = toUnixSeconds(raw);
-          if (sec === undefined) {
-            setGenError(`「${key}」不是有效时间：支持 10 位时间戳或可解析日期`);
-            return;
-          }
-          payload[key] = sec;
-        } else {
-          payload[key] = raw;
-        }
-      }
-      if (payload.iat === undefined) payload.iat = Math.floor(Date.now() / 1000);
-      if (customJson.trim()) {
-        try {
-          const extra = JSON.parse(customJson) as Record<string, unknown>;
-          Object.assign(payload, extra);
-        } catch {
-          setGenError("「数据」不是合法 JSON");
+  /** 自动生成（jwt.io 行为：边输入边出 Token，300ms 防抖） */
+  useEffect(() => {
+    if (category === "jwe" || !typ) {
+      setGenOut("");
+      return;
+    }
+    const t = setTimeout(() => {
+      void (async () => {
+        const payload = buildPayload();
+        if (!payload) return;
+        const key = isAsym(alg) ? pem : secret;
+        if (alg !== "none" && !key) {
+          setGenOut("");
+          setGenError(isAsym(alg) ? "请先在「密钥」填入私钥" : "请先在「密钥」填入密钥");
           return;
         }
-      }
-      const key = alg.startsWith("RS") ? pem : secret;
-      if (!key) {
-        setGenError(alg.startsWith("RS") ? "请先填入私钥 PEM" : "请先填入密钥");
-        return;
-      }
-      const out = await signToken({ alg, typ }, payload, alg, key, keyType);
-      setGenOut(out);
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : "生成失败（检查密钥格式）");
-    } finally {
-      setGenBusy(false);
+        try {
+          const out = await signToken({ alg, typ }, payload, alg, key, keyType);
+          setGenOut(out);
+          setGenError("");
+        } catch (e) {
+          setGenOut("");
+          setGenError(e instanceof Error ? e.message : "生成失败（检查密钥格式）");
+        }
+      })();
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alg, typ, claims, customJson, keyType, secret, pem, category]);
+
+  /** 自动验证（边输入密钥边验签，300ms 防抖） */
+  useEffect(() => {
+    if (!token.trim()) {
+      setVerifyState("");
+      return;
     }
-  }
+    const t = setTimeout(() => {
+      void (async () => {
+        const r = await verifyToken(token, verifyKey, verifyKeyType);
+        setVerifyState(r.state);
+      })();
+    }, 300);
+    return () => clearTimeout(t);
+  }, [token, verifyKey, verifyKeyType]);
+
+  /** 算法切换时把密钥类型收敛到可用列表 */
+  useEffect(() => {
+    const types = keyTypesFor(alg, "generate");
+    if (types.length > 0 && !types.some((t) => t.id === keyType)) {
+      setKeyType(types[0].id);
+    }
+  }, [alg, keyType]);
 
   function resetGen() {
     setTab("basic");
@@ -188,7 +237,7 @@ export default function JwtPage() {
     <div className="fade-rise">
       <ToolHead
         title="JWT 解析 / 生成"
-        lede="解码、签名验证、生成 Token，HS / RS 算法本地完成"
+        lede="解码、签名验证、生成 Token，HS / RS / ES / PS 本地完成"
         chip={
           <span>
             <IconShield width={12} height={12} />
@@ -227,29 +276,29 @@ export default function JwtPage() {
                   {exp.text}
                 </div>
               )}
-              <div className="tool-row" style={{ marginTop: 12 }}>
-                <select
-                  className="input"
-                  style={{ width: 110, flexShrink: 0 }}
-                  value={verifyKeyType}
-                  onChange={(e) => setVerifyKeyType(e.target.value as KeyEncoding)}
-                >
-                  {HS_KEY_TYPES.map((t) => (
-                    <option value={t.id} key={t.id}>{t.name}</option>
-                  ))}
-                </select>
-                <input
-                  className="input mono"
-                  style={{ flex: 1 }}
-                  value={verifyKey}
-                  onChange={(e) => setVerifyKey(e.target.value)}
-                  placeholder="密钥（HS）或公钥 PEM（RS），可留空只查看"
-                  spellCheck={false}
-                />
-                <button className="btn btn-primary btn-sm" onClick={() => void doVerify()} type="button">
-                  验证签名
-                </button>
-              </div>
+              {verifyKeyTypes.length > 0 && (
+                <div className="tool-row" style={{ marginTop: 12 }}>
+                  <select
+                    className="input"
+                    style={{ width: 130, flexShrink: 0 }}
+                    value={verifyKeyTypes.some((t) => t.id === verifyKeyType) ? verifyKeyType : verifyKeyTypes[0].id}
+                    onChange={(e) => setVerifyKeyType(e.target.value as KeyEncoding)}
+                  >
+                    {verifyKeyTypes.map((t) => (
+                      <option value={t.id} key={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    className="input mono"
+                    style={{ flex: 1 }}
+                    value={verifyKey}
+                    onChange={(e) => setVerifyKey(e.target.value)}
+                    placeholder={parsedAlg === "none" ? "该 Token 未签名（alg=none）" : "密钥 / 公钥（输入后自动验证签名）"}
+                    spellCheck={false}
+                    disabled={parsedAlg === "none"}
+                  />
+                </div>
+              )}
               {verifyState && (
                 <div className={`jwt-exp ${VERIFY_LABEL[verifyState].cls}`} style={{ marginTop: 8 }}>
                   <span
@@ -346,7 +395,9 @@ export default function JwtPage() {
                           <option value={a} key={a}>{a}</option>
                         ))}
                       </select>
-                      <span className="count-hint">{alg.startsWith("HS") ? "HMAC 对称密钥" : "RSA 非对称（需 PEM 密钥）"}</span>
+                      <span className="count-hint">
+                        {alg === "none" ? "不签名" : alg.startsWith("HS") ? "HMAC 对称密钥" : alg.startsWith("ES") ? "ECDSA 椭圆曲线" : "RSA（需 PEM 密钥）"}
+                      </span>
                     </div>
                     <div className="form-row">
                       <label>类型 (typ)</label>
@@ -391,7 +442,9 @@ export default function JwtPage() {
 
                 {tab === "secret" && (
                   <div className="jwt-form">
-                    {alg.startsWith("HS") ? (
+                    {alg === "none" ? (
+                      <p className="count-hint">算法为 none：Token 不签名，无需密钥</p>
+                    ) : isAsym(alg) ? (
                       <>
                         <div className="form-row">
                           <label>密钥类型</label>
@@ -401,7 +454,35 @@ export default function JwtPage() {
                             value={keyType}
                             onChange={(e) => setKeyType(e.target.value as KeyEncoding)}
                           >
-                            {HS_KEY_TYPES.map((t) => (
+                            {genKeyTypes.map((t) => (
+                              <option value={t.id} key={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                          <span className="count-hint">{keyType === "jwk" ? "JSON Web Key（私钥）" : "PKCS#8 私钥 PEM"}</span>
+                        </div>
+                        <div className="form-row col">
+                          <label>{keyType === "jwk" ? "私钥 JWK" : "私钥 PEM"}</label>
+                          <textarea
+                            className="input textarea mono"
+                            style={{ minHeight: 150 }}
+                            value={pem}
+                            onChange={(e) => setPem(e.target.value)}
+                            placeholder={keyType === "jwk" ? '{"kty":"RSA","n":"…","d":"…"}' : "-----BEGIN PRIVATE KEY-----…"}
+                            spellCheck={false}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="form-row">
+                          <label>密钥类型</label>
+                          <select
+                            className="input"
+                            style={{ width: 140 }}
+                            value={keyType}
+                            onChange={(e) => setKeyType(e.target.value as KeyEncoding)}
+                          >
+                            {genKeyTypes.map((t) => (
                               <option value={t.id} key={t.id}>{t.name}</option>
                             ))}
                           </select>
@@ -420,18 +501,6 @@ export default function JwtPage() {
                           />
                         </div>
                       </>
-                    ) : (
-                      <div className="form-row col">
-                        <label>私钥 PEM（PKCS#8）</label>
-                        <textarea
-                          className="input textarea mono"
-                          style={{ minHeight: 150 }}
-                          value={pem}
-                          onChange={(e) => setPem(e.target.value)}
-                          placeholder="-----BEGIN PRIVATE KEY-----…"
-                          spellCheck={false}
-                        />
-                      </div>
                     )}
                   </div>
                 )}
@@ -454,22 +523,20 @@ export default function JwtPage() {
             </div>
             <div className="panel-body">
               <div className="tool-row">
-                <button className="btn btn-primary btn-sm" onClick={() => void doGenerate()} type="button" disabled={genBusy}>
-                  <IconKey width={14} height={14} />
-                  {genBusy ? "生成中…" : "生成 Token"}
-                </button>
                 <button className="btn btn-ghost btn-sm" onClick={resetGen} type="button">
                   <IconRefresh width={14} height={14} />
                   重置
                 </button>
-                <span className="count-hint" style={{ marginLeft: "auto" }}>exp / iat 支持日期或时间戳</span>
+                <span className="count-hint" style={{ marginLeft: "auto" }}>
+                  {alg === "none" ? "未签名" : `${alg} · ${keyType === "jwk" ? "JWK" : isAsym(alg) ? "私钥 PEM" : keyType}`}
+                </span>
               </div>
               {genError && <p className="count-hint warn" style={{ marginTop: 10 }}>{genError}</p>}
               {genOut ? (
                 <code className="jwt-token mono">{genOut}</code>
               ) : (
                 <p className="count-hint" style={{ marginTop: 14 }}>
-                  配置左侧参数后点击「生成 Token」…
+                  配置左侧参数，Token 实时生成…
                 </p>
               )}
             </div>
