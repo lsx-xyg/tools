@@ -977,53 +977,91 @@ a.module:hover {
   font-size: 13px;
 }
 
-/* ---------- 存储后端设置卡 ---------- */
-.settings-panel {
-  margin-top: 4px;
-}
-.settings-panel .panel-title {
-  margin-bottom: 14px;
-}
-.settings-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
-  gap: 22px;
-}
-@media (max-width: 900px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.settings-backend {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.backend-pill {
+/* ---------- 存储后端切换（隐藏入口：键盘 tools → 小按钮 → 密码弹窗） ---------- */
+.storage-fab {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 60;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  color: var(--ink-2);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+  transition:
+    color 0.25s var(--ease),
+    border-color 0.25s var(--ease),
+    transform 0.25s var(--ease);
+}
+.storage-fab:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.modal {
+  width: 100%;
+  max-width: 400px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--bg-card);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.35);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.btn-icon {
+  padding: 8px;
+  min-width: 34px;
+}
+.modal-backends {
+  display: flex;
   gap: 8px;
-  padding: 9px 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.modal-backend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  font-size: 13.5px;
+  font-size: 12.5px;
   color: var(--ink-2);
-  transition: border-color 0.25s var(--ease), color 0.25s var(--ease);
 }
-.backend-pill.active {
+.modal-backend.on {
   border-color: var(--accent);
   color: var(--ink-1);
 }
-.tag-now {
-  margin-left: auto;
+.modal-backend em {
+  font-style: normal;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--accent);
 }
-.settings-actions {
-  min-width: 0;
-}
-.settings-actions .input {
+.modal .input-row .input {
   flex: 1;
   min-width: 0;
   font-family: var(--font-mono);
