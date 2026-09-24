@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { IconCheck, IconCopy, IconFileCheck, IconShield, IconTrash, IconUpload } from "@/components/icons";
+import { IconCheck, IconCopy, IconFileCheck, IconShield, IconTrash } from "@/components/icons";
 import { ALGO_LABEL, HASH_ALGOS, hashFile, type HashAlgo } from "@/lib/crypto";
 
 const MB = 1024 * 1024;
@@ -58,33 +58,30 @@ export default function FileHashPage() {
       />
 
       <div className="single-panel">
-        <div className="tool-row">
-          <div className="seg" role="group" aria-label="哈希算法">
-            {HASH_ALGOS.map((a) => (
-              <button data-active={algo === a} onClick={() => setAlgo(a)} type="button" key={a}>
-                {ALGO_LABEL[a]}
-              </button>
-            ))}
-          </div>
-          <span className="spacer" />
-          <input
-            ref={inputRef}
-            type="file"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void run(f);
-              e.currentTarget.value = "";
-            }}
-          />
-          <button className="btn btn-primary btn-sm" onClick={() => inputRef.current?.click()} type="button" disabled={busy}>
-            <IconUpload width={14} height={14} />
-            选择文件
-          </button>
+        <div className="seg seg-wide" role="group" aria-label="哈希算法">
+          {HASH_ALGOS.map((a) => (
+            <button data-active={algo === a} onClick={() => setAlgo(a)} type="button" key={a}>
+              {ALGO_LABEL[a]}
+            </button>
+          ))}
         </div>
 
+        <input
+          ref={inputRef}
+          type="file"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void run(f);
+            e.currentTarget.value = "";
+          }}
+        />
+
         <div
-          className={`drop-zone ${drag ? "drag" : ""}`}
+          className={`drop-zone clickable ${drag ? "drag" : ""}`}
+          onClick={() => {
+            if (!busy) inputRef.current?.click();
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setDrag(true);
@@ -108,7 +105,7 @@ export default function FileHashPage() {
             </div>
           ) : (
             <p>
-              拖拽文件到这里，或点击右上角选择
+              拖拽文件到这里，或点击选择文件
             </p>
           )}
           {busy && <p className="count-hint">计算中…</p>}

@@ -2340,6 +2340,9 @@ mark.re-match {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+.drop-zone.clickable {
+  cursor: pointer;
+}
 .file-meta {
   display: flex;
   flex-direction: column;
@@ -2963,5 +2966,18 @@ mark.re-match {
   /* 时间戳大数字可折行 */
   .ts-value {
     overflow-wrap: anywhere;
+  }
+}
+
+/* ---------- 单栏修正：媒体查询必须定义在基础样式之后才生效 ---------- */
+@media (max-width: 1023px) {
+  .transfer-grid,
+  .ts-grid,
+  .diff-grid,
+  .jwt-grid,
+  .jwt-gen-grid,
+  .url-grid,
+  .qr-grid {
+    grid-template-columns: 1fr;
   }
 }
