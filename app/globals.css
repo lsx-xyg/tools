@@ -2346,3 +2346,99 @@ mark.re-match {
   gap: 4px;
   color: var(--ink);
 }
+
+/* ---------- 悬浮提示（tooltip） ---------- */
+.tip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg-elev);
+  font-size: 11.5px;
+  line-height: 1.5;
+  font-family: var(--font-body);
+  font-weight: 400;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  z-index: 40;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+}
+.tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+.tip-wrap:hover .tip,
+.tip-wrap:focus-within .tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+@media (prefers-color-scheme: dark) {
+  .tip {
+    background: var(--bg-elev);
+    color: var(--ink);
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.5);
+  }
+  .tip::after {
+    border-top-color: var(--bg-elev);
+  }
+}
+
+/* ---------- URL 等高卡片 ---------- */
+.url-grid {
+  align-items: stretch;
+}
+.url-grid .panel-body {
+  display: flex;
+  flex-direction: column;
+}
+.url-grid textarea {
+  flex: 1;
+  min-height: 220px;
+}
+
+/* ---------- JWT 表单 ---------- */
+.jwt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.form-row label {
+  width: 150px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.form-row select,
+.form-row input {
+  max-width: 420px;
+}
+.form-row.col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.form-row.col label {
+  width: auto;
+}

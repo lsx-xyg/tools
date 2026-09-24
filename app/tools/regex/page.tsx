@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { IconShield, IconTextSearch } from "@/components/icons";
 
-const FLAGS = ["g", "i", "m", "s"] as const;
+const FLAGS: { id: string; tip: string }[] = [
+  { id: "g", tip: "全局匹配：查找所有匹配项，而非仅第一个" },
+  { id: "i", tip: "忽略大小写：匹配时不区分字母大小写" },
+  { id: "m", tip: "多行模式：^ 和 $ 匹配每一行的开头 / 结尾" },
+  { id: "s", tip: "单行模式（dotAll）：让 . 也能匹配换行符" },
+];
 
 export default function RegexPage() {
   const [pattern, setPattern] = useState("");
@@ -88,9 +93,17 @@ export default function RegexPage() {
           />
           <div className="seg" role="group" aria-label="正则标志">
             {FLAGS.map((f) => (
-              <button data-active={flags.includes(f)} onClick={() => toggleFlag(f)} type="button" key={f}>
-                {f}
-              </button>
+              <span className="tip-wrap" key={f.id}>
+                <button
+                  data-active={flags.includes(f.id)}
+                  onClick={() => toggleFlag(f.id)}
+                  type="button"
+                  aria-label={`${f.id} 标志：${f.tip}`}
+                >
+                  {f.id}
+                </button>
+                <span className="tip" role="tooltip">{f.tip}</span>
+              </span>
             ))}
           </div>
         </div>
