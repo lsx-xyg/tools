@@ -2345,6 +2345,10 @@ mark.re-match {
   flex-direction: column;
   gap: 4px;
   color: var(--ink);
+  max-width: 100%;
+}
+.file-meta b {
+  overflow-wrap: anywhere;
 }
 
 /* ---------- 悬浮提示（tooltip） ---------- */
@@ -2884,5 +2888,80 @@ mark.re-match {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ---------- 移动端布局适配（工具页通用） ---------- */
+@media (max-width: 700px) {
+  /* seg 选项卡：窄屏弹性换行（hash 4 项 / 互转 6 项 / JWT 4 项） */
+  .seg {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .seg button {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0 8px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  /* 工具行：元素过多时换行，输入框独占一行 */
+  .tool-row {
+    flex-wrap: wrap;
+  }
+  .tool-row > .input {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  .input-row {
+    flex-wrap: wrap;
+  }
+  /* JWT / 表单：标签上移整行，控件占满 */
+  .form-row {
+    flex-wrap: wrap;
+  }
+  .form-row label {
+    width: auto;
+    flex: 0 0 100%;
+  }
+  .form-row select,
+  .form-row input {
+    width: 100%;
+    max-width: none;
+  }
+  /* 面板头换行（标题 + 计数/按钮挤不下时） */
+  .panel-head {
+    flex-wrap: wrap;
+  }
+  /* kv 行更紧凑，值允许折行 */
+  .kv-key {
+    width: 76px;
+  }
+  .kv-val {
+    overflow-wrap: anywhere;
+  }
+  /* PDF 列表图标按钮：加大触控区 */
+  .btn-icon {
+    width: 38px;
+    height: 38px;
+  }
+  /* 二维码页单栏 */
+  .qr-grid {
+    grid-template-columns: 1fr;
+  }
+  /* hash 卡片标签紧凑，值折行 */
+  .hash-card-label {
+    font-size: 10.5px;
+  }
+  .hash-card-value,
+  .uuid-value {
+    overflow-wrap: anywhere;
+  }
+  .jwt-exp {
+    flex-wrap: wrap;
+  }
+  /* 时间戳大数字可折行 */
+  .ts-value {
+    overflow-wrap: anywhere;
   }
 }
