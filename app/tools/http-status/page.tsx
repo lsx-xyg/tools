@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { IconActivity, IconCheck, IconCopy, IconShield } from "@/components/icons";
 import { HTTP_GROUPS, HTTP_STATUS, searchStatus } from "@/lib/http-status";
+import { TruncatedText } from "@/components/tooltip";
 
 export default function HttpStatusPage() {
   const [query, setQuery] = useState("");
@@ -66,8 +67,8 @@ export default function HttpStatusPage() {
                     return (
                       <button className="status-row" onClick={() => void copy(s.code, s.name)} type="button" key={s.code}>
                         <span className="status-code mono">{s.code}</span>
-                        <span className="status-name mono">{s.name}</span>
-                        <span className="status-zh">{s.zh}</span>
+                        <TruncatedText text={s.name} className="status-name mono" />
+                        <TruncatedText text={s.zh} className="status-zh" />
                         {copied === text ? (
                           <span className="chip-ok">
                             <IconCheck width={13} height={13} />

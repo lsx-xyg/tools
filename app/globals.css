@@ -2556,7 +2556,7 @@ mark.re-match {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
-.mime-chip code {
+.mime-chip .mime-name {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -2742,4 +2742,36 @@ mark.re-match {
   white-space: nowrap;
   font-size: 11.5px;
   color: var(--ink-3);
+}
+
+/* ---------- 截断悬浮提示 ---------- */
+.tt-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tt {
+  position: fixed;
+  z-index: 80;
+  max-width: 284px;
+  padding: 7px 11px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-pop, var(--bg-inset));
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.18);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink);
+  pointer-events: none;
+  animation: tt-in 0.16s var(--ease-out);
+  word-break: break-all;
+}
+@keyframes tt-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

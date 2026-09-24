@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { IconCheck, IconCopy, IconFileType, IconShield } from "@/components/icons";
 import { searchTable, MIME_TABLE } from "@/lib/mime";
+import { TruncatedText } from "@/components/tooltip";
 
 export default function MimePage() {
   const [query, setQuery] = useState("");
@@ -56,8 +57,8 @@ export default function MimePage() {
               const text = `${r.mime}  →  ${r.exts.map((e) => `.${e}`).join(" ")}`;
               return (
                 <button className="mime-chip" onClick={() => void copy(r.mime, r.exts)} type="button" key={i}>
-                  <code className="mono">{r.mime}</code>
-                  <span className="count-hint">{r.exts.map((e) => `.${e}`).join(" ")}</span>
+                  <TruncatedText text={r.mime} className="mono mime-name" />
+                  <TruncatedText text={r.exts.map((e) => `.${e}`).join(" ")} className="count-hint" />
                   {copied === text ? (
                     <span className="chip-ok">
                       <IconCheck width={13} height={13} />
