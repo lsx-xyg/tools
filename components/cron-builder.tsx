@@ -26,15 +26,6 @@ const FIELDS_INIT: Record<FieldKey, Field> = {
   week: { label: "周", range: "0–7 · 0/7=周日", mode: "any", val: "", placeholder: "如 1（周一）" },
 };
 
-const PRESETS: { name: string; expr: string }[] = [
-  { name: "每分钟", expr: "* * * * *" },
-  { name: "每小时", expr: "0 * * * *" },
-  { name: "每天 0 点", expr: "0 0 * * *" },
-  { name: "每周一 9 点", expr: "0 9 * * 1" },
-  { name: "每月 1 号", expr: "0 0 1 * *" },
-  { name: "每年元旦", expr: "0 0 1 1 *" },
-];
-
 /** 把 5 段表达式拆回各字段 */
 function splitExpr(expr: string): Record<FieldKey, { mode: Mode; val: string }> {
   const parts = expr.trim().split(/\s+/).slice(-5);
@@ -91,19 +82,6 @@ export function CronBuilder({
     setErr("");
   }
 
-  function applyPreset(p: string) {
-    const split = splitExpr(p);
-    const keys: FieldKey[] = ["minute", "hour", "day", "month", "week"];
-    setFields((prev) => {
-      const next = { ...prev };
-      keys.forEach((k) => {
-        next[k] = { ...prev[k], ...split[k] };
-      });
-      return next;
-    });
-    setErr("");
-  }
-
   function apply() {
     try {
       CronExpressionParser.parse(expr);
@@ -134,15 +112,6 @@ export function CronBuilder({
           <button className="btn btn-quiet btn-icon" onClick={onClose} type="button" aria-label="关闭">
             <IconX width={14} height={14} />
           </button>
-        </div>
-
-        <div className="cb-presets" role="group" aria-label="快速预设">
-          {PRESETS.map((p) => (
-            <button key={p.expr} className="cron-example" onClick={() => applyPreset(p.expr)} type="button">
-              {p.name}
-              <code>{p.expr}</code>
-            </button>
-          ))}
         </div>
 
         <div className="cb-rows">

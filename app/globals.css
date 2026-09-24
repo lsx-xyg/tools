@@ -1933,15 +1933,6 @@ a.module:hover {
 }
 
 /* ---------- Cron 可视化生成弹窗 ---------- */
-.cb-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-.cb-presets .cron-example {
-  font-size: 12px;
-}
 .cb-rows {
   display: flex;
   flex-direction: column;

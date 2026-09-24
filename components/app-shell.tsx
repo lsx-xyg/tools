@@ -68,7 +68,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           <div className="nav-group-label label">更多</div>
           <div className="nav-items">
             <span className="nav-item soon" aria-disabled="true" title="更多工具筹备中">
-              更多工具筹备中
+              <span className="nav-text">更多工具筹备中</span>
               <span className="lamp amber" aria-hidden="true" />
             </span>
           </div>
