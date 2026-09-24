@@ -6,6 +6,8 @@ export interface OfflineTransferMeta {
   expiresIn: number;
   expiresAt: number;
   maxDownloads: number;
+  /** 上传时被自动转为「UTF-8 + BOM」的文件名（文本编码归一化） */
+  converted?: string[];
 }
 
 /** 离线传输自定义参数：时长 1h～7 天，下载次数 1～100（服务端会 clamp） */

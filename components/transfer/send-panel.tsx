@@ -101,6 +101,7 @@ function ReadyView({
   mode,
   expiresAt,
   ttlHours,
+  converted,
   onReset,
   onDelete,
   extra,
@@ -109,6 +110,7 @@ function ReadyView({
   mode: SendMode;
   expiresAt?: number;
   ttlHours?: number;
+  converted?: string[];
   onReset(): void;
   onDelete?(): void;
   extra?: React.ReactNode;
@@ -145,6 +147,14 @@ function ReadyView({
           </button>
         )}
       </div>
+      {mode === "offline" && converted && converted.length > 0 && (
+        <div className="state-line">
+          <IconCheck width={14} height={14} />
+          <span className="mono" style={{ fontSize: 12 }}>
+            已自动转为 UTF-8 编码：{converted.join("、")}
+          </span>
+        </div>
+      )}
       {mode === "offline" && cd && (
         <div className="state-line">
           <IconServer width={14} height={14} />
@@ -187,6 +197,7 @@ export function SendPanel() {
   const [progress, setProgress] = useState<{ sent: number; total: number } | null>(null);
   const [offlineTtl, setOfflineTtl] = useState<number>(24);
   const [offlineDownloads, setOfflineDownloads] = useState<number>(10);
+  const [converted, setConverted] = useState<string[]>([]);
   const senderRef = useRef<{ cancel(): void } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const doneRef = useRef(false);
@@ -209,6 +220,7 @@ export function SendPanel() {
     setCode("");
     setError("");
     setProgress(null);
+    setConverted([]);
     if (sendMode === "offline" && contentMode === "file") setFiles([]);
     if (sendMode === "offline" && contentMode === "text") setText("");
   }, [sendMode, contentMode]);
@@ -273,6 +285,7 @@ export function SendPanel() {
           : await createFileTransfer(files, opts);
       setCode(meta.code);
       setExpiresAt(meta.expiresAt);
+      setConverted(meta.converted ?? []);
       setPhase("waiting");
     } catch (e) {
       setPhase("error");
@@ -561,6 +574,7 @@ export function SendPanel() {
                 mode="offline"
                 expiresAt={expiresAt}
                 ttlHours={offlineTtl}
+                converted={converted}
                 onReset={reset}
                 onDelete={handleDelete}
               />
