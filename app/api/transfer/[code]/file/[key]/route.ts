@@ -32,7 +32,9 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 
   const { rawR2, obj, isLocal } = await getStorage();
-  const disposition = `attachment; filename*=UTF-8''${encodeURIComponent(meta.name)}`;
+  // RFC 6266 双保险：filename（ASCII 降级，兼容旧浏览器/下载器）+ filename*（UTF-8 百分号编码）
+  const asciiFallback = meta.name.replace(/[^\x20-\x7e]/g, "_").slice(0, 150) || "download";
+  const disposition = `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(meta.name)}`;
 
   if (!isLocal && rawR2) {
     // 生产：R2 流式 + 断点续传
@@ -59,7 +61,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "文件不存在" }, { status: 404 });
     }
     const headers = new Headers();
-    headers.set("Content-Type", meta.type || "application/octet-stream");
+    headers.set("Content-Type", fileContentType(meta.type));
     headers.set("Content-Disposition", disposition);
     headers.set("Accept-Ranges", "bytes");
     if (parsed) {
@@ -78,10 +80,16 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "文件不存在" }, { status: 404 });
   }
   const headers = new Headers();
-  headers.set("Content-Type", meta.type || "application/octet-stream");
+  headers.set("Content-Type", fileContentType(meta.type));
   headers.set("Content-Length", String(local.size));
   headers.set("Content-Disposition", disposition);
   return new Response(local.buffer as BodyInit, { status: 200, headers });
+}
+
+/** text/* 类型补 charset=utf-8，避免浏览器/编辑器按本地编码（如 GBK）解码中文乱码 */
+function fileContentType(t: string): string {
+  const base = t || "application/octet-stream";
+  return /^text\//i.test(base) && !/charset/i.test(base) ? `${base}; charset=utf-8` : base;
 }
 
 /** 解析 Range: bytes=start-end / bytes=start- / bytes=-suffix */
