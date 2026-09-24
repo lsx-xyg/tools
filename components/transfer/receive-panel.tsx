@@ -12,6 +12,7 @@ import { startReceiver, type RtcPhase, type ReceivedFile } from "@/lib/rtc-clien
 import { copyText } from "@/lib/clipboard";
 import { countChars, fmtBytes } from "@/lib/limits";
 import { useCountdown } from "@/lib/use-countdown";
+import { ScannerButton } from "./scanner";
 import {
   IconCheck,
   IconClock,
@@ -229,6 +230,16 @@ export function ReceivePanel({ autoJoin }: { autoJoin?: { mode?: string; code?: 
               <span className="count-hint" id="recv-hint">
                 输入发送端显示的提取码，或粘贴带提取码的链接（支持扫码进入）
               </span>
+            </div>
+
+            <div className="input-row" style={{ justifyContent: "flex-start" }}>
+              <ScannerButton
+                onDetected={(c) => {
+                  setInput(c);
+                  void join(c);
+                }}
+              />
+              <span className="count-hint">扫码自动识别提取码</span>
             </div>
 
             {error && (

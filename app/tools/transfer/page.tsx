@@ -1,11 +1,29 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SendPanel } from "@/components/transfer/send-panel";
 import { ReceivePanel } from "@/components/transfer/receive-panel";
-import { IconBolt, IconChevronLeft } from "@/components/icons";
+import { IconBolt, IconChevronLeft, IconExternal } from "@/components/icons";
+
+const noopSubscribe = () => () => {};
+
+/** 微信内置浏览器无法下载文件，提示用户转系统浏览器（SSR 安全） */
+function WechatHint() {
+  const isWechat = useSyncExternalStore(
+    noopSubscribe,
+    () => typeof navigator !== "undefined" && /MicroMessenger/i.test(navigator.userAgent),
+    () => false,
+  );
+  if (!isWechat) return null;
+  return (
+    <div className="wechat-hint" role="status">
+      <IconExternal width={14} height={14} />
+      微信内无法下载文件：请点击右上角「···」→「在浏览器中打开」后再使用
+    </div>
+  );
+}
 
 function TransferPageInner() {
   const sp = useSearchParams();
@@ -14,6 +32,7 @@ function TransferPageInner() {
 
   return (
     <div className="fade-rise">
+      <WechatHint />
       <div className="transfer-head">
         <Link href="/" className="back-link">
           <IconChevronLeft width={15} height={15} />

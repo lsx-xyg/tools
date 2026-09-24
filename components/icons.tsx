@@ -199,3 +199,14 @@ export const IconServer = (p: P) => (
     <path d="M7 7.5h.01M7 16.5h.01" strokeWidth="2.4" />
   </svg>
 );
+
+/** 扫一扫（二维码扫描） */
+export const IconScan = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M3 8V5.5A2.5 2.5 0 0 1 5.5 3H8" />
+    <path d="M16 3h2.5A2.5 2.5 0 0 1 21 5.5V8" />
+    <path d="M21 16v2.5a2.5 2.5 0 0 1-2.5 2.5H16" />
+    <path d="M8 21H5.5A2.5 2.5 0 0 1 3 18.5V16" />
+    <path d="M3 12h18" />
+  </svg>
+);

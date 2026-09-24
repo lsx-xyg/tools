@@ -16,6 +16,7 @@ import {
   getRtcRoom,
 } from "./api";
 import { LIMITS } from "./limits";
+import { isTextFile, normalizeTextEncoding } from "./text-encoding";
 
 const ICE_SERVERS: RTCIceServer[] = [
   // 同局域网/同 WiFi 主要靠 host candidate 直连，STUN 只是拿公网地址的辅助。
@@ -355,6 +356,7 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
       const files: ReceivedFile[] = [];
       let cur: { i: number; name: string; size: number; type: string; parts: Blob[]; got: number } | null = null;
       let received = 0;
+      const pendingNorm: Promise<void>[] = [];
 
       dc.onmessage = (ev) => {
         if (cancelled) return;
@@ -376,29 +378,53 @@ export function startReceiver(code: string, hooks: RtcHooks): ReceiverSession {
             case "fileEnd": {
               const i = (msg as { i: number }).i;
               if (cur && cur.i === i) {
-                files[i] = { name: cur.name, size: cur.size, type: cur.type, blob: new Blob(cur.parts, { type: cur.type }) };
+                const c = cur;
                 cur = null;
+                const name = c.name;
+                const type = c.type;
+                const size = c.size;
+                const blob = new Blob(c.parts, { type: c.type });
+                // 文本类文件归一化为「UTF-8 + BOM」，与离线上传链路行为一致，
+                // 保证接收端任何系统打开都能正确显示中文。
+                const p = (async () => {
+                  try {
+                    if (isTextFile(name, type)) {
+                      const buf = new Uint8Array(await blob.arrayBuffer());
+                      const norm = normalizeTextEncoding(buf);
+                      files[i] = { name, size: norm.data.byteLength, type, blob: new Blob([norm.data], { type }) };
+                    } else {
+                      files[i] = { name, size, type, blob };
+                    }
+                  } catch {
+                    files[i] = { name, size, type, blob };
+                  }
+                })();
+                pendingNorm.push(p);
               }
               break;
             }
             case "done": {
               finished = true;
-              if (meta.mode === "text") {
-                hooks.onText?.(text);
-                hooks.onPhase("done");
-              } else {
-                const list = files.filter(Boolean);
-                hooks.onFiles?.(list);
-                hooks.onPhase("done");
-              }
-              // 回执发送方：内容已在本端接收并处理完成
-              try {
-                dc.send(JSON.stringify({ t: "ack" }));
-              } catch {
-                /* ignore：连接可能已关闭 */
-              }
-              // 优雅收尾：稍等片刻让发送端观察到正常关闭，再拆除本端
-              setTimeout(() => cleanup(true), 800);
+              void (async () => {
+                // 等待所有文本归一化完成再组装结果，避免文件被 filter(Boolean) 丢弃
+                if (pendingNorm.length) await Promise.all(pendingNorm);
+                if (meta.mode === "text") {
+                  hooks.onText?.(text);
+                  hooks.onPhase("done");
+                } else {
+                  const list = files.filter(Boolean);
+                  hooks.onFiles?.(list);
+                  hooks.onPhase("done");
+                }
+                // 回执发送方：内容已在本端接收并处理完成
+                try {
+                  dc.send(JSON.stringify({ t: "ack" }));
+                } catch {
+                  /* ignore：连接可能已关闭 */
+                }
+                // 优雅收尾：稍等片刻让发送端观察到正常关闭，再拆除本端
+                setTimeout(() => cleanup(true), 800);
+              })();
               break;
             }
           }
