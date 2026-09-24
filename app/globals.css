@@ -3,6 +3,7 @@
    ============================================================ */
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
+@import "lxgw-wenkai-screen-webfont/lxgwwenkaiscreen.css";
 
 /* shadcn/ui 主题变量 → 映射到本设计系统的 tokens（保持现有配色） */
 @theme inline {
@@ -69,8 +70,8 @@
   --r-md: 14px;
   --r-lg: 18px;
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-sans: "LXGW WenKai Screen", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", "Cascadia Code", "Roboto Mono",
     ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
@@ -1771,18 +1772,6 @@ a.module:hover {
     font-size: 12.5px;
   }
 }
-
-/* ---------- Reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 /* ---------- 通用工具页 ---------- */
 .textarea {
   width: 100%;
