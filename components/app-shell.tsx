@@ -7,7 +7,7 @@ import { tools, GITHUB_REPO } from "@/lib/tools";
 import { Brand } from "./brand";
 import { useTheme } from "./theme-provider";
 import { SearchPalette } from "./search-palette";
-import { IconChevronsLeft, IconChevronsRight, IconGithub, IconHome, IconMenu, IconMoon, IconPlus, IconSearch, IconSun, IconX } from "./icons";
+import { IconChevronsLeft, IconChevronsRight, IconGithub, IconHome, IconLaptop, IconMenu, IconMoon, IconPlus, IconSearch, IconSun, IconX } from "./icons";
 import { ICONS } from "./icon-map";
 import { Button } from "@/components/ui/button";
 
@@ -64,17 +64,24 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+const THEME_META: Record<string, { label: string; next: string; icon: React.ReactNode }> = {
+  system: { label: "跟随系统", next: "浅色", icon: <IconLaptop /> },
+  light: { label: "浅色模式", next: "深色", icon: <IconSun /> },
+  dark: { label: "深色模式", next: "跟随系统", icon: <IconMoon /> },
+};
+
 function ThemeButton() {
-  const { theme, toggle } = useTheme();
+  const { pref, cycle } = useTheme();
+  const meta = THEME_META[pref];
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={toggle}
-      aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
-      title={theme === "dark" ? "浅色模式" : "深色模式"}
+      onClick={cycle}
+      aria-label={`${meta.label}，点击切换为${meta.next}`}
+      title={`${meta.label} · 点击切${meta.next}`}
     >
-      {theme === "dark" ? <IconSun /> : <IconMoon />}
+      {meta.icon}
     </Button>
   );
 }

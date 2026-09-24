@@ -14,7 +14,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem("toolbox-theme");if(!t){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="light"}})();`;
+const themeScript = `(function(){try{var p=localStorage.getItem("toolbox-theme");var s=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var t=p==="light"||p==="dark"?p:s;document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="light"}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

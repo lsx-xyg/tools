@@ -29,6 +29,7 @@ import {
   Hash,
   Home,
   KeyRound,
+  Laptop,
   Link,
   LoaderCircle,
   Menu,
@@ -120,6 +121,7 @@ export const IconJson = wrap(Braces);
 export const IconKey = wrap(KeyRound);
 export const IconLink = wrap(Link);
 export const IconLoader = wrap(LoaderCircle);
+export const IconLaptop = wrap(Laptop);
 export const IconMenu = wrap(Menu);
 export const IconMonitor = wrap(Monitor);
 export const IconMoon = wrap(Moon);
