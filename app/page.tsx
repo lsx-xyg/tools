@@ -2,14 +2,26 @@ import Link from "next/link";
 import { GITHUB_REPO, soonTools, tools } from "@/lib/tools";
 import { StorageSwitch } from "@/components/storage-switch";
 import {
+  IconBase64,
   IconBolt,
   IconChevronRight,
   IconClock,
+  IconCron,
+  IconJson,
   IconPlus,
+  IconQr,
   IconServer,
   IconShield,
   IconTransfer,
 } from "@/components/icons";
+
+const MODULE_ICONS: Record<string, (p: { width?: number; height?: number }) => React.ReactNode> = {
+  transfer: IconTransfer,
+  qr: IconQr,
+  base64: IconBase64,
+  json: IconJson,
+  cron: IconCron,
+};
 
 export default function Home() {
   return (
@@ -17,8 +29,8 @@ export default function Home() {
       <header className="page-head">
         <h1>顺手的小工具，即开即用。</h1>
         <p className="lede">
-          无需注册登录，打开就能用。第一个工具：文本与文件的跨设备互传——在线直传不落服务器，离线暂存
-          24 小时自动清除。
+          无需注册登录，打开就能用：跨设备互传、二维码生成、Base64 编码、JSON 格式化、Cron
+          解析——全部本地处理或到期自动销毁。
         </p>
         <div className="meta-chips">
           <span className="chip accent">
@@ -52,9 +64,7 @@ export default function Home() {
               <span className="right label">就绪</span>
             </div>
             <div className="module-body">
-              <div className="module-icon">
-                <IconTransfer />
-              </div>
+              <div className="module-icon">{MODULE_ICONS[t.icon]?.({ width: 24, height: 24 })}</div>
               <div className="module-name">{t.name}</div>
               <div className="module-desc">{t.description}</div>
               <div className="module-tags">
@@ -78,7 +88,7 @@ export default function Home() {
             <div className="module-head">
               <span className="label">
                 <span className="lamp amber" aria-hidden="true" />
-                T-0{i + 2}
+                T-0{tools.length + i + 1}
               </span>
               <span className="right label">筹备中</span>
             </div>

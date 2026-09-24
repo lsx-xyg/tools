@@ -161,6 +161,20 @@ export const IconChevronRight = (p: P) => (
   </svg>
 );
 
+export const IconChevronsLeft = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M11 7l-5 5 5 5" />
+    <path d="M18 7l-5 5 5 5" />
+  </svg>
+);
+
+export const IconChevronsRight = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M13 7l5 5-5 5" />
+    <path d="M6 7l5 5-5 5" />
+  </svg>
+);
+
 export const IconPaste = (p: P) => (
   <svg {...base(p)}>
     <rect x="5" y="4" width="14" height="18" rx="2" />
@@ -227,5 +241,42 @@ export const IconDatabase = (p: P) => (
     <ellipse cx="12" cy="5" rx="8" ry="3" />
     <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
     <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+  </svg>
+);
+
+/** 二维码 */
+export const IconQr = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <path d="M14 14h3v3h-3z" />
+    <path d="M21 14v3M14 21h3M18 18h3" />
+  </svg>
+);
+
+/** Base64（Aa 字块） */
+export const IconBase64 = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="3" y="4" width="18" height="16" rx="3" />
+    <path d="M6.5 14.5 9.2 8.5h1.6l2.7 6M6.9 12.6h4.5" />
+    <path d="M13.5 8.5h3.2c1.2 0 1.9.9 1.9 2 0 1.3-1 2-1.9 2h-3.2z" />
+  </svg>
+);
+
+/** JSON（花括号） */
+export const IconJson = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M8.5 4C6 4 5 5.2 5 7.5V10c0 1.8-1 2.8-2 3 1 .2 2 1.2 2 3v2.5C5 18.8 6 20 8.5 20" />
+    <path d="M15.5 4C18 4 19 5.2 19 7.5V10c0 1.8 1 2.8 2 3-1 .2-2 1.2-2 3v2.5C19 18.8 18 20 15.5 20" />
+  </svg>
+);
+
+/** Cron（时钟 + 星号） */
+export const IconCron = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+    <path d="M17.5 17.5l1.2 1.2" />
   </svg>
 );
