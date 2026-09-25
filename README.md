@@ -84,9 +84,22 @@ npx wrangler kv namespace create TRANSFER_KV
 npx wrangler r2 bucket create tools-transfer
 ```
 
-### 2. 配置 wrangler.jsonc
+### 2. KV namespace id：仓库只存占位符
 
-打开 `wrangler.jsonc`，将 `kv_namespaces[0].id` 替换为上面创建返回的 id。
+`wrangler.jsonc` 中的 KV id 是占位符（`TRANSFER_KV_ID_PLACEHOLDER`），**真实 id 永远
+不入库**，公开仓库也不泄露。部署时通过环境变量 / Secret 注入：
+
+- **本地部署**（推荐入口，自动注入 id 并部署）：
+
+  ```bash
+  TRANSFER_KV_ID=<你的id> ./scripts/deploy.sh
+  # 查 id：npx wrangler kv namespace list
+  ```
+
+- **GitHub Actions**：在仓库 Settings → Secrets 添加 `TRANSFER_KV_ID`，workflow 会
+  在部署前自动替换占位符（见 `.github/workflows/deploy.yml`）。
+
+> 也可以手动临时替换后部署：`sed "s/TRANSFER_KV_ID_PLACEHOLDER/<你的id>/" wrangler.jsonc > /tmp/w.jsonc && npx wrangler deploy -c /tmp/w.jsonc`
 
 ### 3. 设置全站访问密码（可选，推荐）
 
@@ -127,6 +140,7 @@ npm run deploy
 
 - `CLOUDFLARE_API_TOKEN`（有 Workers 脚本与 KV / R2 写权限的 API Token）
 - `CLOUDFLARE_ACCOUNT_ID`（Cloudflare 账号 ID）
+- `TRANSFER_KV_ID`（你的 KV namespace id，见上文步骤 2）
 
 ## 🔄 存储后端切换（KV / Redis）
 

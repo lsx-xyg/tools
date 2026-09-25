@@ -17,6 +17,10 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Inject KV namespace id (placeholder → secret)
+        run: sed -i "s/TRANSFER_KV_ID_PLACEHOLDER/${TRANSFER_KV_ID}/" wrangler.jsonc
+        env:
+          TRANSFER_KV_ID: ${{ secrets.TRANSFER_KV_ID }}
       - name: Build & deploy
         run: npm run deploy
         env:
