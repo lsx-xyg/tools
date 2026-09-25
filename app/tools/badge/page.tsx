@@ -18,7 +18,7 @@ function enc(v: string) {
 
 export default function BadgePage() {
   const [label, setLabel] = useState("");
-  const [message, setMessage] = useState("message");
+  const [message, setMessage] = useState("");
   const [color, setColor] = useState("#007ec6");
   const [style, setStyle] = useState<BadgeStyle>("flat");
   const [logo, setLogo] = useState("");
@@ -100,38 +100,33 @@ export default function BadgePage() {
               </div>
             </div>
 
-            {/* 颜色 */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">颜色</label>
-              <ColorPicker value={color} onChange={setColor} />
-            </div>
-
-            {/* 样式 + Logo 颜色 */}
+            {/* 颜色 + Logo 颜色（同一行，都用选择器） */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">样式</label>
-                <div className="seg flex-wrap">
-                  {STYLES.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      data-active={style === s}
-                      onClick={() => setStyle(s)}
-                      className="!px-2.5 !text-[11px]"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-xs font-medium text-muted-foreground">颜色</label>
+                <ColorPicker value={color} onChange={setColor} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Logo 颜色（可选）</label>
-                <input
-                  className="input font-mono"
-                  value={logoColor}
-                  onChange={(e) => setLogoColor(e.target.value)}
-                  placeholder="#ffffff"
-                />
+                <ColorPicker value={logoColor || "#ffffff"} onChange={(v) => setLogoColor(v)} />
+              </div>
+            </div>
+
+            {/* 样式（单独一行） */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">样式</label>
+              <div className="seg flex-wrap">
+                {STYLES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    data-active={style === s}
+                    onClick={() => setStyle(s)}
+                    className="!px-2.5 !text-[11px]"
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -140,7 +135,7 @@ export default function BadgePage() {
               <label className="text-xs font-medium text-muted-foreground">
                 Logo（可选，Simple Icons 名称）
               </label>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <input
                   className="input flex-1"
                   value={logo}

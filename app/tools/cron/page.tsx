@@ -30,7 +30,7 @@ function fmt(d: Date): string {
 }
 
 export default function CronPage() {
-  const [expr, setExpr] = useState("*/5 * * * *");
+  const [expr, setExpr] = useState("");
   const [builderOpen, setBuilderOpen] = useState(false);
 
   const { times, error, fieldCount } = useMemo(() => {

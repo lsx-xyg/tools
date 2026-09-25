@@ -143,7 +143,7 @@ marked.use({
 });
 
 export default function MarkdownPage() {
-  const [md, setMd] = useState(SAMPLE);
+  const [md, setMd] = useState("");
   const [theme, setTheme] = useState<MdTheme>("light");
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);

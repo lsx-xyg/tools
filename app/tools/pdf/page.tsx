@@ -52,7 +52,7 @@ export default function PdfPage() {
   const [splitFile, setSplitFile] = useState<PdfItem | null>(null);
   const [splitErr, setSplitErr] = useState("");
   const [range, setRange] = useState("");
-  const [every, setEvery] = useState("2");
+  const [every, setEvery] = useState("");
   const [busy, setBusy] = useState("");
 
   const totalPages = useMemo(() => splitFile?.pages ?? 0, [splitFile]);
