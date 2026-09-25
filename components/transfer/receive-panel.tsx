@@ -232,7 +232,7 @@ export function ReceivePanel({ autoJoin }: { autoJoin?: { mode?: string; code?: 
               </span>
             </div>
 
-            <div className="input-row" style={{ justifyContent: "flex-start" }}>
+            <div className="input-row" style={{ justifyContent: "flex-start", marginTop: "auto" }}>
               <ScannerButton
                 onDetected={(c) => {
                   setInput(c);
