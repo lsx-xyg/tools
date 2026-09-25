@@ -3105,6 +3105,20 @@ mark.re-match {
   gap: 6px;
   flex: 1;
 }
+.logo-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.logo-input-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.logo-input-row .btn {
+  flex-shrink: 0;
+}
 .swatch {
   width: 22px;
   height: 22px;
@@ -3140,111 +3154,17 @@ mark.re-match {
   white-space: pre-wrap;
 }
 
-/* 图标选择器 */
-.icon-picker {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-}
-.icon-input-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.icon-input-ic {
-  color: var(--ink-3);
-  flex-shrink: 0;
-  margin-left: 2px;
-}
-.icon-input-row .input {
-  flex: 1;
-  min-width: 0;
-  padding-left: 4px;
-}
-.icon-clear {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-}
-.icon-clear:hover {
-  color: var(--ink-1);
-  background: var(--bg-hover);
-}
-.icon-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 30;
-  max-height: 260px;
-  overflow-y: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 0.12);
-  padding: 4px;
-}
-.icon-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink-1);
-  font-size: 13px;
-  cursor: pointer;
-  text-align: left;
-}
-.icon-item:hover {
-  background: var(--bg-hover);
-}
-.icon-item.active {
-  background: var(--bg-active);
-}
-.icon-chip {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  border: 1px solid rgb(0 0 0 / 0.12);
-}
-.icon-name {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.icon-slug {
-  margin-left: auto;
-  color: var(--ink-3);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.icon-empty {
-  padding: 10px;
-  color: var(--ink-3);
-  font-size: 13px;
-  text-align: center;
-}
-
-/* ---------- Markdown ---------- */
 .md-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-top: 14px;
+}
+/* Markdown 编辑/预览：窄屏上下单列（须在主定义之后，避免被覆盖） */
+@media (max-width: 700px) {
+  .md-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .md-editor {
   width: 100%;

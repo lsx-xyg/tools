@@ -243,64 +243,69 @@ ${rendered}
         }
       />
 
-      <div className="tool-row">
-        <button className="btn btn-ghost btn-sm" onClick={() => setMd(SAMPLE)} type="button">
-          <IconDocText width={14} height={14} />
-          示例
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={() => setMd("")} type="button">
-          清空
-        </button>
-        <span className="spacer" />
-        <button className="btn btn-ghost btn-sm" onClick={() => void copyHtml()} type="button">
-          {copied ? <IconCheck width={14} height={14} /> : <IconCopy width={14} height={14} />}
-          {copied ? "已复制" : "复制 HTML"}
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={downloadHtml} type="button">
-          <IconDownload width={14} height={14} />
-          下载 .html
-        </button>
-        <button className="btn btn-primary btn-sm" onClick={printPdf} type="button">
-          <IconPrinter width={14} height={14} />
-          导出 PDF
-        </button>
-      </div>
-
-      <div className="md-grid">
-        <div className="panel">
-          <div className="panel-head">
-            <span className="label">
-              <IconDocText width={14} height={14} />
-              Markdown
-            </span>
-            <span className="right label">{md.length} 字符</span>
-          </div>
-          <textarea
-            ref={editorRef}
-            className="md-editor"
-            value={md}
-            onChange={(e) => setMd(e.target.value)}
-            onScroll={() => syncScroll("editor")}
-            spellCheck={false}
-            placeholder="输入 Markdown…"
-            aria-label="Markdown 编辑器"
-          />
+      <div className="single-panel">
+        <div className="tool-row">
+          <button className="btn btn-ghost btn-sm" onClick={() => setMd(SAMPLE)} type="button">
+            <IconDocText width={14} height={14} />
+            示例
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setMd("")} type="button">
+            清空
+          </button>
+          <span className="spacer" />
+          <span className="seg" role="group" aria-label="预览主题">
+            {THEMES.map((t) => (
+              <button key={t.id} data-active={theme === t.id} onClick={() => setTheme(t.id)} type="button">
+                {t.label}
+              </button>
+            ))}
+          </span>
+          <button className="btn btn-ghost btn-sm" onClick={() => void copyHtml()} type="button">
+            {copied ? <IconCheck width={14} height={14} /> : <IconCopy width={14} height={14} />}
+            {copied ? "已复制" : "复制 HTML"}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={downloadHtml} type="button">
+            <IconDownload width={14} height={14} />
+            下载 .html
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={printPdf} type="button">
+            <IconPrinter width={14} height={14} />
+            导出 PDF
+          </button>
         </div>
 
-        <div className="panel">
-          <div className="panel-head">
-            <span className="label">预览</span>
-            <span className="right">
-              <span className="seg seg-thumb" role="group" aria-label="预览主题">
-                {THEMES.map((t) => (
-                  <button key={t.id} data-active={theme === t.id} onClick={() => setTheme(t.id)} type="button">
-                    {t.label}
-                  </button>
-                ))}
+        <div className="md-grid">
+          <div className="panel">
+            <div className="panel-head">
+              <span className="label">
+                <IconDocText width={14} height={14} />
+                Markdown
               </span>
-            </span>
+              <span className="right label">{md.length} 字符</span>
+            </div>
+            <textarea
+              ref={editorRef}
+              className="md-editor"
+              value={md}
+              onChange={(e) => setMd(e.target.value)}
+              onScroll={() => syncScroll("editor")}
+              spellCheck={false}
+              placeholder="输入 Markdown…"
+              aria-label="Markdown 编辑器"
+            />
           </div>
-          <div className={`md-body md-preview md-theme-${theme}`} ref={previewRef} onScroll={() => syncScroll("preview")} dangerouslySetInnerHTML={{ __html: rendered }} />
+
+          <div className="panel">
+            <div className="panel-head">
+              <span className="label">预览</span>
+            </div>
+            <div
+              className={`md-body md-preview md-theme-${theme}`}
+              ref={previewRef}
+              onScroll={() => syncScroll("preview")}
+              dangerouslySetInnerHTML={{ __html: rendered }}
+            />
+          </div>
         </div>
       </div>
     </div>
