@@ -3179,7 +3179,7 @@ mark.re-match {
   min-height: 460px;
   border: none;
   outline: none;
-  resize: vertical;
+  resize: none;
   background: transparent;
   color: var(--ink);
   font-family: var(--font-mono);

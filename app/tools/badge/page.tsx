@@ -1,192 +1,250 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ToolHead } from "@/components/tool-head";
-import { IconCheck, IconCopy, IconShield } from "@/components/icons";
+import { Check, Copy, ExternalLink } from "lucide-react";
+import hljs from "highlight.js";
+import { ColorPicker } from "@/components/color-picker";
 
-const STYLES = [
-  "flat",
-  "flat-square",
-  "plastic",
-  "for-the-badge",
-  "social",
-  "popout",
-  "popout-square",
-];
+const STYLES = ["flat", "plastic", "flat-square", "for-the-badge", "social"] as const;
+type BadgeStyle = (typeof STYLES)[number];
 
-const COLORS: { name: string; hex: string }[] = [
-  { name: "brightgreen", hex: "4c1" },
-  { name: "green", hex: "97ca00" },
-  { name: "yellowgreen", hex: "a4a61d" },
-  { name: "yellow", hex: "dfb317" },
-  { name: "orange", hex: "fe7d37" },
-  { name: "red", hex: "e05d44" },
-  { name: "blue", hex: "007ec6" },
-  { name: "lightgrey", hex: "9f9f9f" },
-  { name: "blueviolet", hex: "8c8ce0" },
-  { name: "pink", hex: "dd5597" },
-  { name: "darkgrey", hex: "555" },
-  { name: "white", hex: "fff" },
-  { name: "black", hex: "333" },
-];
+const OUTPUT_MODES = ["Markdown", "HTML", "直链"] as const;
+type OutputMode = (typeof OUTPUT_MODES)[number];
 
-type OutKind = "markdown" | "html" | "link";
+function enc(v: string) {
+  return encodeURIComponent(v);
+}
 
 export default function BadgePage() {
   const [label, setLabel] = useState("");
-  const [message, setMessage] = useState("");
-  const [color, setColor] = useState("blue");
-  const [style, setStyle] = useState("flat");
+  const [message, setMessage] = useState("message");
+  const [color, setColor] = useState("#007ec6");
+  const [style, setStyle] = useState<BadgeStyle>("flat");
   const [logo, setLogo] = useState("");
   const [logoColor, setLogoColor] = useState("");
-  const [outKind, setOutKind] = useState<OutKind>("markdown");
+  const [outputMode, setOutputMode] = useState<OutputMode>("Markdown");
   const [copied, setCopied] = useState(false);
 
-  // shields.io 在线渲染：所有输出统一走官方 URL
-  const url = useMemo(() => {
-    const p = new URLSearchParams();
-    if (label) p.set("label", label);
-    p.set("message", message || "message");
-    if (color) p.set("color", color.startsWith("#") ? color.slice(1) : color);
-    p.set("style", style);
-    if (logo) p.set("logo", logo);
-    if (logoColor) p.set("logoColor", logoColor);
-    return `https://img.shields.io/static/v1?${p.toString()}`;
+  const badgeUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (label) params.set("label", label);
+    params.set("message", message || "message");
+    params.set("color", color.replace(/^#/, ""));
+    params.set("style", style);
+    if (logo) params.set("logo", logo);
+    if (logoColor) params.set("logoColor", logoColor.replace(/^#/, ""));
+    return `https://img.shields.io/static/v1?${params.toString()}`;
   }, [label, message, color, style, logo, logoColor]);
 
-  const output = useMemo(() => {
-    const alt = `${label || "label"}: ${message || "message"}`;
-    if (outKind === "markdown") return `![${alt}](${url})`;
-    if (outKind === "html") return `<img alt="${alt}" src="${url}" />`;
-    return url;
-  }, [outKind, url, label, message]);
+  const altText = label ? `${label}: ${message}` : message;
+
+  const code = useMemo(() => {
+    if (outputMode === "Markdown") return `![${altText}](${badgeUrl})`;
+    if (outputMode === "HTML") return `<img alt="${altText}" src="${badgeUrl}" />`;
+    return badgeUrl;
+  }, [outputMode, altText, badgeUrl]);
+
+  const highlighted = useMemo(() => {
+    const lang = outputMode === "HTML" ? "xml" : outputMode === "直链" ? "bash" : "markdown";
+    try {
+      return hljs.highlight(code, { language: lang }).value;
+    } catch {
+      return code;
+    }
+  }, [code, outputMode]);
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(output);
+      await navigator.clipboard.writeText(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
+      setTimeout(() => setCopied(false), 1800);
     } catch {
       /* ignore */
     }
   };
 
-  const hexInput = color.startsWith("#") ? color.slice(1) : COLORS.find((c) => c.name === color)?.hex ?? color;
-
   return (
-    <div className="fade-rise">
-      <ToolHead
-        title="徽章生成"
-        lede="shields.io 风格徽章，在线实时渲染"
-        chip={
-          <span>
-            <IconShield width={12} height={12} />
-            由 shields.io 渲染
-          </span>
-        }
-      />
+    <div className="mx-auto max-w-6xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">徽章生成器</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          基于 shields.io 在线渲染 · 配置左侧参数，右侧实时预览并复制代码
+        </p>
+      </div>
 
-      <div className="single-panel">
-        <div className="badge-preview">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="徽章预览" />
-        </div>
-
-        <div className="form-grid">
-          <label className="form-row">
-            <span>Label 左侧文案</span>
-            <input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="build" />
-          </label>
-          <label className="form-row">
-            <span>Message 右侧文案</span>
-            <input className="input" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="passing" />
-          </label>
-
-          <div className="form-row form-col-span">
-            <span>颜色</span>
-            <div className="badge-colors">
-              {COLORS.map((c) => (
-                <button
-                  key={c.name}
-                  type="button"
-                  className={`swatch ${color === c.name ? "active" : ""}`}
-                  style={{ background: `#${c.hex}` }}
-                  onClick={() => setColor(c.name)}
-                  title={c.name}
-                  aria-label={c.name}
-                />
-              ))}
-              <span className="hex-field">
-                <span>#</span>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* ========== 左栏：配置 ========== */}
+        <div className="panel" style={{ overflow: "visible" }}>
+          <div className="panel-head">
+            <span>配置</span>
+          </div>
+          <div className="space-y-5 p-5">
+            {/* Label + Message */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Label（可选）</label>
                 <input
                   className="input"
-                  value={hexInput}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
-                    setColor(v ? `#${v}` : "");
-                  }}
-                  placeholder="自定义 hex"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder="如 build"
                 />
-              </span>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Message</label>
+                <input
+                  className="input"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="如 passing"
+                />
+              </div>
+            </div>
+
+            {/* 颜色 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">颜色</label>
+              <ColorPicker value={color} onChange={setColor} />
+            </div>
+
+            {/* 样式 + Logo 颜色 */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">样式</label>
+                <div className="seg flex-wrap">
+                  {STYLES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      data-active={style === s}
+                      onClick={() => setStyle(s)}
+                      className="!px-2.5 !text-[11px]"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Logo 颜色（可选）</label>
+                <input
+                  className="input font-mono"
+                  value={logoColor}
+                  onChange={(e) => setLogoColor(e.target.value)}
+                  placeholder="#ffffff"
+                />
+              </div>
+            </div>
+
+            {/* Logo */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Logo（可选，Simple Icons 名称）
+              </label>
+              <div className="flex gap-2">
+                <input
+                  className="input flex-1"
+                  value={logo}
+                  onChange={(e) => setLogo(e.target.value)}
+                  placeholder="如 github / docker / react"
+                />
+                <a
+                  href="https://simpleicons.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost btn-sm shrink-0"
+                >
+                  <ExternalLink width={14} height={14} />
+                  全部图标
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== 右栏：预览 + 代码 ========== */}
+        <div className="space-y-6">
+          {/* 预览 */}
+          <div className="panel">
+            <div className="panel-head">
+              <span>预览</span>
+            </div>
+            <div className="flex min-h-[140px] items-center justify-center bg-[repeating-conic-gradient(var(--bg-subtle)_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] p-8">
+              <img
+                src={badgeUrl}
+                alt={altText}
+                className="max-w-full"
+                style={{ imageRendering: "auto" }}
+              />
             </div>
           </div>
 
-          <label className="form-row">
-            <span>样式</span>
-            <select className="input" value={style} onChange={(e) => setStyle(e.target.value)}>
-              {STYLES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="form-row">
-            <span>Logo 颜色（可选）</span>
-            <input className="input" value={logoColor} onChange={(e) => setLogoColor(e.target.value)} placeholder="white" />
-          </label>
-
-          <div className="form-row form-col-span">
-            <span>Logo（可选）</span>
-            <div className="logo-input-row">
-              <input
-                className="input"
-                value={logo}
-                onChange={(e) => setLogo(e.target.value)}
-                placeholder="如 github / docker / react"
-                aria-label="Logo 名称"
-              />
+          {/* 代码输出 */}
+          <div className="panel overflow-hidden">
+            <div className="panel-head flex items-center justify-between">
+              <span>代码输出</span>
+              <div className="seg">
+                {OUTPUT_MODES.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    data-active={outputMode === m}
+                    onClick={() => setOutputMode(m)}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="relative">
               <button
                 type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => window.open("https://simpleicons.org/", "_blank", "noopener")}
+                onClick={copy}
+                className="absolute right-3 top-3 z-10 flex h-8 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 text-xs text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
               >
-                全部图标
+                {copied ? (
+                  <>
+                    <Check width={13} height={13} className="text-emerald-400" />
+                    已复制
+                  </>
+                ) : (
+                  <>
+                    <Copy width={13} height={13} />
+                    复制
+                  </>
+                )}
               </button>
+              <pre className="m-0 min-h-[140px] max-h-[260px] overflow-x-auto overflow-y-auto bg-slate-900 p-4 pr-20 text-[13px] leading-relaxed">
+                <code
+                  className="hljs language-xml whitespace-pre"
+                  dangerouslySetInnerHTML={{ __html: highlighted }}
+                />
+              </pre>
             </div>
           </div>
+
+          <p className="text-xs text-muted-foreground/70">
+            徽章由{" "}
+            <a
+              href="https://shields.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-accent"
+            >
+              shields.io
+            </a>{" "}
+            在线渲染，Logo 图标来自{" "}
+            <a
+              href="https://simpleicons.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-accent"
+            >
+              Simple Icons
+            </a>
+            。
+          </p>
         </div>
-
-        <div className="tool-row">
-          <div className="seg" role="group" aria-label="输出格式">
-            {(["markdown", "html", "link"] as OutKind[]).map((k) => (
-              <button key={k} data-active={outKind === k} onClick={() => setOutKind(k)} type="button">
-                {k === "markdown" ? "Markdown" : k === "html" ? "HTML" : "直链"}
-              </button>
-            ))}
-          </div>
-          <span className="spacer" />
-          <button className="btn btn-primary btn-sm" onClick={() => void copy()} type="button">
-            {copied ? <IconCheck width={14} height={14} /> : <IconCopy width={14} height={14} />}
-            {copied ? "已复制" : "复制"}
-          </button>
-        </div>
-
-        <pre className="badge-out">{output}</pre>
-
-        <p className="count-hint">
-          徽章由 shields.io 在线渲染（需联网）；粘贴到 Markdown / HTML 均可显示。颜色支持预设或任意 hex（# 可不填）；
-          Logo 填写 Simple Icons 名称（如 github / docker），完整列表见 simpleicons.org。
-        </p>
       </div>
     </div>
   );
