@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test";
 
 export interface Tool {
   id: ToolId;
@@ -57,7 +57,8 @@ export interface Tool {
     | "image"
     | "badge"
     | "markdown"
-    | "http-parse";
+    | "http-parse"
+    | "ws-test";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -351,6 +352,18 @@ export const tools: Tool[] = [
     icon: "http-parse",
     lamp: "ok",
     tags: ["HTTP", "User-Agent", "Cookie", "URL", "Header", "解析"],
+  },
+  {
+    id: "ws-test",
+    index: "T-25",
+    name: "WebSocket / SSE 测试",
+    tagline: "连接测试 · 收发消息 · 实时日志",
+    description:
+      "WebSocket 测试：连接 ws/wss 地址，发送与接收文本/二进制消息，状态灯与时间线日志。SSE 测试：EventSource 流式订阅，支持 GET/POST、自定义 Headers 与请求体，事件名/数据/id 逐条展示。全部在浏览器本地完成。",
+    path: "/tools/ws-test",
+    icon: "ws-test",
+    lamp: "ok",
+    tags: ["WebSocket", "SSE", "连接", "测试", "实时"],
   },
 ];
 
