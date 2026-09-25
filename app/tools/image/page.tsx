@@ -273,7 +273,7 @@ export default function ImagePage() {
               )}
             </div>
 
-            <div className="tool-row tool-row-wrap">
+            <div className="replace-row">
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -283,6 +283,9 @@ export default function ImagePage() {
                 <IconRefresh width={14} height={14} />
                 更换图片
               </button>
+            </div>
+
+            <div className="tool-row tool-row-wrap">
               {mode === "compress" && (
                 <>
                   <label className="field-label">

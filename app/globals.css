@@ -3007,6 +3007,14 @@ mark.re-match {
   max-height: 420px;
   user-select: none;
 }
+/* 更换图片：独立一行，置于图片下方 */
+.replace-row {
+  display: flex;
+  margin-top: 10px;
+}
+.replace-row .btn {
+  margin-inline: auto;
+}
 .img-stage.crop-mode {
   cursor: crosshair;
   touch-action: none;
