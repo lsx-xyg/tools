@@ -3364,3 +3364,25 @@ mark.re-match {
 .md-preview::-webkit-scrollbar {
   display: none;
 }
+
+/* ========== 图片处理：输出行移动端上下布局 ========== */
+@media (max-width: 600px) {
+  .img-output-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+  .img-output-head .label {
+    flex-wrap: wrap;
+    line-height: 1.6;
+  }
+  .img-output-head .right {
+    margin-left: 0;
+    align-self: stretch;
+  }
+  .img-output-head .right .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

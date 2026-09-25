@@ -366,7 +366,7 @@ export default function ImagePage() {
               )}
             </div>
 
-            <div className="panel-head">
+            <div className="panel-head img-output-head">
               <span className="label">
                 输出 · {result ? `${result.w} × ${result.h} · ${fmtSize(result.bytes)}` : "处理中…"}
                 {result && (

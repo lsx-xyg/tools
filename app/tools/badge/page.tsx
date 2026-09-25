@@ -77,10 +77,10 @@ export default function BadgePage() {
           <div className="panel-head">
             <span>配置</span>
           </div>
-          <div className="space-y-5 p-5">
+          <div className="space-y-6 p-5">
             {/* Label + Message */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Label（可选）</label>
                 <input
                   className="input"
@@ -89,7 +89,7 @@ export default function BadgePage() {
                   placeholder="如 build"
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Message</label>
                 <input
                   className="input"
@@ -102,20 +102,20 @@ export default function BadgePage() {
 
             {/* 颜色 + Logo 颜色（同一行，都用选择器） */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">颜色</label>
                 <ColorPicker value={color} onChange={setColor} />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Logo 颜色（可选）</label>
                 <ColorPicker value={logoColor || "#ffffff"} onChange={(v) => setLogoColor(v)} />
               </div>
             </div>
 
             {/* 样式（单独一行） */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">样式</label>
-              <div className="seg flex-wrap">
+              <div className="seg flex-wrap w-full">
                 {STYLES.map((s) => (
                   <button
                     key={s}
@@ -131,7 +131,7 @@ export default function BadgePage() {
             </div>
 
             {/* Logo */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">
                 Logo（可选，Simple Icons 名称）
               </label>
