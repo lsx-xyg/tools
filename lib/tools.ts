@@ -78,8 +78,8 @@ export const tools: Tool[] = [
   {
     id: "qr",
     index: "T-02",
-    name: "二维码生成",
-    tagline: "文本 / 链接转二维码",
+    name: "二维码生成 / 解析",
+    tagline: "生成二维码或解析二维码图片",
     description:
       "把文本、链接、Wi-Fi 配置等任意内容生成二维码，扫码即得。可调节尺寸与颜色，一键下载 PNG。全部在本地浏览器完成，内容不经过服务器。",
     path: "/tools/qr",
