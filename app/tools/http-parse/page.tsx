@@ -2,8 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { UAParser } from "ua-parser-js";
+import hljs from "highlight.js/lib/core";
+import jsonLang from "highlight.js/lib/languages/json";
 import { ToolHead } from "@/components/tool-head";
 import { IconCheck, IconCopy, IconShield } from "@/components/icons";
+
+hljs.registerLanguage("json", jsonLang);
 
 type TabId = "ua" | "cookie" | "url" | "query" | "header" | "setcookie" | "request";
 
@@ -157,6 +161,10 @@ interface ParsedRequest {
   body: string;
   isJson: boolean;
   queryInPath: KV[];
+  contentType: string;
+  bodyType: "json" | "form-urlencoded" | "multipart" | "text" | "empty";
+  formData: KV[];
+  multipartParts: { name: string; filename: string }[];
 }
 
 function parseHttpRequest(raw: string): ParsedRequest | null {
@@ -192,6 +200,7 @@ function parseHttpRequest(raw: string): ParsedRequest | null {
   const headers: KV[] = [];
   let uaValue = "";
   let cookieValue = "";
+  let contentType = "";
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -203,17 +212,48 @@ function parseHttpRequest(raw: string): ParsedRequest | null {
     const lk = key.toLowerCase();
     if (lk === "user-agent") uaValue = value;
     if (lk === "cookie") cookieValue = value;
+    if (lk === "content-type") contentType = value;
   }
 
   const uaResult = uaValue ? parseUA(uaValue) : [];
   const cookieResult = cookieValue ? parseCookie(cookieValue) : [];
 
+  // 判断 body 类型并解析
   let isJson = false;
+  let bodyType: ParsedRequest["bodyType"] = "empty";
+  let formData: KV[] = [];
+  let multipartParts: { name: string; filename: string }[] = [];
+
   if (body) {
-    try { JSON.parse(body); isJson = true; } catch { isJson = false; }
+    const ct = contentType.toLowerCase();
+    if (ct.includes("application/json") || ct.includes("+json")) {
+      bodyType = "json";
+      try { JSON.parse(body); isJson = true; } catch { isJson = false; }
+    } else if (ct.includes("application/x-www-form-urlencoded")) {
+      bodyType = "form-urlencoded";
+      formData = parseQuery(body); // URLSearchParams 自动处理 + 和 %XX
+    } else if (ct.includes("multipart/form-data")) {
+      bodyType = "multipart";
+      const bm = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      const boundary = bm ? (bm[1] || bm[2] || "").trim() : "";
+      if (boundary) {
+        const parts = body.split(`--${boundary}`);
+        for (const part of parts) {
+          const p = part.trim();
+          if (!p || p === "--") continue;
+          const dm = p.match(/Content-Disposition:[^\n]*name="([^"]*)"(?:[^\n]*filename="([^"]*)")?/i);
+          if (dm) {
+            multipartParts.push({ name: dm[1] || "", filename: dm[2] || "" });
+          }
+        }
+      }
+    } else {
+      bodyType = "text";
+      try { JSON.parse(body); isJson = true; bodyType = "json"; } catch { /* text */ }
+    }
   }
 
-  return { method, path, version, headers, uaResult, cookieResult, body, isJson, queryInPath };
+  return { method, path, version, headers, uaResult, cookieResult, body, isJson, queryInPath, contentType, bodyType, formData, multipartParts };
 }
 
 const PARSERS: Record<TabId, (raw: string) => KV[]> = {
@@ -252,7 +292,7 @@ function ResultItem({ item }: { item: KV }) {
 }
 
 export default function HttpParsePage() {
-  const [tab, setTab] = useState<TabId>("ua");
+  const [tab, setTab] = useState<TabId>("request");
   const [inputs, setInputs] = useState<Record<TabId, string>>({
     ua: "", cookie: "", url: "", query: "", header: "", setcookie: "", request: "",
   });
@@ -382,12 +422,73 @@ export default function HttpParsePage() {
                   {/* 请求体 */}
                   {parsedRequest.body && (
                     <div className="hp-section">
-                      <div className="hp-section-title">
-                        请求体{parsedRequest.isJson ? "（JSON）" : ""}
+                      <div className="hp-section-title hp-body-title">
+                        <span>请求体</span>
+                        <span className={`hp-body-tag tag-${parsedRequest.bodyType}`}>
+                          {parsedRequest.bodyType === "json" ? "JSON" :
+                           parsedRequest.bodyType === "form-urlencoded" ? "Form Data" :
+                           parsedRequest.bodyType === "multipart" ? "Multipart" : "Text"}
+                        </span>
                       </div>
-                      <pre className="hp-body-pre">
-                        <code>{parsedRequest.isJson ? JSON.stringify(JSON.parse(parsedRequest.body), null, 2) : parsedRequest.body}</code>
-                      </pre>
+
+                      {/* JSON：美化 + 高亮 */}
+                      {parsedRequest.bodyType === "json" && parsedRequest.isJson && (
+                        <pre className="hp-body-pre code-dark"><code
+                          dangerouslySetInnerHTML={{
+                            __html: hljs.highlight(JSON.stringify(JSON.parse(parsedRequest.body), null, 2), { language: "json" }).value,
+                          }}
+                        /></pre>
+                      )}
+                      {parsedRequest.bodyType === "json" && !parsedRequest.isJson && (
+                        <pre className="hp-body-pre"><code>{parsedRequest.body}</code></pre>
+                      )}
+
+                      {/* Form Data：键值对表格 */}
+                      {parsedRequest.bodyType === "form-urlencoded" && (
+                        parsedRequest.formData.length > 0 ? (
+                          <div className="hp-result-list">
+                            {parsedRequest.formData.map((item, i) => (
+                              <ResultItem key={`fd-${i}`} item={item} />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="count-hint">未解析到表单字段</p>
+                        )
+                      )}
+
+                      {/* Multipart：列出 part name/filename */}
+                      {parsedRequest.bodyType === "multipart" && (
+                        <div>
+                          <p className="count-hint warn" style={{ marginBottom: 10 }}>
+                            文件上传表单（multipart/form-data）无法在此处预览文件内容
+                          </p>
+                          {parsedRequest.multipartParts.length > 0 ? (
+                            <div className="hp-result-list">
+                              {parsedRequest.multipartParts.map((part, i) => (
+                                <div key={`mp-${i}`} className="result-row">
+                                  <span className="result-key">{part.name || "(未命名)"}</span>
+                                  <span className="result-val">
+                                    {part.filename ? `文件: ${part.filename}` : "文本字段"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="count-hint">未识别到表单字段（可能 boundary 不匹配）</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Text：原样展示 */}
+                      {parsedRequest.bodyType === "text" && (
+                        <pre className="hp-body-pre"><code>{parsedRequest.body}</code></pre>
+                      )}
+
+                      {/* 原始请求体折叠面板 */}
+                      <details className="hp-raw-collapse">
+                        <summary>查看原始请求体</summary>
+                        <pre className="hp-body-pre" style={{ marginTop: 8 }}><code>{parsedRequest.body}</code></pre>
+                      </details>
                     </div>
                   )}
                 </div>

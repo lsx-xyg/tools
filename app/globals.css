@@ -3519,3 +3519,53 @@ mark.re-match {
   word-break: break-all;
   font-family: var(--font-mono);
 }
+
+/* ========== 请求体标题 + 类型标签 ========== */
+.hp-body-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hp-body-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: none;
+  border: 1px solid;
+}
+.tag-json { color: #2563eb; border-color: rgb(37 99 235 / 0.3); background: rgb(37 99 235 / 0.08); }
+.tag-form-urlencoded { color: #059669; border-color: rgb(5 150 105 / 0.3); background: rgb(5 150 105 / 0.08); }
+.tag-multipart { color: #d97706; border-color: rgb(217 119 6 / 0.3); background: rgb(217 119 6 / 0.08); }
+.tag-text { color: var(--ink-2); border-color: var(--line); background: var(--bg-subtle); }
+
+/* ========== 原始请求体折叠面板 ========== */
+.hp-raw-collapse {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 10px;
+}
+.hp-raw-collapse summary {
+  font-size: 12px;
+  color: var(--ink-2);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+.hp-raw-collapse summary:hover {
+  color: var(--accent);
+}
+.hp-raw-collapse summary::before {
+  content: "▸";
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.hp-raw-collapse[open] summary::before {
+  transform: rotate(90deg);
+}
+.hp-raw-collapse summary::-webkit-details-marker { display: none; }
