@@ -5,9 +5,10 @@ import { UAParser } from "ua-parser-js";
 import { ToolHead } from "@/components/tool-head";
 import { IconCheck, IconCopy, IconShield } from "@/components/icons";
 
-type TabId = "ua" | "cookie" | "url" | "query" | "header" | "setcookie";
+type TabId = "ua" | "cookie" | "url" | "query" | "header" | "setcookie" | "request";
 
 const TABS: { id: TabId; label: string; placeholder: string }[] = [
+  { id: "request", label: "HTTP 请求", placeholder: "粘贴完整 HTTP 请求原文，自动分离请求行 / 请求头 / 请求体并分别解析，例如：\nPOST /api/login HTTP/1.1\nHost: example.com\nContent-Type: application/json\nAuthorization: Bearer eyJhbGciOi...\nCookie: session=abc; theme=dark\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0\n\n{\"username\":\"admin\",\"password\":\"123\"}" },
   { id: "ua", label: "User-Agent", placeholder: "粘贴 User-Agent 字符串，例如：\nMozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
   { id: "cookie", label: "Cookie", placeholder: "粘贴 Cookie 字符串，例如：\nsession=abc123; theme=dark; lang=zh-CN; token=eyJhbGciOi..." },
   { id: "url", label: "URL", placeholder: "粘贴完整 URL，例如：\nhttps://user:pass@example.com:8080/path/to/page?q=hello&page=2#section" },
@@ -145,6 +146,76 @@ function parseSetCookie(raw: string): KV[] {
   return out;
 }
 
+/* ========== HTTP 完整请求解析 ========== */
+interface ParsedRequest {
+  method: string;
+  path: string;
+  version: string;
+  headers: KV[];
+  uaResult: KV[];
+  cookieResult: KV[];
+  body: string;
+  isJson: boolean;
+  queryInPath: KV[];
+}
+
+function parseHttpRequest(raw: string): ParsedRequest | null {
+  const text = raw.trim();
+  if (!text) return null;
+
+  // 分割 headers 和 body（第一个空行）
+  const m = text.match(/\r?\n\r?\n/);
+  let headerPart = text;
+  let body = "";
+  if (m && m.index !== undefined) {
+    headerPart = text.slice(0, m.index);
+    body = text.slice(m.index + m[0].length).trim();
+  }
+
+  const lines = headerPart.split(/\r?\n/);
+  if (lines.length === 0) return null;
+
+  // 请求行：方法 路径 版本
+  const requestLine = lines[0].trim();
+  const rlParts = requestLine.split(/\s+/);
+  const method = rlParts[0] || "";
+  const fullPath = rlParts[1] || "";
+  const version = rlParts[2] || "";
+
+  // 路径中的 query string
+  const qIdx = fullPath.indexOf("?");
+  const path = qIdx === -1 ? fullPath : fullPath.slice(0, qIdx);
+  const queryStr = qIdx === -1 ? "" : fullPath.slice(qIdx + 1);
+  const queryInPath = queryStr ? parseQuery(queryStr) : [];
+
+  // Headers
+  const headers: KV[] = [];
+  let uaValue = "";
+  let cookieValue = "";
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const colon = line.indexOf(":");
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim();
+    const value = line.slice(colon + 1).trim();
+    headers.push({ key, value });
+    const lk = key.toLowerCase();
+    if (lk === "user-agent") uaValue = value;
+    if (lk === "cookie") cookieValue = value;
+  }
+
+  const uaResult = uaValue ? parseUA(uaValue) : [];
+  const cookieResult = cookieValue ? parseCookie(cookieValue) : [];
+
+  let isJson = false;
+  if (body) {
+    try { JSON.parse(body); isJson = true; } catch { isJson = false; }
+  }
+
+  return { method, path, version, headers, uaResult, cookieResult, body, isJson, queryInPath };
+}
+
 const PARSERS: Record<TabId, (raw: string) => KV[]> = {
   ua: parseUA,
   cookie: parseCookie,
@@ -152,6 +223,7 @@ const PARSERS: Record<TabId, (raw: string) => KV[]> = {
   query: parseQuery,
   header: parseHeader,
   setcookie: parseSetCookie,
+  request: () => [],
 };
 
 /* ========== 结果项组件 ========== */
@@ -182,12 +254,13 @@ function ResultItem({ item }: { item: KV }) {
 export default function HttpParsePage() {
   const [tab, setTab] = useState<TabId>("ua");
   const [inputs, setInputs] = useState<Record<TabId, string>>({
-    ua: "", cookie: "", url: "", query: "", header: "", setcookie: "",
+    ua: "", cookie: "", url: "", query: "", header: "", setcookie: "", request: "",
   });
 
   const current = TABS.find((t) => t.id === tab)!;
   const raw = inputs[tab];
   const results = useMemo(() => PARSERS[tab](raw), [tab, raw]);
+  const parsedRequest = useMemo(() => (tab === "request" ? parseHttpRequest(raw) : null), [tab, raw]);
 
   return (
     <div className="fade-rise">
@@ -244,7 +317,88 @@ export default function HttpParsePage() {
             <span className="count-hint">{results.length} 项</span>
           </div>
           <div className="panel-body">
-            {!raw.trim() ? (
+            {tab === "request" ? (
+              parsedRequest ? (
+                <div className="hp-sections">
+                  {/* 请求行 */}
+                  <div className="hp-section">
+                    <div className="hp-section-title">请求行</div>
+                    <div className="hp-result-list">
+                      <ResultItem item={{ key: "方法", value: parsedRequest.method }} />
+                      <ResultItem item={{ key: "路径", value: parsedRequest.path }} />
+                      {parsedRequest.queryInPath.length > 0 && (
+                        <ResultItem item={{ key: "路径参数", value: parsedRequest.queryInPath.map((q) => `${q.key}=${q.value}`).join("&") }} />
+                      )}
+                      <ResultItem item={{ key: "协议", value: parsedRequest.version }} />
+                    </div>
+                  </div>
+
+                  {/* 请求头 */}
+                  <div className="hp-section">
+                    <div className="hp-section-title">请求头（{parsedRequest.headers.length} 项）</div>
+                    <div className="hp-result-list">
+                      {parsedRequest.headers.map((item, i) => (
+                        <ResultItem key={`h-${i}`} item={item} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* User-Agent 详情 */}
+                  {parsedRequest.uaResult.length > 0 && (
+                    <div className="hp-section">
+                      <div className="hp-section-title">User-Agent 详情</div>
+                      <div className="hp-result-list">
+                        {parsedRequest.uaResult.map((item, i) => (
+                          <ResultItem key={`ua-${i}`} item={item} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cookie 详情 */}
+                  {parsedRequest.cookieResult.length > 0 && (
+                    <div className="hp-section">
+                      <div className="hp-section-title">Cookie 详情（{parsedRequest.cookieResult.length} 项）</div>
+                      <div className="hp-result-list">
+                        {parsedRequest.cookieResult.map((item, i) => (
+                          <ResultItem key={`ck-${i}`} item={item} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 路径 Query 详情 */}
+                  {parsedRequest.queryInPath.length > 0 && (
+                    <div className="hp-section">
+                      <div className="hp-section-title">路径 Query 参数（{parsedRequest.queryInPath.length} 项）</div>
+                      <div className="hp-result-list">
+                        {parsedRequest.queryInPath.map((item, i) => (
+                          <ResultItem key={`q-${i}`} item={item} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 请求体 */}
+                  {parsedRequest.body && (
+                    <div className="hp-section">
+                      <div className="hp-section-title">
+                        请求体{parsedRequest.isJson ? "（JSON）" : ""}
+                      </div>
+                      <pre className="hp-body-pre">
+                        <code>{parsedRequest.isJson ? JSON.stringify(JSON.parse(parsedRequest.body), null, 2) : parsedRequest.body}</code>
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                !raw.trim() ? (
+                  <div className="qr-empty">在左侧粘贴完整 HTTP 请求原文后自动分离解析</div>
+                ) : (
+                  <p className="count-hint warn">无法解析，请检查是否为标准 HTTP 请求格式（需包含请求行，如 GET /path HTTP/1.1）</p>
+                )
+              )
+            ) : !raw.trim() ? (
               <div className="qr-empty">在左侧粘贴内容后自动解析</div>
             ) : results.length === 0 ? (
               <p className="count-hint warn">未解析到有效内容，请检查输入格式</p>
