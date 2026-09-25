@@ -69,7 +69,7 @@ export default function BadgePage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl overflow-x-hidden">
+    <div className="fade-rise mx-auto max-w-6xl overflow-x-hidden">
       <ToolHead
         title="徽章生成器"
         lede="基于 shields.io 在线渲染 · 配置左侧参数，右侧实时预览并复制代码"
