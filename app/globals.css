@@ -3342,12 +3342,7 @@ mark.re-match {
 .code-dark .hljs-addition { color: #aff5b4; background: #033a16; }
 .code-dark .hljs-deletion { color: #ffdcd7; background: #67060c; }
 
-/* ========== 图片处理：stage 居中 ========== */
-.img-stage {
-  display: block;
-  width: fit-content;
-  margin-inline: auto;
-}
+/* ========== 图片处理：stage 保持原始 inline-block，居中由 .preview-area flex 负责 ========== */
 
 /* ========== Markdown：隐藏滚动条，底部对齐 ========== */
 .md-editor {
@@ -3363,6 +3358,23 @@ mark.re-match {
 }
 .md-preview::-webkit-scrollbar {
   display: none;
+}
+
+/* ========== 图片处理：预览区稳定高度 + 居中 ========== */
+.preview-area {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0;
+}
+@media (max-width: 600px) {
+  .preview-area {
+    min-height: 240px;
+    padding: 12px 0;
+  }
 }
 
 /* ========== 图片处理：输出行移动端上下布局 ========== */

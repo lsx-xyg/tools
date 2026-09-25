@@ -241,6 +241,7 @@ export default function ImagePage() {
           </div>
         ) : (
           <>
+            <div className="preview-area">
             <div
               className={`img-stage ${mode === "crop" ? "crop-mode" : ""}`}
               ref={stageRef}
@@ -287,6 +288,7 @@ export default function ImagePage() {
                 <IconRefresh width={14} height={14} />
                 更换图片
               </button>
+            </div>
             </div>
 
             <div className="tool-row tool-row-wrap">
