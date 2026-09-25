@@ -268,9 +268,7 @@ export default function QrPage() {
                   <img
                     src={dataUrl}
                     alt="生成的二维码"
-                    width={size}
-                    height={size}
-                    style={{ maxWidth: "100%", height: "auto" }}
+                    style={{ width: 220, height: 220, maxWidth: "100%", objectFit: "contain" }}
                   />
                 ) : (
                   <div className="qr-empty">输入内容后自动生成</div>
