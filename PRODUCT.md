@@ -16,7 +16,7 @@ Next.js（App Router + TypeScript），经 `@opennextjs/cloudflare` 适配器部
 
 ## Product Purpose
 
-在线工具箱：一个可不断添加小工具的站点。首个工具为「文本/文件互传」：发送端输入文本或上传文件后获得 6 位提取码，接收端输入提取码即可取回内容。内容 24 小时后自动清除，文件最多可下载 10 次。交互模式参考 easychuan.cn。
+在线工具箱：一个可不断添加小工具的站点，当前已有 20 个工具（T-01 文本/文件互传 ～ T-20 PDF 处理），见 `lib/tools.ts` 注册清单。核心工具「文本/文件互传」：发送端输入文本或上传文件后获得 6 位提取码，接收端输入提取码或扫码即可取回；支持 WebRTC 点对点在线直传（内容不落服务器）与离线暂存（保留时长 / 下载次数可自定义，到期自动销毁）。
 
 ## Positioning
 
@@ -29,15 +29,17 @@ Next.js（App Router + TypeScript），经 `@opennextjs/cloudflare` 适配器部
 ## Capabilities and Constraints
 
 - 文本传输：≤ 200,000 字符。
-- 文件传输：单次 ≤ 10 个文件、单个 ≤ 10 MB、总量 ≤ 50 MB（假定，可调整）。
-- 有效期 24 小时；文件下载次数 ≤ 10（假定，对齐参考站）。
+- 文件传输：单次 ≤ 10 个文件、单个 ≤ 10 MB、总量 ≤ 50 MB。
+- 离线保留时长可自定义：1h / 6h / 24h / 3 天 / 7 天；下载次数可自定义：1 / 3 / 10 / 100（服务端 clamp）。
 - 提取码：6 位数字，内容到期自动销毁。
-- 部署：Cloudflare Workers 免费额度 + KV + R2。
-- 未定：登录态（v1 不做）、传输内容加密（v1 明文，注明风险）。
+- 在线直传：WebRTC P2P，服务器仅中转信令（SDP/ICE），内容不落盘；NAT 穿透依赖 host candidate（不含 Google STUN）。
+- 部署：Cloudflare Workers 免费额度 + KV + R2，可选 Redis（Upstash REST）切换存储后端。
+- 全站密码门（可选）：密码存环境变量 SITE_PASSWORD，验证后 30 天 HttpOnly Cookie。
+- 传输内容为明文暂存，到期自动销毁，不保证对抗取证级安全。
 
 ## Brand Commitments
 
-仓库名 `tools`；站点中文名「工具箱」（假定）；无已确认的 logo 或品牌资产。
+仓库名 `tools`；站点中文名「工具箱 TOOLBOX」；GitHub 仓库 https://github.com/lsx-xyg/tools（MIT 开源，准备公开）；无独立 logo，品牌资产为「精密仪器台」设计系统。
 
 ## Evidence on Hand
 
