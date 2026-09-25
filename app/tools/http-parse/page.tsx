@@ -357,6 +357,17 @@ export default function HttpParsePage() {
   const raw = inputs[tab];
   const results = useMemo(() => PARSERS[tab](raw), [tab, raw]);
   const parsedRequest = useMemo(() => (tab === "request" ? parseHttpRequest(raw) : null), [tab, raw]);
+  const resultCount = useMemo(() => {
+    if (tab !== "request" || !parsedRequest) return results.length;
+    return (
+      3 + // 请求行：方法/路径/协议
+      parsedRequest.headers.length +
+      parsedRequest.uaResult.length +
+      parsedRequest.cookieResult.length +
+      parsedRequest.queryInPath.length +
+      (parsedRequest.body ? 1 : 0)
+    );
+  }, [tab, results, parsedRequest]);
 
   return (
     <div className="fade-rise">
@@ -410,7 +421,7 @@ export default function HttpParsePage() {
         <section className="panel">
           <div className="panel-head">
             <span className="label">解析结果</span>
-            <span className="count-hint">{results.length} 项</span>
+            <span className="count-hint">{resultCount} 项</span>
           </div>
           <div className="panel-body">
             {tab === "request" ? (

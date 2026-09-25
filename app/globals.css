@@ -3618,10 +3618,13 @@ mark.re-match {
 .hp-multipart-row:last-child { border-bottom: none; }
 .hp-multipart-row:hover { background: var(--bg-subtle); }
 .hp-mp-name {
+  display: flex;
+  align-items: center;
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--ink);
   word-break: break-all;
+  min-height: 20px;
 }
 .hp-mp-type {
   display: inline-flex;
@@ -3638,10 +3641,13 @@ mark.re-match {
 .hp-mp-type.type-file { color: #d97706; background: rgb(217 119 6 / 0.1); }
 .hp-mp-type.type-text { color: #059669; background: rgb(5 150 105 / 0.1); }
 .hp-mp-content {
+  display: flex;
+  align-items: center;
   color: var(--ink-2);
   word-break: break-all;
   font-family: var(--font-mono);
   font-size: 12px;
+  min-height: 20px;
 }
 
 @media (max-width: 640px) {
