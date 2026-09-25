@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { IconDownload, IconImage, IconShield } from "@/components/icons";
+import { IconDownload, IconImage, IconRefresh, IconShield } from "@/components/icons";
 
 type Mode = "compress" | "resize" | "crop" | "convert";
 
@@ -274,6 +274,15 @@ export default function ImagePage() {
             </div>
 
             <div className="tool-row tool-row-wrap">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => inputRef.current?.click()}
+                title="更换图片"
+              >
+                <IconRefresh width={14} height={14} />
+                更换图片
+              </button>
               {mode === "compress" && (
                 <>
                   <label className="field-label">

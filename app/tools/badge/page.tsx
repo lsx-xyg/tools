@@ -114,7 +114,7 @@ function renderBadgeSvg(
   const labelRect = labelW > 0
     ? `<rect width="${labelW}" height="20" fill="${labelFill}" rx="${rx}"/><rect x="${labelW - 3}" width="3" height="20" fill="${labelFill}"/>`
     : "";
-  const msgRect = `<rect x="${labelW}" width="${msgW}" height="20" fill="${msgFill}" rx="${rx}"/><rect x="${labelW}" width="3" height="20" fill="${labelFill}"/>`;
+  const msgRect = `<rect x="${labelW}" width="${msgW}" height="20" fill="${msgFill}" rx="${rx}"/>${labelW > 0 ? `<rect x="${labelW}" width="3" height="20" fill="${labelFill}"/>` : ""}`;
   const fill = grad ? "url(#g)" : "#fff";
 
   const icon = iconPath
@@ -299,6 +299,11 @@ export default function BadgePage() {
             </select>
           </label>
 
+          <label className="form-row">
+            <span>Logo 颜色（可选）</span>
+            <input className="input" value={logoColor} onChange={(e) => setLogoColor(e.target.value)} placeholder="white" />
+          </label>
+
           <div className="form-row form-col-span">
             <span>Logo 图标（Simple Icons，可选）</span>
             <div className="icon-picker" ref={iconBoxRef}>
@@ -353,11 +358,6 @@ export default function BadgePage() {
               )}
             </div>
           </div>
-
-          <label className="form-row">
-            <span>Logo 颜色（可选）</span>
-            <input className="input" value={logoColor} onChange={(e) => setLogoColor(e.target.value)} placeholder="white" />
-          </label>
         </div>
 
         <div className="tool-row">
