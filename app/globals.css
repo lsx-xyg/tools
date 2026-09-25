@@ -2908,6 +2908,10 @@ mark.re-match {
     min-width: 0;
     white-space: nowrap;
   }
+  /* 徽章表单：窄屏单列 */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
   /* 工具行：元素过多时换行，输入框独占一行 */
   .tool-row {
     flex-wrap: wrap;
@@ -2985,11 +2989,9 @@ mark.re-match {
 /* ---------- 图片处理 ---------- */
 .img-stage {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
+  max-width: 100%;
   max-height: 420px;
-  min-height: 160px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -3000,9 +3002,9 @@ mark.re-match {
   background-position: 0 0, 9px 9px;
 }
 .img-stage img {
+  display: block;
   max-width: 100%;
   max-height: 420px;
-  object-fit: contain;
   user-select: none;
 }
 .img-stage.crop-mode {
@@ -3089,9 +3091,12 @@ mark.re-match {
   height: 28px;
 }
 .form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.form-col-span {
+  grid-column: 1 / -1;
 }
 .badge-colors {
   display: flex;
@@ -3133,6 +3138,105 @@ mark.re-match {
   font-size: 12px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+/* 图标选择器 */
+.icon-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.icon-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.icon-input-ic {
+  color: var(--ink-3);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.icon-input-row .input {
+  flex: 1;
+  min-width: 0;
+  padding-left: 4px;
+}
+.icon-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.icon-clear:hover {
+  color: var(--ink-1);
+  background: var(--bg-hover);
+}
+.icon-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.12);
+  padding: 4px;
+}
+.icon-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-1);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.icon-item:hover {
+  background: var(--bg-hover);
+}
+.icon-item.active {
+  background: var(--bg-active);
+}
+.icon-chip {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 1px solid rgb(0 0 0 / 0.12);
+}
+.icon-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.icon-slug {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.icon-empty {
+  padding: 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: center;
 }
 
 /* ---------- Markdown ---------- */
@@ -3208,3 +3312,87 @@ mark.re-match {
 .md-body hr { border: none; border-top: 1px solid var(--line); margin: 1.4em 0; }
 .md-body del { color: var(--ink-3); }
 .md-body .err { color: var(--err, #b91c1c); }
+
+/* ---------- Markdown 预览主题（独立于站点主题） ---------- */
+.md-body.md-theme-light {
+  --md-ink: #23201a;
+  --md-bg: #ffffff;
+  --md-bg-sub: #f6f4ef;
+  --md-line: #e6e2d9;
+  --md-accent: #c2410c;
+  --md-ink-2: #5c564b;
+}
+.md-body.md-theme-dark {
+  --md-ink: #e6edf3;
+  --md-bg: #0d1117;
+  --md-bg-sub: #161b22;
+  --md-line: #30363d;
+  --md-accent: #58a6ff;
+  --md-ink-2: #9da7b3;
+}
+.md-body.md-theme-sepia {
+  --md-ink: #5b4636;
+  --md-bg: #f4ecd8;
+  --md-bg-sub: #eadfc4;
+  --md-line: #d8cbaa;
+  --md-accent: #a03a1e;
+  --md-ink-2: #8a7458;
+}
+.md-body.md-theme-light,
+.md-body.md-theme-dark,
+.md-body.md-theme-sepia {
+  color: var(--md-ink);
+  background: var(--md-bg);
+}
+.md-body.md-theme-light a,
+.md-body.md-theme-dark a,
+.md-body.md-theme-sepia a {
+  color: var(--md-accent);
+}
+.md-body.md-theme-light h1,
+.md-body.md-theme-dark h1,
+.md-body.md-theme-sepia h1 {
+  border-bottom-color: var(--md-line);
+}
+.md-body.md-theme-light :not(pre) > code,
+.md-body.md-theme-dark :not(pre) > code,
+.md-body.md-theme-sepia :not(pre) > code {
+  background: var(--md-bg-sub);
+  border-color: var(--md-line);
+}
+.md-body.md-theme-light pre,
+.md-body.md-theme-dark pre,
+.md-body.md-theme-sepia pre {
+  background: var(--md-bg-sub);
+  border-color: var(--md-line);
+}
+.md-body.md-theme-light blockquote,
+.md-body.md-theme-dark blockquote,
+.md-body.md-theme-sepia blockquote {
+  background: var(--md-bg-sub);
+  border-left-color: var(--md-accent);
+  color: var(--md-ink-2);
+}
+.md-body.md-theme-light th,
+.md-body.md-theme-dark th,
+.md-body.md-theme-sepia th {
+  background: var(--md-bg-sub);
+}
+.md-body.md-theme-light th,
+.md-body.md-theme-dark th,
+.md-body.md-theme-sepia th,
+.md-body.md-theme-light td,
+.md-body.md-theme-dark td,
+.md-body.md-theme-sepia td {
+  border-color: var(--md-line);
+}
+.md-body.md-theme-light hr,
+.md-body.md-theme-dark hr,
+.md-body.md-theme-sepia hr {
+  border-top-color: var(--md-line);
+}
+.md-body.md-theme-light del,
+.md-body.md-theme-dark del,
+.md-body.md-theme-sepia del {
+  color: var(--md-ink-2);
+}

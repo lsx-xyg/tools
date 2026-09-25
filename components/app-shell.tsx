@@ -28,7 +28,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               <IconHome className="nav-icon" />
               <span className="nav-text">仪表台</span>
             </Link>
-            {tools.map((t) => (
+            {[...tools].sort((a, b) => a.index.localeCompare(b.index)).map((t) => (
               <Link
                 key={t.id}
                 href={t.path}

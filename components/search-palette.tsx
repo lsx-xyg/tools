@@ -20,7 +20,7 @@ interface Entry {
 function buildIndex(): Entry[] {
   return [
     { key: "home", name: "仪表台", hint: "工具总览 · 首页", path: "/" },
-    ...tools.map((t) => ({
+    ...[...tools].sort((a, b) => a.index.localeCompare(b.index)).map((t) => ({
       key: t.id,
       name: t.name,
       hint: `${t.tagline} · ${t.tags.join(" / ")}`,

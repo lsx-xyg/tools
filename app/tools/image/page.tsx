@@ -142,12 +142,13 @@ export default function ImagePage() {
     const rect = el.getBoundingClientRect();
     const pctX = ((e.clientX - rect.left) / rect.width) * 100;
     const pctY = ((e.clientY - rect.top) / rect.height) * 100;
-    const inBox = pctX >= crop.x && pctX <= crop.x + crop.w && pctY >= crop.y && pctY <= crop.y + crop.h;
+    const fullBox = crop.w >= 99.9 && crop.h >= 99.9;
+    const inBox = !fullBox && pctX >= crop.x && pctX <= crop.x + crop.w && pctY >= crop.y && pctY <= crop.y + crop.h;
     if (inBox) {
       setDrag({ kind: "move", startX: e.clientX, startY: e.clientY, crop });
     } else {
-      const nw = Math.max(10, 100 - crop.x);
-      const nh = Math.max(10, 100 - crop.y);
+      const nw = Math.max(10, 100 - pctX);
+      const nh = Math.max(10, 100 - pctY);
       const box = applyRatio(nw, nh);
       setCrop({ x: Math.min(pctX, 100 - box.w), y: Math.min(pctY, 100 - box.h), w: box.w, h: box.h });
       setDrag({ kind: "resize", startX: e.clientX, startY: e.clientY, crop: { x: Math.min(pctX, 100 - box.w), y: Math.min(pctY, 100 - box.h), w: box.w, h: box.h } });
@@ -256,7 +257,15 @@ export default function ImagePage() {
                     height: `${crop.h}%`,
                   }}
                 >
-                  <span className="crop-handle" />
+                  <span
+                    className="crop-handle"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setDrag({ kind: "resize", startX: e.clientX, startY: e.clientY, crop });
+                    }}
+                    aria-label="调整裁剪框大小"
+                  />
                 </div>
               )}
               {mode === "crop" && (

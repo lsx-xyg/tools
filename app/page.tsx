@@ -42,7 +42,7 @@ export default function Home() {
 
       <div className="section-label label">仪表阵列</div>
       <div className="console">
-        {tools.map((t) => (
+        {[...tools].sort((a, b) => a.index.localeCompare(b.index)).map((t) => (
           <Link key={t.id} href={t.path} className="module">
             <div className="module-head">
               <span className="label">
