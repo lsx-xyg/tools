@@ -49,7 +49,7 @@
 | T-21 | 图片处理 | 压缩 / 缩放 / 裁剪 / 格式转换，canvas 本地渲染 |
 | T-22 | 徽章生成 | shields.io 风格徽章，在线渲染，预设/hex 颜色 + Simple Icons Logo |
 | T-23 | Markdown 编辑器 | 实时预览 · 代码高亮 · 多主题 · 转 HTML / 导出 PDF |
-| T-24 | 请求头解析 | User-Agent / Cookie / URL / Query String / HTTP Header / Set-Cookie 结构化解析 |
+| T-24 | 请求头解析 | 7 Tab：完整 HTTP 请求原文自动分离（请求行/Headers/Body）+ UA/Cookie/URL/Query/Header/Set-Cookie 结构化解析，Body 支持 JSON/XML/HTML 格式化高亮 + Form Data/Multipart 三列展示 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台
 > （见下方「如何新增一个工具」）。
@@ -60,6 +60,7 @@
 | --- | --- |
 | 前端 | Next.js 16（App Router）+ TypeScript + 自研 CSS 设计系统 |
 | 图标 / 组件 | lucide-react + shadcn/ui 风格 Button（Radix + cva + clsx + tailwind-merge） |
+| 代码高亮 | Prism.js（JSON / XML / HTML / Markdown / Bash 等 16 种语言，三套主题） |
 | 运行时 | Cloudflare Workers（`@opennextjs/cloudflare` 适配器） |
 | 存储 | KV（传输记录 + P2P 信令）、R2（离线文件对象）；可选 Redis（Upstash REST） |
 | 主题 | 三态（跟随系统 / 浅色 / 深色），`localStorage` 持久化 + matchMedia 实时监听 |
