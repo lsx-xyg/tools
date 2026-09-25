@@ -214,7 +214,7 @@ export default function BadgePage() {
                   </>
                 )}
               </button>
-              <pre className="m-0 min-h-[140px] max-h-[260px] min-w-0 overflow-x-auto overflow-y-auto bg-slate-900 p-4 pr-20 text-[13px] leading-relaxed">
+              <pre className="code-dark m-0 min-h-[120px] min-w-0 overflow-x-auto bg-slate-900 p-4 pr-20 text-[13px] leading-relaxed">
                 <code
                   className="hljs language-xml whitespace-pre"
                   dangerouslySetInnerHTML={{ __html: highlighted }}

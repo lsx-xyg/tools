@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { HexColorPicker } from "react-colorful";
+import { Sketch } from "@uiw/react-color";
 
 const PRESETS = [
   "#007ec6", "#4c1", "#dfb317", "#fe7d37", "#e05d44", "#9f9f9f",
@@ -41,34 +41,12 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
       </button>
 
       {open && (
-        <div className="absolute left-0 z-50 mt-2 w-[248px] rounded-lg border border-line bg-elev p-3 shadow-xl">
-          <HexColorPicker color={value} onChange={onChange} />
-
-          <div className="mt-3">
-            <div className="mb-1.5 text-xs text-muted-foreground">预设颜色</div>
-            <div className="grid grid-cols-6 gap-1.5">
-              {PRESETS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => onChange(c)}
-                  className="h-6 w-6 rounded border border-black/10 transition-transform hover:scale-110"
-                  style={{ background: c }}
-                  title={c}
-                  aria-label={c}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="h-8 w-full rounded border border-input bg-background px-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-accent/30"
-              placeholder="#007ec6"
-            />
-          </div>
+        <div className="absolute left-0 z-50 mt-2 rounded-lg border border-line bg-elev p-2 shadow-xl">
+          <Sketch
+            color={value}
+            onChange={(color) => onChange(color.hex)}
+            presetColors={PRESETS}
+          />
         </div>
       )}
     </div>

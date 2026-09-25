@@ -3178,7 +3178,8 @@ mark.re-match {
 }
 .md-editor {
   width: 100%;
-  min-height: 460px;
+  height: 560px;
+  min-height: 560px;
   border: none;
   outline: none;
   resize: none;
@@ -3188,6 +3189,7 @@ mark.re-match {
   font-size: 13px;
   line-height: 1.7;
   padding: 14px 16px;
+  overflow-y: auto;
 }
 .md-body {
   font-size: 14px;
@@ -3197,8 +3199,8 @@ mark.re-match {
 }
 .md-preview {
   padding: 14px 16px;
-  max-height: 560px;
-  overflow: auto;
+  height: 560px;
+  overflow-y: auto;
 }
 .md-body h1, .md-body h2, .md-body h3, .md-body h4 {
   margin: 1.1em 0 0.45em;
@@ -3325,4 +3327,40 @@ mark.re-match {
 .md-body.md-theme-dark del,
 .md-body.md-theme-sepia del {
   color: var(--md-ink-2);
+}
+
+/* ========== 徽章代码区：暗色 hljs 配色（github-dark） ========== */
+.code-dark code.hljs { color: #e6edf3; background: transparent; }
+.code-dark .hljs-keyword, .code-dark .hljs-meta .hljs-keyword, .code-dark .hljs-template-tag, .code-dark .hljs-template-variable, .code-dark .hljs-type, .code-dark .hljs-variable.language_ { color: #ff7b72; }
+.code-dark .hljs-title, .code-dark .hljs-title.class_, .code-dark .hljs-title.function_ { color: #d2a8ff; }
+.code-dark .hljs-attr, .code-dark .hljs-attribute, .code-dark .hljs-literal, .code-dark .hljs-meta, .code-dark .hljs-number, .code-dark .hljs-operator, .code-dark .hljs-variable { color: #79c0ff; }
+.code-dark .hljs-regexp, .code-dark .hljs-string, .code-dark .hljs-meta .hljs-string { color: #a5d6ff; }
+.code-dark .hljs-built_in, .code-dark .hljs-symbol { color: #ffa657; }
+.code-dark .hljs-comment, .code-dark .hljs-code { color: #8b949e; }
+.code-dark .hljs-name, .code-dark .hljs-quote, .code-dark .hljs-selector-tag { color: #7ee787; }
+.code-dark .hljs-link { color: #79c0ff; }
+.code-dark .hljs-addition { color: #aff5b4; background: #033a16; }
+.code-dark .hljs-deletion { color: #ffdcd7; background: #67060c; }
+
+/* ========== 图片处理：stage 居中 ========== */
+.img-stage {
+  display: block;
+  width: fit-content;
+  margin-inline: auto;
+}
+
+/* ========== Markdown：隐藏滚动条，底部对齐 ========== */
+.md-editor {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.md-editor::-webkit-scrollbar {
+  display: none;
+}
+.md-preview {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.md-preview::-webkit-scrollbar {
+  display: none;
 }
