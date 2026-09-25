@@ -12,15 +12,24 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
       - name: Inject KV namespace id (placeholder → secret)
-        run: sed -i "s/TRANSFER_KV_ID_PLACEHOLDER/${TRANSFER_KV_ID}/" wrangler.jsonc
+        run: |
+          if [ -z "$TRANSFER_KV_ID" ]; then
+            echo "::error::TRANSFER_KV_ID secret 未设置"
+            exit 1
+          fi
+          sed -i "s|TRANSFER_KV_ID_PLACEHOLDER|${TRANSFER_KV_ID}|" wrangler.jsonc
         env:
           TRANSFER_KV_ID: ${{ secrets.TRANSFER_KV_ID }}
+
       - name: Build & deploy
         run: npm run deploy
         env:
