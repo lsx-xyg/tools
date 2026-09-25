@@ -3538,7 +3538,115 @@ mark.re-match {
 .tag-json { color: #2563eb; border-color: rgb(37 99 235 / 0.3); background: rgb(37 99 235 / 0.08); }
 .tag-form-urlencoded { color: #059669; border-color: rgb(5 150 105 / 0.3); background: rgb(5 150 105 / 0.08); }
 .tag-multipart { color: #d97706; border-color: rgb(217 119 6 / 0.3); background: rgb(217 119 6 / 0.08); }
+.tag-xml { color: #7c3aed; border-color: rgb(124 58 237 / 0.3); background: rgb(124 58 237 / 0.08); }
+.tag-html { color: #0891b2; border-color: rgb(8 145 178 / 0.3); background: rgb(8 145 178 / 0.08); }
 .tag-text { color: var(--ink-2); border-color: var(--line); background: var(--bg-subtle); }
+
+/* ========== Prism 深色代码主题（适配米色精密仪器台） ========== */
+.prism-dark {
+  background: #1e1e2e !important;
+  color: #cdd6f4 !important;
+  border: 1px solid rgb(255 255 255 / 0.06);
+}
+.prism-dark code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.prism-dark .token.comment,
+.prism-dark .token.prolog,
+.prism-dark .token.doctype,
+.prism-dark .token.cdata { color: #6c7086; font-style: italic; }
+.prism-dark .token.punctuation { color: #a6adc8; }
+.prism-dark .token.property,
+.prism-dark .token.tag,
+.prism-dark .token.constant,
+.prism-dark .token.symbol,
+.prism-dark .token.deleted { color: #f38ba8; }
+.prism-dark .token.boolean,
+.prism-dark .token.number { color: #fab387; }
+.prism-dark .token.selector,
+.prism-dark .token.attr-name,
+.prism-dark .token.string,
+.prism-dark .token.char,
+.prism-dark .token.builtin,
+.prism-dark .token.inserted { color: #a6e3a1; }
+.prism-dark .token.operator,
+.prism-dark .token.entity,
+.prism-dark .token.url,
+.prism-dark .language-css .token.string,
+.prism-dark .style .token.string { color: #89dceb; }
+.prism-dark .token.atrule,
+.prism-dark .token.attr-value,
+.prism-dark .token.keyword { color: #cba6f7; }
+.prism-dark .token.function,
+.prism-dark .token.class-name { color: #89b4fa; }
+.prism-dark .token.regex,
+.prism-dark .token.important,
+.prism-dark .token.variable { color: #f9e2af; }
+.prism-dark .token.namespace { opacity: 0.7; }
+
+/* ========== Multipart 三列表格 ========== */
+.hp-multipart-list {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.hp-multipart-head {
+  display: grid;
+  grid-template-columns: 1fr 70px 1.5fr;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--bg-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.hp-multipart-row {
+  display: grid;
+  grid-template-columns: 1fr 70px 1.5fr;
+  gap: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+  transition: background 0.15s ease;
+}
+.hp-multipart-row:last-child { border-bottom: none; }
+.hp-multipart-row:hover { background: var(--bg-subtle); }
+.hp-mp-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-all;
+}
+.hp-mp-type {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 2px 0;
+  border-radius: 4px;
+}
+.hp-mp-type.type-file { color: #d97706; background: rgb(217 119 6 / 0.1); }
+.hp-mp-type.type-text { color: #059669; background: rgb(5 150 105 / 0.1); }
+.hp-mp-content {
+  color: var(--ink-2);
+  word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .hp-multipart-head,
+  .hp-multipart-row {
+    grid-template-columns: 1fr 56px 1fr;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+}
 
 /* ========== 原始请求体折叠面板 ========== */
 .hp-raw-collapse {

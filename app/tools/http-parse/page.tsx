@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { UAParser } from "ua-parser-js";
-import hljs from "highlight.js/lib/core";
-import jsonLang from "highlight.js/lib/languages/json";
+import { XMLParser, XMLBuilder } from "fast-xml-parser";
+import { html as beautifyHtml } from "js-beautify";
+import Prism from "prismjs";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-markup";
 import { ToolHead } from "@/components/tool-head";
 import { IconCheck, IconCopy, IconShield } from "@/components/icons";
-
-hljs.registerLanguage("json", jsonLang);
 
 type TabId = "ua" | "cookie" | "url" | "query" | "header" | "setcookie" | "request";
 
@@ -162,9 +163,11 @@ interface ParsedRequest {
   isJson: boolean;
   queryInPath: KV[];
   contentType: string;
-  bodyType: "json" | "form-urlencoded" | "multipart" | "text" | "empty";
+  bodyType: "json" | "form-urlencoded" | "multipart" | "xml" | "html" | "text" | "empty";
   formData: KV[];
-  multipartParts: { name: string; filename: string }[];
+  multipartParts: { name: string; filename: string; content: string }[];
+  xmlError: string | null;
+  formattedBody: string;
 }
 
 function parseHttpRequest(raw: string): ParsedRequest | null {
@@ -222,16 +225,21 @@ function parseHttpRequest(raw: string): ParsedRequest | null {
   let isJson = false;
   let bodyType: ParsedRequest["bodyType"] = "empty";
   let formData: KV[] = [];
-  let multipartParts: { name: string; filename: string }[] = [];
+  let multipartParts: { name: string; filename: string; content: string }[] = [];
+  let xmlError: string | null = null;
+  let formattedBody = "";
 
   if (body) {
     const ct = contentType.toLowerCase();
     if (ct.includes("application/json") || ct.includes("+json")) {
       bodyType = "json";
-      try { JSON.parse(body); isJson = true; } catch { isJson = false; }
+      try {
+        formattedBody = JSON.stringify(JSON.parse(body), null, 2);
+        isJson = true;
+      } catch { isJson = false; formattedBody = body; }
     } else if (ct.includes("application/x-www-form-urlencoded")) {
       bodyType = "form-urlencoded";
-      formData = parseQuery(body); // URLSearchParams 自动处理 + 和 %XX
+      formData = parseQuery(body);
     } else if (ct.includes("multipart/form-data")) {
       bodyType = "multipart";
       const bm = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
@@ -239,21 +247,56 @@ function parseHttpRequest(raw: string): ParsedRequest | null {
       if (boundary) {
         const parts = body.split(`--${boundary}`);
         for (const part of parts) {
-          const p = part.trim();
-          if (!p || p === "--") continue;
-          const dm = p.match(/Content-Disposition:[^\n]*name="([^"]*)"(?:[^\n]*filename="([^"]*)")?/i);
+          // 不 trim，保留内容原始换行；只去掉首尾的边界换行
+          const p = part.replace(/^\r?\n/, "").replace(/\r?\n$/, "");
+          if (!p || p === "--" || p.trim() === "--") continue;
+          // 分离 part headers 和 part body（第一个空行）
+          const pm = p.match(/\r?\n\r?\n/);
+          let partHeaders = p;
+          let partContent = "";
+          if (pm && pm.index !== undefined) {
+            partHeaders = p.slice(0, pm.index);
+            partContent = p.slice(pm.index + pm[0].length);
+          }
+          const dm = partHeaders.match(/Content-Disposition:[^\n]*name="([^"]*)"(?:[^\n]*filename="([^"]*)")?/i);
           if (dm) {
-            multipartParts.push({ name: dm[1] || "", filename: dm[2] || "" });
+            multipartParts.push({
+              name: dm[1] || "",
+              filename: dm[2] || "",
+              content: partContent.trim(),
+            });
           }
         }
       }
+    } else if (ct.includes("xml")) {
+      bodyType = "xml";
+      try {
+        const parser = new XMLParser({ ignoreAttributes: false, preserveOrder: false });
+        const parsed = parser.parse(body);
+        const builder = new XMLBuilder({ format: true, indentBy: "  ", ignoreAttributes: false, suppressEmptyNode: false });
+        formattedBody = builder.build(parsed);
+      } catch (e) {
+        xmlError = e instanceof Error ? e.message : "XML 解析失败";
+        formattedBody = body;
+      }
+    } else if (ct.includes("html")) {
+      bodyType = "html";
+      try {
+        formattedBody = beautifyHtml(body, { indent_size: 2, content_unformatted: [] });
+      } catch {
+        formattedBody = body;
+      }
     } else {
       bodyType = "text";
-      try { JSON.parse(body); isJson = true; bodyType = "json"; } catch { /* text */ }
+      try {
+        formattedBody = JSON.stringify(JSON.parse(body), null, 2);
+        isJson = true;
+        bodyType = "json";
+      } catch { formattedBody = body; }
     }
   }
 
-  return { method, path, version, headers, uaResult, cookieResult, body, isJson, queryInPath, contentType, bodyType, formData, multipartParts };
+  return { method, path, version, headers, uaResult, cookieResult, body, isJson, queryInPath, contentType, bodyType, formData, multipartParts, xmlError, formattedBody };
 }
 
 const PARSERS: Record<TabId, (raw: string) => KV[]> = {
@@ -427,20 +470,47 @@ export default function HttpParsePage() {
                         <span className={`hp-body-tag tag-${parsedRequest.bodyType}`}>
                           {parsedRequest.bodyType === "json" ? "JSON" :
                            parsedRequest.bodyType === "form-urlencoded" ? "Form Data" :
-                           parsedRequest.bodyType === "multipart" ? "Multipart" : "Text"}
+                           parsedRequest.bodyType === "multipart" ? "Multipart" :
+                           parsedRequest.bodyType === "xml" ? "XML" :
+                           parsedRequest.bodyType === "html" ? "HTML" : "Text"}
                         </span>
                       </div>
 
-                      {/* JSON：美化 + 高亮 */}
+                      {/* JSON：美化 + Prism 高亮 */}
                       {parsedRequest.bodyType === "json" && parsedRequest.isJson && (
-                        <pre className="hp-body-pre code-dark"><code
+                        <pre className="hp-body-pre prism-dark"><code
                           dangerouslySetInnerHTML={{
-                            __html: hljs.highlight(JSON.stringify(JSON.parse(parsedRequest.body), null, 2), { language: "json" }).value,
+                            __html: Prism.highlight(parsedRequest.formattedBody, Prism.languages.json, "json"),
                           }}
                         /></pre>
                       )}
                       {parsedRequest.bodyType === "json" && !parsedRequest.isJson && (
                         <pre className="hp-body-pre"><code>{parsedRequest.body}</code></pre>
+                      )}
+
+                      {/* XML：格式化 + Prism 高亮 */}
+                      {parsedRequest.bodyType === "xml" && (
+                        <>
+                          {parsedRequest.xmlError && (
+                            <p className="count-hint warn" style={{ marginBottom: 10 }}>
+                              XML 解析失败，已按原始文本展示
+                            </p>
+                          )}
+                          <pre className="hp-body-pre prism-dark"><code
+                            dangerouslySetInnerHTML={{
+                              __html: Prism.highlight(parsedRequest.formattedBody, Prism.languages.markup, "xml"),
+                            }}
+                          /></pre>
+                        </>
+                      )}
+
+                      {/* HTML：格式化 + Prism 高亮 */}
+                      {parsedRequest.bodyType === "html" && (
+                        <pre className="hp-body-pre prism-dark"><code
+                          dangerouslySetInnerHTML={{
+                            __html: Prism.highlight(parsedRequest.formattedBody, Prism.languages.markup, "html"),
+                          }}
+                        /></pre>
                       )}
 
                       {/* Form Data：键值对表格 */}
@@ -456,19 +526,27 @@ export default function HttpParsePage() {
                         )
                       )}
 
-                      {/* Multipart：列出 part name/filename */}
+                      {/* Multipart：三列（字段名 / 类型 / 内容） */}
                       {parsedRequest.bodyType === "multipart" && (
                         <div>
                           <p className="count-hint warn" style={{ marginBottom: 10 }}>
                             文件上传表单（multipart/form-data）无法在此处预览文件内容
                           </p>
                           {parsedRequest.multipartParts.length > 0 ? (
-                            <div className="hp-result-list">
+                            <div className="hp-multipart-list">
+                              <div className="hp-multipart-head">
+                                <span>字段名</span>
+                                <span>类型</span>
+                                <span>内容</span>
+                              </div>
                               {parsedRequest.multipartParts.map((part, i) => (
-                                <div key={`mp-${i}`} className="result-row">
-                                  <span className="result-key">{part.name || "(未命名)"}</span>
-                                  <span className="result-val">
-                                    {part.filename ? `文件: ${part.filename}` : "文本字段"}
+                                <div key={`mp-${i}`} className="hp-multipart-row">
+                                  <span className="hp-mp-name">{part.name || "(未命名)"}</span>
+                                  <span className={`hp-mp-type ${part.filename ? "type-file" : "type-text"}`}>
+                                    {part.filename ? "文件" : "文本"}
+                                  </span>
+                                  <span className="hp-mp-content" title={part.filename || part.content}>
+                                    {part.filename ? part.filename : (part.content || "（空）")}
                                   </span>
                                 </div>
                               ))}
