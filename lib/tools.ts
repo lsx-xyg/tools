@@ -1,6 +1,7 @@
 /** 工具注册表：新增工具 = 在这里加一项 + 加一个页面 */
 
-export type ToolId =
+/** 基础工具 id（第一批 20 个） */
+type BaseToolId =
   | "transfer"
   | "qr"
   | "base64"
@@ -21,6 +22,9 @@ export type ToolId =
   | "mime"
   | "http-status"
   | "pdf";
+
+/** 全部工具 id（含第二批新工具） */
+export type ToolId = BaseToolId | "image" | "badge" | "markdown";
 
 export interface Tool {
   id: ToolId;
@@ -49,7 +53,10 @@ export interface Tool {
     | "case"
     | "mime"
     | "http-status"
-    | "pdf";
+    | "pdf"
+    | "image"
+    | "badge"
+    | "markdown";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -283,6 +290,42 @@ export const tools: Tool[] = [
     icon: "http-status",
     lamp: "ok",
     tags: ["HTTP", "状态码", "404", "速查"],
+  },
+  {
+    id: "image",
+    index: "T-21",
+    name: "图片处理",
+    tagline: "压缩 / 缩放 / 裁剪 / 转换",
+    description:
+      "上传图片，本地完成压缩（JPEG / WebP 质量可调）、缩放（等比 / 指定尺寸）、裁剪（自由比例 / 预设比例）与格式转换，一键下载。全部本地浏览器处理，不上传服务器。",
+    path: "/tools/image",
+    icon: "image",
+    lamp: "ok",
+    tags: ["压缩", "缩放", "裁剪", "格式转换"],
+  },
+  {
+    id: "badge",
+    index: "T-22",
+    name: "徽章生成",
+    tagline: "shields.io 风格徽章",
+    description:
+      "填写 label、message、颜色与样式，实时预览 shields.io 风格徽章，一键复制 Markdown / HTML / 直链。",
+    path: "/tools/badge",
+    icon: "badge",
+    lamp: "ok",
+    tags: ["徽章", "shields.io", "Markdown"],
+  },
+  {
+    id: "markdown",
+    index: "T-23",
+    name: "Markdown 编辑器",
+    tagline: "实时预览 / 转 HTML / PDF",
+    description:
+      "编辑 Markdown 实时预览（GFM），一键复制或下载完整 HTML，浏览器打印导出 PDF。全部本地渲染，不上传。",
+    path: "/tools/markdown",
+    icon: "markdown",
+    lamp: "ok",
+    tags: ["Markdown", "HTML", "PDF", "预览"],
   },
   {
     id: "pdf",

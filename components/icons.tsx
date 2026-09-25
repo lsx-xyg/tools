@@ -17,6 +17,8 @@ import {
   Clock,
   Copy,
   Database,
+  BadgeCheck,
+  Crop,
   Download,
   ExternalLink,
   File,
@@ -28,6 +30,7 @@ import {
   Fingerprint,
   Hash,
   Home,
+  Image,
   KeyRound,
   Laptop,
   Link,
@@ -36,6 +39,7 @@ import {
   Monitor,
   Moon,
   Plus,
+  Printer,
   QrCode,
   RefreshCw,
   Repeat,
@@ -123,8 +127,12 @@ export const IconLink = wrap(Link);
 export const IconLoader = wrap(LoaderCircle);
 export const IconLaptop = wrap(Laptop);
 export const IconMenu = wrap(Menu);
+export const IconBadgeCheck = wrap(BadgeCheck);
+export const IconCrop = wrap(Crop);
+export const IconImage = wrap(Image);
 export const IconMonitor = wrap(Monitor);
 export const IconMoon = wrap(Moon);
+export const IconPrinter = wrap(Printer);
 export const IconPaste = wrap(ClipboardPaste);
 export const IconPlus = wrap(Plus);
 export const IconQr = wrap(QrCode);
