@@ -2,13 +2,13 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-在线工具箱：23 个即开即用的小工具，无需注册登录，纯本地计算或到期自动销毁。
+在线工具箱：24 个即开即用的小工具，无需注册登录，纯本地计算或到期自动销毁。
 部署在 **Cloudflare Workers**（Next.js + OpenNext Cloudflare 适配器 + KV + R2），
 可自行部署、按需扩展新工具。
 
 ## ✨ 特性
 
-- **23 个即开即用的小工具**：文本 / 文件互传、二维码生成 / 解析、JSON 格式化、Base64、
+- **24 个即开即用的小工具**：文本 / 文件互传、二维码生成 / 解析、JSON 格式化、Base64、
   Cron 解析、格式互转、时间戳、Hash、UUID、Diff、正则、URL 编码、JWT、图片
   处理、徽章生成、Markdown 编辑器、PDF 处理等（见下方完整清单）。
 - **在线直传（P2P）**：WebRTC 数据通道在设备间直传文本 / 文件，服务器只中转
@@ -49,6 +49,7 @@
 | T-21 | 图片处理 | 压缩 / 缩放 / 裁剪 / 格式转换，canvas 本地渲染 |
 | T-22 | 徽章生成 | shields.io 风格徽章，在线渲染，预设/hex 颜色 + Simple Icons Logo |
 | T-23 | Markdown 编辑器 | 实时预览 · 代码高亮 · 多主题 · 转 HTML / 导出 PDF |
+| T-24 | 请求头解析 | User-Agent / Cookie / URL / Query String / HTTP Header / Set-Cookie 结构化解析 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台
 > （见下方「如何新增一个工具」）。

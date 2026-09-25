@@ -23,6 +23,7 @@ import {
   ExternalLink,
   File,
   FileCheck,
+  FileCode,
   FileDiff,
   FileStack,
   FileText,
@@ -104,6 +105,7 @@ export const IconFingerprint = wrap(Fingerprint);
 export const IconFileStack = wrap(FileStack);
 export const IconFileType = wrap(FileType);
 export const IconHash = wrap(Hash);
+export const IconHttp = wrap(FileCode);
 /** GitHub 品牌 mark（lucide 主包已移除品牌图标，保留手绘路径） */
 export const IconGithub = (p: P) => (
   <svg

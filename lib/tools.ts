@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse";
 
 export interface Tool {
   id: ToolId;
@@ -56,7 +56,8 @@ export interface Tool {
     | "pdf"
     | "image"
     | "badge"
-    | "markdown";
+    | "markdown"
+    | "http-parse";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -338,6 +339,18 @@ export const tools: Tool[] = [
     icon: "pdf",
     lamp: "ok",
     tags: ["PDF", "合并", "拆分", "提取页面"],
+  },
+  {
+    id: "http-parse",
+    index: "T-24",
+    name: "请求头解析",
+    tagline: "UA / Cookie / URL / Query / Header / Set-Cookie",
+    description:
+      "粘贴原始字符串即可结构化解析：User-Agent 拆出浏览器/系统/设备，Cookie 与 Query String 拆键值对，URL 拆协议/主机/端口/路径，HTTP Header 与 Set-Cookie 逐行解析属性。全部本地处理，不上传。",
+    path: "/tools/http-parse",
+    icon: "http-parse",
+    lamp: "ok",
+    tags: ["HTTP", "User-Agent", "Cookie", "URL", "Header", "解析"],
   },
 ];
 

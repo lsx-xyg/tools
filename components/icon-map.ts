@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { IconActivity, IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck,
-  IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFingerprint, IconGithub, IconHash, IconHome, IconImage, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
+  IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFingerprint, IconGithub, IconHash, IconHome, IconHttp, IconImage, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconX } from "./icons";
 
 export const ICONS: Record<string, (p: { width?: number; height?: number }) => ReactNode> = {
   transfer: IconTransfer,
@@ -27,4 +27,5 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   image: IconImage,
   badge: IconBadgeCheck,
   markdown: IconDocText,
+  "http-parse": IconHttp,
 };
