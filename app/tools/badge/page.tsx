@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
-import hljs from "highlight.js";
+import Prism from "prismjs";
+import "prismjs/components/prism-markup";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-markdown";
 import { ColorPicker } from "@/components/color-picker";
 import { ToolHead } from "@/components/tool-head";
 
@@ -46,9 +49,10 @@ export default function BadgePage() {
   }, [outputMode, altText, badgeUrl]);
 
   const highlighted = useMemo(() => {
-    const lang = outputMode === "HTML" ? "xml" : outputMode === "直链" ? "bash" : "markdown";
+    const lang = outputMode === "HTML" ? "markup" : outputMode === "直链" ? "bash" : "markdown";
     try {
-      return hljs.highlight(code, { language: lang }).value;
+      const grammar = Prism.languages[lang];
+      return grammar ? Prism.highlight(code, grammar, lang) : code;
     } catch {
       return code;
     }
@@ -208,9 +212,9 @@ export default function BadgePage() {
                   </>
                 )}
               </button>
-              <pre className="code-dark m-0 min-h-[120px] min-w-0 overflow-x-auto bg-slate-900 p-4 pr-20 text-[13px] leading-relaxed">
+              <pre className="prism-dark m-0 min-h-[120px] min-w-0 overflow-x-auto p-4 pr-20 text-[13px] leading-relaxed">
                 <code
-                  className="hljs language-xml whitespace-pre"
+                  className="whitespace-pre"
                   dangerouslySetInnerHTML={{ __html: highlighted }}
                 />
               </pre>

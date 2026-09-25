@@ -3329,19 +3329,6 @@ mark.re-match {
   color: var(--md-ink-2);
 }
 
-/* ========== 徽章代码区：暗色 hljs 配色（github-dark） ========== */
-.code-dark code.hljs { color: #e6edf3; background: transparent; }
-.code-dark .hljs-keyword, .code-dark .hljs-meta .hljs-keyword, .code-dark .hljs-template-tag, .code-dark .hljs-template-variable, .code-dark .hljs-type, .code-dark .hljs-variable.language_ { color: #ff7b72; }
-.code-dark .hljs-title, .code-dark .hljs-title.class_, .code-dark .hljs-title.function_ { color: #d2a8ff; }
-.code-dark .hljs-attr, .code-dark .hljs-attribute, .code-dark .hljs-literal, .code-dark .hljs-meta, .code-dark .hljs-number, .code-dark .hljs-operator, .code-dark .hljs-variable { color: #79c0ff; }
-.code-dark .hljs-regexp, .code-dark .hljs-string, .code-dark .hljs-meta .hljs-string { color: #a5d6ff; }
-.code-dark .hljs-built_in, .code-dark .hljs-symbol { color: #ffa657; }
-.code-dark .hljs-comment, .code-dark .hljs-code { color: #8b949e; }
-.code-dark .hljs-name, .code-dark .hljs-quote, .code-dark .hljs-selector-tag { color: #7ee787; }
-.code-dark .hljs-link { color: #79c0ff; }
-.code-dark .hljs-addition { color: #aff5b4; background: #033a16; }
-.code-dark .hljs-deletion { color: #ffdcd7; background: #67060c; }
-
 /* ========== 图片处理：stage 保持原始 inline-block，居中由 .preview-area flex 负责 ========== */
 
 /* ========== Markdown：隐藏滚动条，底部对齐 ========== */

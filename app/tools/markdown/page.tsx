@@ -3,7 +3,23 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import hljs from "highlight.js";
+import Prism from "prismjs";
+import "prismjs/components/prism-markup";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-clike";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-rust";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-markdown";
 import { ToolHead } from "@/components/tool-head";
 import { IconCheck, IconCopy, IconDocText, IconDownload, IconPrinter, IconShield } from "@/components/icons";
 
@@ -77,66 +93,65 @@ body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
 .md-body hr { border: none; border-top: 1px solid #e6e2d9; margin: 1.5em 0; }
 `;
 
-// 代码高亮（highlight.js 核心 token 色，按主题三套）
-const HLJS_LIGHT = `
-.hljs{color:#24292e;background:transparent}
-.hljs-comment,.hljs-quote{color:#6a737d;font-style:italic}
-.hljs-keyword,.hljs-selector-tag,.hljs-literal{color:#d73a49;font-weight:600}
-.hljs-string,.hljs-doctag,.hljs-regexp{color:#032f62}
-.hljs-number,.hljs-attr,.hljs-attribute,.hljs-variable{color:#005cc5}
-.hljs-title,.hljs-title.function_,.hljs-section{color:#6f42c1}
-.hljs-built_in,.hljs-type,.hljs-class .hljs-title{color:#005cc5}
-.hljs-meta{color:#24292e}
-.hljs-symbol,.hljs-bullet,.hljs-link{color:#e36209}
-.hljs-emphasis{font-style:italic}.hljs-strong{font-weight:600}
+// 代码高亮（Prism token 色，按主题三套）
+const PRISM_LIGHT = `
+.md-preview code[class*=language-]{color:#24292e;background:transparent}
+.md-preview .token.comment,.md-preview .token.prolog,.md-preview .token.doctype,.md-preview .token.cdata{color:#6a737d;font-style:italic}
+.md-preview .token.punctuation{color:#24292e}
+.md-preview .token.property,.md-preview .token.tag,.md-preview .token.constant,.md-preview .token.symbol,.md-preview .token.deleted{color:#005cc5}
+.md-preview .token.boolean,.md-preview .token.number{color:#005cc5}
+.md-preview .token.selector,.md-preview .token.attr-name,.md-preview .token.string,.md-preview .token.char,.md-preview .token.builtin,.md-preview .token.inserted{color:#032f62}
+.md-preview .token.operator,.md-preview .token.entity,.md-preview .token.url{color:#005cc5}
+.md-preview .token.atrule,.md-preview .token.attr-value,.md-preview .token.keyword{color:#d73a49;font-weight:600}
+.md-preview .token.function,.md-preview .token.class-name{color:#6f42c1}
+.md-preview .token.regex,.md-preview .token.important,.md-preview .token.variable{color:#e36209}
+.md-preview .token.bold{font-weight:600}.md-preview .token.italic{font-style:italic}
 `;
-const HLJS_DARK = `
-.hljs{color:#e6edf3;background:transparent}
-.hljs-comment,.hljs-quote{color:#8b949e;font-style:italic}
-.hljs-keyword,.hljs-selector-tag,.hljs-literal{color:#ff7b72;font-weight:600}
-.hljs-string,.hljs-doctag,.hljs-regexp{color:#a5d6ff}
-.hljs-number,.hljs-attr,.hljs-attribute,.hljs-variable{color:#79c0ff}
-.hljs-title,.hljs-title.function_,.hljs-section{color:#d2a8ff}
-.hljs-built_in,.hljs-type,.hljs-class .hljs-title{color:#ffa657}
-.hljs-meta{color:#e6edf3}
-.hljs-symbol,.hljs-bullet,.hljs-link{color:#ffa657}
-.hljs-emphasis{font-style:italic}.hljs-strong{font-weight:600}
+const PRISM_DARK = `
+.md-preview code[class*=language-]{color:#e6edf3;background:transparent}
+.md-preview .token.comment,.md-preview .token.prolog,.md-preview .token.doctype,.md-preview .token.cdata{color:#8b949e;font-style:italic}
+.md-preview .token.punctuation{color:#c9d1d9}
+.md-preview .token.property,.md-preview .token.tag,.md-preview .token.constant,.md-preview .token.symbol,.md-preview .token.deleted{color:#79c0ff}
+.md-preview .token.boolean,.md-preview .token.number{color:#79c0ff}
+.md-preview .token.selector,.md-preview .token.attr-name,.md-preview .token.string,.md-preview .token.char,.md-preview .token.builtin,.md-preview .token.inserted{color:#a5d6ff}
+.md-preview .token.operator,.md-preview .token.entity,.md-preview .token.url{color:#79c0ff}
+.md-preview .token.atrule,.md-preview .token.attr-value,.md-preview .token.keyword{color:#ff7b72;font-weight:600}
+.md-preview .token.function,.md-preview .token.class-name{color:#d2a8ff}
+.md-preview .token.regex,.md-preview .token.important,.md-preview .token.variable{color:#ffa657}
+.md-preview .token.bold{font-weight:600}.md-preview .token.italic{font-style:italic}
 `;
-const HLJS_SEPIA = `
-.hljs{color:#4f3a25;background:transparent}
-.hljs-comment,.hljs-quote{color:#9a8a6a;font-style:italic}
-.hljs-keyword,.hljs-selector-tag,.hljs-literal{color:#a03a1e;font-weight:600}
-.hljs-string,.hljs-doctag,.hljs-regexp{color:#5a5a1e}
-.hljs-number,.hljs-attr,.hljs-attribute,.hljs-variable{color:#2f4f4f}
-.hljs-title,.hljs-title.function_,.hljs-section{color:#6b3d7a}
-.hljs-built_in,.hljs-type,.hljs-class .hljs-title{color:#2f4f4f}
-.hljs-meta{color:#4f3a25}
-.hljs-symbol,.hljs-bullet,.hljs-link{color:#9a6b1e}
-.hljs-emphasis{font-style:italic}.hljs-strong{font-weight:600}
+const PRISM_SEPIA = `
+.md-preview code[class*=language-]{color:#4f3a25;background:transparent}
+.md-preview .token.comment,.md-preview .token.prolog,.md-preview .token.doctype,.md-preview .token.cdata{color:#9a8a6a;font-style:italic}
+.md-preview .token.punctuation{color:#4f3a25}
+.md-preview .token.property,.md-preview .token.tag,.md-preview .token.constant,.md-preview .token.symbol,.md-preview .token.deleted{color:#2f4f4f}
+.md-preview .token.boolean,.md-preview .token.number{color:#2f4f4f}
+.md-preview .token.selector,.md-preview .token.attr-name,.md-preview .token.string,.md-preview .token.char,.md-preview .token.builtin,.md-preview .token.inserted{color:#5a5a1e}
+.md-preview .token.operator,.md-preview .token.entity,.md-preview .token.url{color:#2f4f4f}
+.md-preview .token.atrule,.md-preview .token.attr-value,.md-preview .token.keyword{color:#a03a1e;font-weight:600}
+.md-preview .token.function,.md-preview .token.class-name{color:#6b3d7a}
+.md-preview .token.regex,.md-preview .token.important,.md-preview .token.variable{color:#9a6b1e}
+.md-preview .token.bold{font-weight:600}.md-preview .token.italic{font-style:italic}
 `;
-const HLJS_THEMES: Record<MdTheme, string> = { light: HLJS_LIGHT, dark: HLJS_DARK, sepia: HLJS_SEPIA };
+const PRISM_THEMES: Record<MdTheme, string> = { light: PRISM_LIGHT, dark: PRISM_DARK, sepia: PRISM_SEPIA };
 
-// 配置 marked：代码高亮
+// 配置 marked：代码高亮（Prism）
 marked.use({
   renderer: {
     code({ text, lang }) {
-      const language = lang && hljs.getLanguage(lang) ? lang : "";
+      const language = lang && Prism.languages[lang] ? lang : "";
       let highlighted = "";
       if (language) {
         try {
-          highlighted = hljs.highlight(text, { language }).value;
+          highlighted = Prism.highlight(text, Prism.languages[language], language);
         } catch {
           highlighted = "";
         }
       }
       if (!highlighted) {
-        try {
-          highlighted = hljs.highlightAuto(text).value;
-        } catch {
-          highlighted = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
+        highlighted = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       }
-      const cls = language ? `hljs language-${language}` : "hljs";
+      const cls = language ? `language-${language}` : "";
       return `<pre><code class="${cls}">${highlighted}</code></pre>`;
     },
   },
@@ -174,7 +189,7 @@ export default function MarkdownPage() {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Markdown 导出</title>
-<style>${PRINT_CSS}\n${HLJS_LIGHT}</style>
+<style>${PRINT_CSS}\n${PRISM_LIGHT}</style>
 </head>
 <body>
 <div class="md-body">
@@ -231,7 +246,7 @@ ${rendered}
 
   return (
     <div className="fade-rise">
-      <style>{HLJS_THEMES[theme]}</style>
+      <style>{PRISM_THEMES[theme]}</style>
       <ToolHead
         title="Markdown 编辑器"
         lede="实时预览 · 代码高亮 · 多主题 · 转 HTML / PDF"
