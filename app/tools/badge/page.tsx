@@ -64,7 +64,7 @@ export default function BadgePage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl overflow-x-hidden">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">徽章生成器</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -72,7 +72,7 @@ export default function BadgePage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         {/* ========== 左栏：配置 ========== */}
         <div className="panel" style={{ overflow: "visible" }}>
           <div className="panel-head">
@@ -163,7 +163,7 @@ export default function BadgePage() {
         </div>
 
         {/* ========== 右栏：预览 + 代码 ========== */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* 预览 */}
           <div className="panel">
             <div className="panel-head">
@@ -214,7 +214,7 @@ export default function BadgePage() {
                   </>
                 )}
               </button>
-              <pre className="m-0 min-h-[140px] max-h-[260px] overflow-x-auto overflow-y-auto bg-slate-900 p-4 pr-20 text-[13px] leading-relaxed">
+              <pre className="m-0 min-h-[140px] max-h-[260px] min-w-0 overflow-x-auto overflow-y-auto bg-slate-900 p-4 pr-20 text-[13px] leading-relaxed">
                 <code
                   className="hljs language-xml whitespace-pre"
                   dangerouslySetInnerHTML={{ __html: highlighted }}

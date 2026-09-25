@@ -143,14 +143,18 @@ export default function ImagePage() {
     const pctX = ((e.clientX - rect.left) / rect.width) * 100;
     const pctY = ((e.clientY - rect.top) / rect.height) * 100;
     const inBox = pctX >= crop.x && pctX <= crop.x + crop.w && pctY >= crop.y && pctY <= crop.y + crop.h;
-    if (inBox) {
+    // 全选框（100%）时任何点击都命中框内，视为“新建裁剪框”
+    const fullBox = crop.w >= 99.5 && crop.h >= 99.5;
+    if (inBox && !fullBox) {
       setDrag({ kind: "move", startX: e.clientX, startY: e.clientY, crop });
     } else {
       const nw = Math.max(10, 100 - crop.x);
       const nh = Math.max(10, 100 - crop.y);
       const box = applyRatio(nw, nh);
-      setCrop({ x: Math.min(pctX, 100 - box.w), y: Math.min(pctY, 100 - box.h), w: box.w, h: box.h });
-      setDrag({ kind: "resize", startX: e.clientX, startY: e.clientY, crop: { x: Math.min(pctX, 100 - box.w), y: Math.min(pctY, 100 - box.h), w: box.w, h: box.h } });
+      const nx = Math.min(pctX, 100 - box.w);
+      const ny = Math.min(pctY, 100 - box.h);
+      setCrop({ x: nx, y: ny, w: box.w, h: box.h });
+      setDrag({ kind: "resize", startX: e.clientX, startY: e.clientY, crop: { x: nx, y: ny, w: box.w, h: box.h } });
     }
     e.preventDefault();
   };
@@ -256,7 +260,15 @@ export default function ImagePage() {
                     height: `${crop.h}%`,
                   }}
                 >
-                  <span className="crop-handle" />
+                  <span
+                    className="crop-handle"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setDrag({ kind: "resize", startX: e.clientX, startY: e.clientY, crop });
+                    }}
+                    aria-label="调整裁剪框大小"
+                  />
                 </div>
               )}
               {mode === "crop" && (
