@@ -258,11 +258,13 @@ function parseHttpRequest(raw: string): ParsedRequest | null {
             partHeaders = p.slice(0, pm.index);
             partContent = p.slice(pm.index + pm[0].length);
           }
-          const dm = partHeaders.match(/Content-Disposition:[^\n]*name="([^"]*)"(?:[^\n]*filename="([^"]*)")?/i);
-          if (dm) {
+          // 分别提取 name 和 filename，避免组合正则在可选部分出错
+          const nameMatch = partHeaders.match(/\bname="([^"]*)"/i);
+          const filenameMatch = partHeaders.match(/\bfilename="([^"]*)"/i);
+          if (nameMatch) {
             multipartParts.push({
-              name: dm[1] || "",
-              filename: dm[2] || "",
+              name: nameMatch[1] || "",
+              filename: filenameMatch ? filenameMatch[1] : "",
               content: partContent.trim(),
             });
           }
@@ -271,6 +273,17 @@ function parseHttpRequest(raw: string): ParsedRequest | null {
     } else if (ct.includes("xml")) {
       bodyType = "xml";
       try {
+        // 严格校验：DOMParser + application/xml，检查 parsererror
+        // 严禁用 text/html 模式（会自动修复非法 XML）
+        if (typeof DOMParser !== "undefined") {
+          const domParser = new DOMParser();
+          const doc = domParser.parseFromString(body, "application/xml");
+          const parseErrorEl = doc.querySelector("parsererror");
+          if (parseErrorEl) {
+            throw new Error("XML 解析失败");
+          }
+        }
+        // 校验通过才格式化
         const parser = new XMLParser({ ignoreAttributes: false, preserveOrder: false });
         const parsed = parser.parse(body);
         const builder = new XMLBuilder({ format: true, indentBy: "  ", ignoreAttributes: false, suppressEmptyNode: false });
