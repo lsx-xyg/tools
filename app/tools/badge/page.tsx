@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import hljs from "highlight.js";
 import { ColorPicker } from "@/components/color-picker";
+import { ToolHead } from "@/components/tool-head";
 
 const STYLES = ["flat", "plastic", "flat-square", "for-the-badge", "social"] as const;
 type BadgeStyle = (typeof STYLES)[number];
@@ -65,16 +66,14 @@ export default function BadgePage() {
 
   return (
     <div className="mx-auto max-w-6xl overflow-x-hidden">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">徽章生成器</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          基于 shields.io 在线渲染 · 配置左侧参数，右侧实时预览并复制代码
-        </p>
-      </div>
+      <ToolHead
+        title="徽章生成器"
+        lede="基于 shields.io 在线渲染 · 配置左侧参数，右侧实时预览并复制代码"
+      />
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         {/* ========== 左栏：配置 ========== */}
-        <div className="panel" style={{ overflow: "visible" }}>
+        <div className="panel">
           <div className="panel-head">
             <span>配置</span>
           </div>
