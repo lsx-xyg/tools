@@ -51,5 +51,3 @@ next-env.d.ts
 # local dev store
 .local-store/
 
-# 由 npm install 生成的锁文件（经 MCP 推送不便，按仓库约定不提交）
-package-lock.json
