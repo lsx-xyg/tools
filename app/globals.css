@@ -4452,28 +4452,38 @@ mark.re-match {
 }
 
 @media (max-width: 640px) {
-  .ws-url-row {
-    flex-wrap: wrap;
+  .ws-url-row,
+  .ws-send-row {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .ws-url-row .seg-compact {
+  .ws-url-row .input,
+  .ws-send-row .input {
     width: 100%;
+    flex-basis: auto;
   }
-  .ws-url-row .input {
-    width: 100%;
-    flex-basis: 100%;
-  }
-  .ws-url-row .btn {
-    width: 100%;
-    justify-content: center;
-  }
+  .ws-url-row .btn,
   .ws-send-row .btn {
     width: 100%;
     justify-content: center;
   }
+  .ws-url-row .seg-compact {
+    width: 100%;
+  }
+  .ws-url-row .seg-compact button {
+    flex: 1;
+  }
   .ws-status-line {
     flex-wrap: wrap;
+    row-gap: 6px;
   }
   .ws-log {
     max-height: 300px;
+  }
+  .ws-log-row {
+    padding: 8px 10px;
+  }
+  .ws-note {
+    font-size: 12px;
   }
 }
