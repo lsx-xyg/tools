@@ -309,7 +309,7 @@ function SsePanel() {
           className="input"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="http(s):// 地址，如 https://example.com/events"
+          placeholder="https://echo.websocket.org/.sse"
           spellCheck={false}
         />
       </div>
