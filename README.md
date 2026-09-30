@@ -50,7 +50,7 @@
 | T-22 | 徽章生成 | shields.io 风格徽章，在线渲染，预设/hex 颜色 + Simple Icons Logo |
 | T-23 | Markdown 编辑器 | 实时预览 · 代码高亮 · 多主题 · 转 HTML / 导出 PDF |
 | T-25 | WebSocket / SSE 测试 | 连接 ws/wss 收发消息·SSE 流式订阅（GET/POST、自定义 Headers），实时时间线日志 |
-| T-26 | Vercel 部署清理 | 连接 Vercel 账号，每个项目保留最新 N 个部署，其余批量并发删除；支持手动 Token 或 OAuth 登录，Token 仅存内存、关闭即清除 |
+| T-26 | Vercel 部署清理 | 连接 Vercel 账号，每个项目保留最新 N 个部署，其余批量并发删除；手动粘贴 Access Token，Token 仅存内存、关闭即清除 |
 | T-24 | 请求头解析 | 7 Tab：完整 HTTP 请求原文自动分离（请求行/Headers/Body）+ UA/Cookie/URL/Query/Header/Set-Cookie 结构化解析，Body 支持 JSON/XML/HTML 格式化高亮 + Form Data/Multipart 三列展示 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台
@@ -123,27 +123,6 @@ npx wrangler secret put SITE_PASSWORD
 > 本地开发：`npx wrangler dev --var SITE_PASSWORD:你的密码`。
 > 若不需要密码门，删除 `wrangler.jsonc` 中 `main` 的 `worker-auth.ts` 引用并恢复
 > 默认入口即可。
-
-### 3.5 （可选）配置 Vercel OAuth 登录
-
-T-26「Vercel 部署清理」支持两种 Token 获取方式：手动粘贴 Access Token（默认，无需配置），或
-「用 Vercel 登录」一键授权（可选，需注册 OAuth 应用）。
-
-如需启用 OAuth 登录：
-
-1. 在 [Vercel OAuth Apps](https://vercel.com/dashboard/settings?tab=oauth-apps) 创建应用，
-   **Redirect URI** 填 `https://你的域名/api/vercel-oauth/callback`。
-2. 把拿到的 Client ID / Client Secret 设为环境变量：
-
-```bash
-npx wrangler secret put VERCEL_CLIENT_ID
-npx wrangler secret put VERCEL_CLIENT_SECRET
-# （可选）默认自动推导，跨域部署时显式指定：
-npx wrangler secret put VERCEL_REDIRECT_URI
-```
-
-> 未配置时页面只显示手动 Token 输入框，功能完全可用。Token 仅存当前页面内存，
-> 刷新或关闭标签页即清除，不写入任何持久化存储。
 
 ### 4. 配置 R2 生命周期（建议，物理清理兜底）
 

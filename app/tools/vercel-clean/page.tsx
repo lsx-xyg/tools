@@ -2,25 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { IconCloud, IconTrash, IconRefresh, IconCheck, IconX, IconExternal, IconKey, IconEye, IconEyeOff } from "@/components/icons";
+import { IconCloud, IconTrash, IconRefresh, IconCheck, IconX, IconExternal, IconEye, IconEyeOff } from "@/components/icons";
 
 /* ============ 常量 ============ */
 const BASE_API_URL = "https://api.vercel.com";
 const DEFAULT_KEEP_LATEST = 3;
 const DEFAULT_CONCURRENCY = 8;
 const PAGE_SIZE = 100;
-const SESSION_STORAGE_KEY = "vercel_token";
-const PKCE_VERIFIER_KEY = "vercel_pkce_verifier";
-
-async function sha256base64url(input: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
 
 /* ============ 类型 ============ */
 interface VercelProject {
@@ -144,8 +132,6 @@ async function runWithConcurrency<T>(
 export default function VercelCleanPage() {
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
-  const [oauthConfigured, setOauthConfigured] = useState(false);
-  const [oauthClientId, setOauthClientId] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<VercelProject[]>([]);
   const [selectedProject, setSelectedProject] = useState(""); // "" = 所有项目
@@ -159,30 +145,6 @@ export default function VercelCleanPage() {
   const logIdRef = useRef(0);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  /* 从 sessionStorage 读取 OAuth 回传的 token，读取后立即删除 */
-  useEffect(() => {
-    try {
-      const t = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (t) {
-        setToken(t);
-        sessionStorage.removeItem(SESSION_STORAGE_KEY);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  /* 检测 OAuth 是否配置 */
-  useEffect(() => {
-    fetch("/api/vercel-oauth/config")
-      .then((r) => r.json())
-      .then((d) => {
-        setOauthConfigured(d.configured);
-        setOauthClientId(d.clientId);
-      })
-      .catch(() => {});
-  }, []);
-
   /* 日志自动滚动到底部 */
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -194,41 +156,10 @@ export default function VercelCleanPage() {
 
   const clearLogs = () => setLogs([]);
 
-  /* 跳转 Vercel OAuth 授权（带 PKCE） */
-  const startOAuth = async () => {
-    if (!oauthClientId) return;
-    try {
-      // 生成 code_verifier
-      const array = new Uint8Array(32);
-      crypto.getRandomValues(array);
-      const verifier = btoa(String.fromCharCode(...array))
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=+$/, "");
-      // 计算 code_challenge = BASE64URL(SHA256(verifier))
-      const challenge = await sha256base64url(verifier);
-      // 存 sessionStorage，回调时读取（关闭标签页即清除）
-      sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
-
-      const redirectUri = `${window.location.origin}/api/vercel-oauth/callback`;
-      const params = new URLSearchParams({
-        client_id: oauthClientId,
-        redirect_uri: redirectUri,
-        response_type: "code",
-        code_challenge: challenge,
-        code_challenge_method: "S256",
-        scope: "openid project:read deployment:read deployment:write",
-      });
-      window.location.href = `https://vercel.com/oauth/authorize?${params}`;
-    } catch (e) {
-      addLog(`OAuth 启动失败：${e instanceof Error ? e.message : String(e)}`, "error");
-    }
-  };
-
   /* 获取项目列表 */
   const fetchProjects = async () => {
     if (!token.trim()) {
-      addLog("请先填写 Vercel Token 或通过 OAuth 登录", "error");
+      addLog("请先填写 Vercel Token", "error");
       return;
     }
     setFetchingProjects(true);
@@ -432,11 +363,6 @@ export default function VercelCleanPage() {
                 >
                   如何获取 Token <IconExternal />
                 </a>
-                {oauthConfigured && (
-                  <button type="button" className="btn btn-primary btn-sm" onClick={startOAuth}>
-                    <IconKey /> 用 Vercel 登录
-                  </button>
-                )}
               </div>
             </div>
 
@@ -544,7 +470,7 @@ export default function VercelCleanPage() {
 
       <div className="vc-note">
         <strong>安全说明：</strong>Token 仅保存在当前页面的 React state（内存）中，不写入 localStorage / Cookie，
-        刷新或关闭标签页即清除。OAuth 登录通过 sessionStorage 一次性回传，读取后立即删除。
+        刷新或关闭标签页即清除。
         所有 API 请求直接从浏览器发往 Vercel 官方 API，不经过本工具的服务器中转。
       </div>
     </div>
