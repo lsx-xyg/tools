@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /**
  * Vercel OAuth 回调：用 authorization code 换 access_token，
@@ -10,8 +11,19 @@ export async function GET(req: NextRequest) {
   const error = req.nextUrl.searchParams.get("error");
   const errorDesc = req.nextUrl.searchParams.get("error_description");
 
-  const clientId = process.env.VERCEL_CLIENT_ID;
-  const clientSecret = process.env.VERCEL_CLIENT_SECRET;
+  // 生产：从 Cloudflare Workers env 读取 secret
+  let clientId = process.env.VERCEL_CLIENT_ID;
+  let clientSecret = process.env.VERCEL_CLIENT_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const { env } = await getCloudflareContext({ async: true });
+      const e = env as Record<string, string | undefined>;
+      clientId = e.VERCEL_CLIENT_ID || clientId;
+      clientSecret = e.VERCEL_CLIENT_SECRET || clientSecret;
+    } catch {
+      /* 回退到 process.env */
+    }
+  }
   const redirectUri =
     process.env.VERCEL_REDIRECT_URI ||
     `${req.nextUrl.origin}/api/vercel-oauth/callback`;
