@@ -10,6 +10,17 @@ const DEFAULT_KEEP_LATEST = 3;
 const DEFAULT_CONCURRENCY = 8;
 const PAGE_SIZE = 100;
 const SESSION_STORAGE_KEY = "vercel_token";
+const PKCE_VERIFIER_KEY = "vercel_pkce_verifier";
+
+async function sha256base64url(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
 
 /* ============ 类型 ============ */
 interface VercelProject {
@@ -183,14 +194,34 @@ export default function VercelCleanPage() {
 
   const clearLogs = () => setLogs([]);
 
-  /* 跳转 Vercel OAuth 授权 */
-  const startOAuth = () => {
+  /* 跳转 Vercel OAuth 授权（带 PKCE） */
+  const startOAuth = async () => {
     if (!oauthClientId) return;
-    const redirectUri = `${window.location.origin}/api/vercel-oauth/callback`;
-    const authUrl = `https://vercel.com/oauth/authorize?client_id=${encodeURIComponent(
-      oauthClientId
-    )}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
-    window.location.href = authUrl;
+    try {
+      // 生成 code_verifier
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      const verifier = btoa(String.fromCharCode(...array))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+      // 计算 code_challenge = BASE64URL(SHA256(verifier))
+      const challenge = await sha256base64url(verifier);
+      // 存 sessionStorage，回调时读取（关闭标签页即清除）
+      sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
+
+      const redirectUri = `${window.location.origin}/api/vercel-oauth/callback`;
+      const params = new URLSearchParams({
+        client_id: oauthClientId,
+        redirect_uri: redirectUri,
+        response_type: "code",
+        code_challenge: challenge,
+        code_challenge_method: "S256",
+      });
+      window.location.href = `https://vercel.com/oauth/authorize?${params}`;
+    } catch (e) {
+      addLog(`OAuth 启动失败：${e instanceof Error ? e.message : String(e)}`, "error");
+    }
   };
 
   /* 获取项目列表 */

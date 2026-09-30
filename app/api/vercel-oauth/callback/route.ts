@@ -1,32 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+
+export const dynamic = "force-dynamic";
 
 /**
- * Vercel OAuth 回调：用 authorization code 换 access_token，
- * 然后通过 sessionStorage 临时传递给前端页面（不进 URL、不进 localStorage）。
- * 前端读取后立即删除 sessionStorage，token 仅存 React state，关闭标签页即清除。
+ * Vercel OAuth 回调：
+ * 由于 PKCE 的 code_verifier 存在浏览器 sessionStorage 里，服务端拿不到，
+ * 所以这里返回一个极简 HTML 页面，由前端 JS 读取 code + code_verifier，
+ * POST 到 /api/vercel-oauth/exchange 换 token，成功后存 sessionStorage 并跳转。
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const error = req.nextUrl.searchParams.get("error");
   const errorDesc = req.nextUrl.searchParams.get("error_description");
-
-  // 生产：从 Cloudflare Workers env 读取 secret
-  let clientId = process.env.VERCEL_CLIENT_ID;
-  let clientSecret = process.env.VERCEL_CLIENT_SECRET;
-  if (process.env.NODE_ENV === "production") {
-    try {
-      const { env } = await getCloudflareContext({ async: true });
-      const e = env as Record<string, string | undefined>;
-      clientId = e.VERCEL_CLIENT_ID || clientId;
-      clientSecret = e.VERCEL_CLIENT_SECRET || clientSecret;
-    } catch {
-      /* 回退到 process.env */
-    }
-  }
-  const redirectUri =
-    process.env.VERCEL_REDIRECT_URI ||
-    `${req.nextUrl.origin}/api/vercel-oauth/callback`;
 
   if (error) {
     return renderError(`授权失败：${errorDesc || error}`);
@@ -34,48 +19,48 @@ export async function GET(req: NextRequest) {
   if (!code) {
     return renderError("缺少 authorization code");
   }
-  if (!clientId || !clientSecret) {
-    return renderError("服务端未配置 VERCEL_CLIENT_ID / VERCEL_CLIENT_SECRET");
+
+  // 前端 JS：从 URL 取 code，从 sessionStorage 取 code_verifier，POST 到 exchange 端点
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>正在完成 Vercel 登录…</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f1e8;color:#23201a;}.card{text-align:center;}.spinner{width:32px;height:32px;border:3px solid #e5e0d6;border-top-color:#c2410c;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}@keyframes spin{to{transform:rotate(360deg)}}</style>
+</head><body><div class="card"><div class="spinner"></div><p id="msg">正在换取 Token…</p></div>
+<script>
+(function(){
+  var msg = document.getElementById('msg');
+  var code = ${JSON.stringify(code)};
+  var verifier = '';
+  try { verifier = sessionStorage.getItem('vercel_pkce_verifier') || ''; } catch(e) {}
+  if (!verifier) {
+    msg.textContent = '错误：找不到 PKCE verifier，请重新发起登录';
+    setTimeout(function(){ location.href = '/tools/vercel-clean'; }, 2000);
+    return;
   }
-
-  try {
-    const resp = await fetch("https://api.vercel.com/login/oauth/token", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        code,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code",
-      }),
+  fetch('/api/vercel-oauth/exchange', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code, code_verifier: verifier })
+  }).then(function(r){ return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+    .then(function(res){
+      if (res.ok && res.data.token) {
+        try {
+          sessionStorage.setItem('vercel_token', res.data.token);
+          sessionStorage.removeItem('vercel_pkce_verifier');
+        } catch(e) {}
+        location.href = '/tools/vercel-clean';
+      } else {
+        msg.textContent = '换取 Token 失败：' + (res.data.error || res.data.detail || '未知错误');
+      }
+    })
+    .catch(function(e){
+      msg.textContent = '网络错误：' + e.message;
     });
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      return renderError(`换取 Token 失败 [${resp.status}]：${text}`);
-    }
-
-    const data = (await resp.json()) as { access_token?: string };
-    const token = data.access_token;
-    if (!token) {
-      return renderError("响应中缺少 access_token");
-    }
-
-    // 通过 sessionStorage 传递：渲染一个极简页面，写入后立即跳转
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>正在返回工具箱…</title></head><body><script>
-try { sessionStorage.setItem("vercel_token", ${JSON.stringify(token)}); } catch(e) {}
-location.href = "/tools/vercel-clean";
+})();
 </script></body></html>`;
-    return new NextResponse(html, {
-      status: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-  } catch (e) {
-    return renderError(`请求异常：${e instanceof Error ? e.message : String(e)}`);
-  }
+
+  return new NextResponse(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
 function renderError(msg: string) {
