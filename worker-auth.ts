@@ -91,6 +91,12 @@ export default {
       });
     }
 
+    // 公开路径：Vercel OAuth 回调必须可被 Vercel 服务器无 cookie 访问，
+    // config 探测端点也需要公开（前端未登录时就要判断是否显示登录按钮）
+    if (url.pathname.startsWith("/api/vercel-oauth/")) {
+      return opennextWorker.fetch(request, env, ctx);
+    }
+
     // 已认证 → 正常处理
     if (hasAuth(request.headers.get("cookie"))) {
       return opennextWorker.fetch(request, env, ctx);
