@@ -427,7 +427,7 @@ export default function VercelCleanPage() {
                 </select>
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-secondary vc-match-height"
                   onClick={fetchProjects}
                   disabled={!token.trim() || fetchingProjects || running}
                 >
