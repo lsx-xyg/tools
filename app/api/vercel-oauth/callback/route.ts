@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "edge";
-
 /**
  * Vercel OAuth 回调：用 authorization code 换 access_token，
  * 然后通过 sessionStorage 临时传递给前端页面（不进 URL、不进 localStorage）。
