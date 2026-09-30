@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const resp = await fetch("https://api.vercel.com/v2/oauth/access_token", {
+    const resp = await fetch("https://api.vercel.com/login/oauth/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
         client_secret: clientSecret,
         code,
         redirect_uri: redirectUri,
+        grant_type: "authorization_code",
       }),
     });
 
