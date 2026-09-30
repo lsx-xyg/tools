@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IconActivity, IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCron, IconDocText, IconFileCheck,
+import { IconActivity, IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCloud, IconCron, IconDocText, IconFileCheck,
   IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFingerprint, IconGithub, IconHash, IconHome, IconHttp, IconImage, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconWifi, IconX } from "./icons";
 
 export const ICONS: Record<string, (p: { width?: number; height?: number }) => ReactNode> = {
@@ -29,4 +29,5 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   markdown: IconDocText,
   "http-parse": IconHttp,
   "ws-test": IconWifi,
+  "vercel-clean": IconCloud,
 };

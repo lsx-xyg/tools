@@ -15,12 +15,15 @@ import {
   ChevronsRight,
   ClipboardPaste,
   Clock,
+  Cloud,
   Copy,
   Database,
   BadgeCheck,
   Crop,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   File,
   FileCheck,
   FileCode,
@@ -153,3 +156,6 @@ export const IconRepeat = wrap(Repeat);
 export const IconWifi = wrap(Wifi);
 export const IconX = wrap(X);
 export const IconZap = wrap(Zap);
+export const IconCloud = wrap(Cloud);
+export const IconEye = wrap(Eye);
+export const IconEyeOff = wrap(EyeOff);

@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean";
 
 export interface Tool {
   id: ToolId;
@@ -58,7 +58,8 @@ export interface Tool {
     | "badge"
     | "markdown"
     | "http-parse"
-    | "ws-test";
+    | "ws-test"
+    | "vercel-clean";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -364,6 +365,18 @@ export const tools: Tool[] = [
     icon: "ws-test",
     lamp: "ok",
     tags: ["WebSocket", "SSE", "连接", "测试", "实时"],
+  },
+  {
+    id: "vercel-clean",
+    index: "T-26",
+    name: "Vercel 部署清理",
+    tagline: "批量删除旧部署 · 保留最新 N 个",
+    description:
+      "连接 Vercel 账号，拉取项目与部署列表，每个项目独立保留最新 N 个部署，其余批量并发删除。支持手动 Token 或 OAuth 登录，Token 仅存内存、关闭即清除，实时日志展示删除进度。",
+    path: "/tools/vercel-clean",
+    icon: "vercel-clean",
+    lamp: "ok",
+    tags: ["Vercel", "部署", "清理", "批量删除", "DevOps"],
   },
 ];
 
