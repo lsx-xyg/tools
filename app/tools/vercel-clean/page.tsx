@@ -29,6 +29,7 @@ interface LogEntry {
   id: number;
   text: string;
   level: LogLevel;
+  time?: string;
 }
 
 /* ============ API 封装 ============ */
@@ -137,13 +138,14 @@ export default function VercelCleanPage() {
   const [selectedProject, setSelectedProject] = useState(""); // "" = 所有项目
   const [fetchingProjects, setFetchingProjects] = useState(false);
 
-  const [keepLatest, setKeepLatest] = useState(DEFAULT_KEEP_LATEST);
-  const [concurrency, setConcurrency] = useState(DEFAULT_CONCURRENCY);
+  const [keepLatest, setKeepLatest] = useState<number | "">(DEFAULT_KEEP_LATEST);
+  const [concurrency, setConcurrency] = useState<number | "">(DEFAULT_CONCURRENCY);
 
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logIdRef = useRef(0);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const [logFullscreen, setLogFullscreen] = useState(false);
 
   /* 日志自动滚动到底部 */
   useEffect(() => {
@@ -151,7 +153,8 @@ export default function VercelCleanPage() {
   }, [logs]);
 
   const addLog = useCallback((text: string, level: LogLevel = "info") => {
-    setLogs((prev) => [...prev, { id: ++logIdRef.current, text, level }]);
+    const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    setLogs((prev) => [...prev, { id: ++logIdRef.current, text, level, time }]);
   }, []);
 
   const clearLogs = () => setLogs([]);
@@ -188,8 +191,8 @@ export default function VercelCleanPage() {
     setRunning(true);
     clearLogs();
     const t = token.trim();
-    const keep = Math.max(0, keepLatest || DEFAULT_KEEP_LATEST);
-    const conc = Math.max(1, Math.min(50, concurrency || DEFAULT_CONCURRENCY));
+    const keep = Math.max(0, Number(keepLatest) || DEFAULT_KEEP_LATEST);
+    const conc = Math.max(1, Math.min(50, Number(concurrency) || DEFAULT_CONCURRENCY));
 
     addLog("=".repeat(50), "system");
     addLog(`开始清理（每个项目独立保留最新 ${keep} 个）`, "system");
@@ -403,7 +406,10 @@ export default function VercelCleanPage() {
                   type="number"
                   className="input"
                   value={keepLatest}
-                  onChange={(e) => setKeepLatest(parseInt(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setKeepLatest(v === "" ? "" : Math.max(0, parseInt(v) || 0));
+                  }}
                   min={0}
                   disabled={running}
                 />
@@ -414,7 +420,10 @@ export default function VercelCleanPage() {
                   type="number"
                   className="input"
                   value={concurrency}
-                  onChange={(e) => setConcurrency(parseInt(e.target.value) || 1)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setConcurrency(v === "" ? "" : Math.max(1, Math.min(50, parseInt(v) || 1)));
+                  }}
                   min={1}
                   max={50}
                   disabled={running}
@@ -446,10 +455,25 @@ export default function VercelCleanPage() {
         </div>
 
         {/* ===== 日志区 ===== */}
-        <div className="panel">
+        <div className={`panel vc-log-panel ${logFullscreen ? "vc-log-fullscreen" : ""}`}>
           <div className="panel-head">
             <span className="label">运行日志</span>
-            <span className="right count-hint">{logs.length} 条</span>
+            <span className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="count-hint">{logs.length} 条</span>
+              <button
+                type="button"
+                className="vc-icon-btn"
+                onClick={() => setLogFullscreen(!logFullscreen)}
+                title={logFullscreen ? "退出全屏" : "全屏查看"}
+                style={{ width: 32, height: 32, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                {logFullscreen ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+                )}
+              </button>
+            </span>
           </div>
           <div className="panel-body">
             <div className="vc-log">
@@ -458,7 +482,8 @@ export default function VercelCleanPage() {
               ) : (
                 logs.map((log) => (
                   <div key={log.id} className={`vc-log-line vc-log-${log.level}`}>
-                    {log.text}
+                    {log.time && <span className="vc-log-time">{log.time}</span>}
+                    <span className="vc-log-text">{log.text}</span>
                   </div>
                 ))
               )}
@@ -467,6 +492,9 @@ export default function VercelCleanPage() {
           </div>
         </div>
       </div>
+
+      {/* 全屏遮罩 */}
+      {logFullscreen && <div className="vc-log-overlay" onClick={() => setLogFullscreen(false)} />}
 
       <div className="vc-note">
         <strong>安全说明：</strong>Token 仅保存在当前页面的 React state（内存）中，不写入 localStorage / Cookie，

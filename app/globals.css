@@ -4597,16 +4597,21 @@ mark.re-match {
 .vc-log {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  background: var(--line);
+  gap: 0;
+  background: var(--bg-subtle);
   border-radius: var(--r-sm);
   overflow: hidden;
-  max-height: 480px;
+  max-height: 420px;
   overflow-y: auto;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.6;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
+.vc-log::-webkit-scrollbar { width: 6px; }
+.vc-log::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.vc-log::-webkit-scrollbar-track { background: transparent; }
 .vc-log-empty {
   background: var(--bg);
   padding: 32px 20px;
@@ -4616,16 +4621,75 @@ mark.re-match {
   font-size: 13px;
 }
 .vc-log-line {
-  padding: 5px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 14px;
   background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+.vc-log-line::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+}
+.vc-log-time {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+  opacity: 0.7;
+  user-select: none;
+}
+.vc-log-text {
+  flex: 1;
+  min-width: 0;
   white-space: pre-wrap;
   word-break: break-all;
 }
 .vc-log-info { color: var(--ink); }
+.vc-log-info::before { background: var(--ink-3); }
 .vc-log-success { color: #059669; }
+.vc-log-success::before { background: #059669; }
 .vc-log-error { color: #dc2626; }
+.vc-log-error::before { background: #dc2626; }
 .vc-log-warn { color: #d97706; }
+.vc-log-warn::before { background: #d97706; }
 .vc-log-system { color: var(--ink-2); font-weight: 600; }
+.vc-log-system::before { background: var(--accent); }
+
+/* 全屏日志 */
+.vc-log-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+.vc-log-fullscreen {
+  position: fixed !important;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(900px, 92vw);
+  max-height: 85vh;
+  z-index: 1000;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+.vc-log-fullscreen .panel-body {
+  flex: 1;
+  min-height: 0;
+}
+.vc-log-fullscreen .vc-log {
+  max-height: none;
+  height: 100%;
+}
 .vc-note {
   margin-top: 16px;
   padding: 14px 18px;
@@ -4660,6 +4724,10 @@ mark.re-match {
     justify-content: center;
   }
   .vc-log {
-    max-height: 320px;
+    max-height: 300px;
+  }
+  .vc-log-fullscreen {
+    width: 94vw;
+    max-height: 88vh;
   }
 }
