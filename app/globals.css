@@ -4624,26 +4624,19 @@ mark.re-match {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 6px 14px;
+  padding: 5px 14px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
-  position: relative;
 }
-.vc-log-line::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: transparent;
-}
+.vc-log-indent-1 { padding-left: 34px; }
+.vc-log-indent-2 { padding-left: 56px; }
 .vc-log-time {
   flex-shrink: 0;
   color: var(--ink-3);
   font-size: 11px;
-  opacity: 0.7;
+  opacity: 0.55;
   user-select: none;
+  padding-top: 1px;
 }
 .vc-log-text {
   flex: 1;
@@ -4652,15 +4645,10 @@ mark.re-match {
   word-break: break-all;
 }
 .vc-log-info { color: var(--ink); }
-.vc-log-info::before { background: var(--ink-3); }
 .vc-log-success { color: #059669; }
-.vc-log-success::before { background: #059669; }
 .vc-log-error { color: #dc2626; }
-.vc-log-error::before { background: #dc2626; }
 .vc-log-warn { color: #d97706; }
-.vc-log-warn::before { background: #d97706; }
-.vc-log-system { color: var(--ink-2); font-weight: 600; }
-.vc-log-system::before { background: var(--accent); }
+.vc-log-system { color: var(--accent); font-weight: 600; }
 
 /* 全屏日志 */
 .vc-log-overlay {

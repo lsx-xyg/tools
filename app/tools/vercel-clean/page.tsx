@@ -30,6 +30,7 @@ interface LogEntry {
   text: string;
   level: LogLevel;
   time?: string;
+  indent?: number;
 }
 
 /* ============ API 封装 ============ */
@@ -152,9 +153,9 @@ export default function VercelCleanPage() {
     logEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [logs]);
 
-  const addLog = useCallback((text: string, level: LogLevel = "info") => {
+  const addLog = useCallback((text: string, level: LogLevel = "info", indent = 0) => {
     const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
-    setLogs((prev) => [...prev, { id: ++logIdRef.current, text, level, time }]);
+    setLogs((prev) => [...prev, { id: ++logIdRef.current, text, level, time, indent }]);
   }, []);
 
   const clearLogs = () => setLogs([]);
@@ -229,17 +230,17 @@ export default function VercelCleanPage() {
 
       for (let i = 0; i < targetProjects.length; i++) {
         const { id, name } = targetProjects[i];
-        addLog(`\n[${i + 1}/${targetProjects.length}] 项目 [${name}] 正在拉取部署…`, "system");
+        addLog(`[${i + 1}/${targetProjects.length}] 项目 [${name}] 正在拉取部署…`, "system");
         let deps: VercelDeployment[];
         try {
           deps = await getDeploymentsForProject(t, id);
         } catch (e) {
-          addLog(`  ✗ 拉取失败，跳过：${e instanceof Error ? e.message : String(e)}`, "error");
+          addLog(`拉取失败，跳过：${e instanceof Error ? e.message : String(e)}`, "error", 1);
           continue;
         }
 
         if (deps.length === 0) {
-          addLog("  该项目没有部署，跳过。", "warn");
+          addLog("该项目没有部署，跳过。", "warn", 1);
           continue;
         }
 
@@ -250,20 +251,19 @@ export default function VercelCleanPage() {
         const deleteList = sorted.slice(keep);
         totalKeep += keepList.length;
 
-        addLog(`  共 ${sorted.length} 个部署，保留 ${keepList.length} 个，待删 ${deleteList.length} 个。`, "info");
+        addLog(`共 ${sorted.length} 个部署，保留 ${keepList.length} 个，待删 ${deleteList.length} 个。`, "info", 1);
 
         for (const dep of keepList) {
           const ts = dep.created
             ? new Date(dep.created).toLocaleString("zh-CN", { hour12: false })
             : "未知";
-          addLog(`    [保留] ${dep.url || dep.uid}  (${ts})`, "info");
+          addLog(`[保留] ${dep.url || dep.uid}  (${ts})`, "info", 2);
         }
         for (const dep of deleteList) {
           toDelete.push({ project: name, dep });
         }
       }
 
-      addLog(`\n${"=".repeat(50)}`, "system");
       addLog(`汇总：保留 ${totalKeep} 个，待删除 ${toDelete.length} 个。`, "system");
 
       if (toDelete.length === 0) {
@@ -282,11 +282,11 @@ export default function VercelCleanPage() {
         const result = await deleteDeployment(t, dep);
         if (result.ok) {
           successCount++;
-          addLog(`[${idx + 1}/${toDelete.length}] ✓ [${project}] 已删除 ${result.url}`, "success");
+          addLog(`[${idx + 1}/${toDelete.length}] ✓ [${project}] 已删除 ${result.url}`, "success", 1);
         } else {
           failCount++;
           failures.push({ project, url: result.url, err: result.err || "未知错误" });
-          addLog(`[${idx + 1}/${toDelete.length}] ✗ [${project}] 删除失败 ${result.url} -> ${result.err}`, "error");
+          addLog(`[${idx + 1}/${toDelete.length}] ✗ [${project}] 删除失败 ${result.url} -> ${result.err}`, "error", 1);
         }
       });
 
@@ -481,7 +481,7 @@ export default function VercelCleanPage() {
                 <div className="vc-log-empty">配置完成后点击「开始清理」，日志将在此实时输出。</div>
               ) : (
                 logs.map((log) => (
-                  <div key={log.id} className={`vc-log-line vc-log-${log.level}`}>
+                  <div key={log.id} className={`vc-log-line vc-log-${log.level} vc-log-indent-${log.indent || 0}`}>
                     {log.time && <span className="vc-log-time">{log.time}</span>}
                     <span className="vc-log-text">{log.text}</span>
                   </div>
