@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+export const dynamic = "force-dynamic";
+
 /** 返回是否配置了 Vercel OAuth 应用（client_id），前端据此决定是否显示"用 Vercel 登录"按钮 */
 export async function GET() {
   let clientId: string | undefined;
