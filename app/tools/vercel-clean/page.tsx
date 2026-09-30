@@ -217,6 +217,7 @@ export default function VercelCleanPage() {
         response_type: "code",
         code_challenge: challenge,
         code_challenge_method: "S256",
+        scope: "openid project:read deployment:read deployment:write",
       });
       window.location.href = `https://vercel.com/oauth/authorize?${params}`;
     } catch (e) {
