@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ToolHead } from "@/components/tool-head";
 import { IconCloud, IconTrash, IconRefresh, IconCheck, IconX, IconExternal, IconEye, IconEyeOff } from "@/components/icons";
 
@@ -304,6 +305,46 @@ export default function VercelCleanPage() {
     }
   };
 
+  /* 日志面板（非全屏/全屏共用，全屏时通过 Portal 渲染到 body） */
+  const logPanel = (
+    <div className={`panel vc-log-panel ${logFullscreen ? "vc-log-fullscreen" : ""}`}>
+      <div className="panel-head">
+        <span className="label">运行日志</span>
+        <span className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="count-hint">{logs.length} 条</span>
+          <button
+            type="button"
+            className="vc-icon-btn"
+            onClick={() => setLogFullscreen(!logFullscreen)}
+            title={logFullscreen ? "退出全屏" : "全屏查看"}
+            style={{ width: 32, height: 32, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            {logFullscreen ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+            )}
+          </button>
+        </span>
+      </div>
+      <div className="panel-body">
+        <div className="vc-log">
+          {logs.length === 0 ? (
+            <div className="vc-log-empty">配置完成后点击「开始清理」，日志将在此实时输出。</div>
+          ) : (
+            logs.map((log) => (
+              <div key={log.id} className={`vc-log-line vc-log-${log.level} vc-log-indent-${log.indent || 0}`}>
+                {log.time && <span className="vc-log-time">{log.time}</span>}
+                <span className="vc-log-text">{log.text}</span>
+              </div>
+            ))
+          )}
+          <div ref={logEndRef} />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fade-rise">
       <ToolHead
@@ -454,47 +495,18 @@ export default function VercelCleanPage() {
           </div>
         </div>
 
-        {/* ===== 日志区 ===== */}
-        <div className={`panel vc-log-panel ${logFullscreen ? "vc-log-fullscreen" : ""}`}>
-          <div className="panel-head">
-            <span className="label">运行日志</span>
-            <span className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className="count-hint">{logs.length} 条</span>
-              <button
-                type="button"
-                className="vc-icon-btn"
-                onClick={() => setLogFullscreen(!logFullscreen)}
-                title={logFullscreen ? "退出全屏" : "全屏查看"}
-                style={{ width: 32, height: 32, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                {logFullscreen ? (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
-                ) : (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
-                )}
-              </button>
-            </span>
-          </div>
-          <div className="panel-body">
-            <div className="vc-log">
-              {logs.length === 0 ? (
-                <div className="vc-log-empty">配置完成后点击「开始清理」，日志将在此实时输出。</div>
-              ) : (
-                logs.map((log) => (
-                  <div key={log.id} className={`vc-log-line vc-log-${log.level} vc-log-indent-${log.indent || 0}`}>
-                    {log.time && <span className="vc-log-time">{log.time}</span>}
-                    <span className="vc-log-text">{log.text}</span>
-                  </div>
-                ))
-              )}
-              <div ref={logEndRef} />
-            </div>
-          </div>
-        </div>
+        {/* ===== 日志区（非全屏） ===== */}
+        {!logFullscreen && logPanel}
       </div>
 
-      {/* 全屏遮罩 */}
-      {logFullscreen && <div className="vc-log-overlay" onClick={() => setLogFullscreen(false)} />}
+      {/* 全屏日志：用 Portal 渲染到 body，避免被祖先 transform 限制遮罩范围 */}
+      {logFullscreen && typeof document !== "undefined" && createPortal(
+        <>
+          <div className="vc-log-overlay" onClick={() => setLogFullscreen(false)} />
+          {logPanel}
+        </>,
+        document.body
+      )}
 
       <div className="vc-note">
         <strong>安全说明：</strong>Token 仅保存在当前页面的 React state（内存）中，不写入 localStorage / Cookie，

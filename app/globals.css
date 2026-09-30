@@ -4655,18 +4655,18 @@ mark.re-match {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 999;
-  backdrop-filter: blur(2px);
+  z-index: 9999;
+  backdrop-filter: blur(3px);
 }
 .vc-log-fullscreen {
   position: fixed !important;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(900px, 92vw);
-  max-height: 85vh;
-  z-index: 1000;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  width: min(1200px, 95vw);
+  max-height: 90vh;
+  z-index: 10000;
+  box-shadow: 0 32px 96px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
 }
@@ -4715,7 +4715,7 @@ mark.re-match {
     max-height: 300px;
   }
   .vc-log-fullscreen {
-    width: 94vw;
-    max-height: 88vh;
+    width: 96vw;
+    max-height: 92vh;
   }
 }
