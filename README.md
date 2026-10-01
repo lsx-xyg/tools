@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="logo.png" alt="工具箱 Logo" width="80" height="80" />
+<img src="logo.svg" alt="工具箱 Logo" width="80" height="80" />
 
 # 工具箱 TOOLBOX
 
