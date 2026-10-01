@@ -1,13 +1,21 @@
 /**
  * 全站密码保护入口（自定义 Cloudflare Worker）。
  * 构建时由 opennextjs-cloudflare 生成 .open-next/worker.js，本文件在其外层包装认证：
- * - 未验证（无有效 site_auth Cookie）→ 一律返回极简密码页（含 /api/*）
- * - POST /api/auth 校验密码（env.SITE_PASSWORD）→ 写入 30 天 HttpOnly Cookie
+ * - 未验证（无有效签名 site_auth Cookie）→ 一律返回极简密码页（含 /api/*）
+ * - POST /api/auth 校验密码（env.SITE_PASSWORD）→ 签发 HMAC 签名 token，写入 30 天 HttpOnly Cookie
+ * - 每次请求验证 token 签名 + 过期时间，不可伪造（改 cookie 值直接失效）
  * - 已验证 → 转发给 OpenNext worker 正常处理
  */
 // @ts-expect-error 构建产物：opennextjs-cloudflare build 后生成
 import opennextWorker from "./.open-next/worker.js";
-import { authSetCookie, checkPassword, hasAuth } from "./lib/site-auth";
+import {
+  authSetCookie,
+  checkPassword,
+  extractAuthToken,
+  generateAuthToken,
+  hasAuthCookie,
+  verifyAuthToken,
+} from "./lib/site-auth";
 
 interface AuthEnv {
   SITE_PASSWORD?: string;
@@ -59,6 +67,15 @@ fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},bod
 </body>
 </html>`;
 
+/** 验证 cookie 中的签名 token 是否有效（异步，需 SITE_PASSWORD） */
+async function isAuthed(request: Request, env: AuthEnv): Promise<boolean> {
+  const token = extractAuthToken(request.headers.get("cookie"));
+  if (!token) return false;
+  const secret = env.SITE_PASSWORD;
+  if (!secret) return false;
+  return verifyAuthToken(token, secret);
+}
+
 export default {
   async fetch(request: Request, env: AuthEnv, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -78,21 +95,24 @@ export default {
             headers: { "content-type": "application/json" },
           });
         }
+        // 签发 HMAC 签名 token（用 SITE_PASSWORD 做签名密钥）
+        const token = await generateAuthToken(env.SITE_PASSWORD!);
         return new Response(JSON.stringify({ ok: true }), {
           headers: {
             "content-type": "application/json",
-            "set-cookie": authSetCookie(url.protocol === "https:"),
+            "set-cookie": authSetCookie(token, url.protocol === "https:"),
           },
         });
       }
-      // GET：供前端探测登录状态
-      return new Response(JSON.stringify({ authed: hasAuth(request.headers.get("cookie")) }), {
+      // GET：供前端探测登录状态（验证签名）
+      const authed = await isAuthed(request, env);
+      return new Response(JSON.stringify({ authed }), {
         headers: { "content-type": "application/json" },
       });
     }
 
-    // 已认证 → 正常处理
-    if (hasAuth(request.headers.get("cookie"))) {
+    // 已认证（签名验证通过）→ 正常处理
+    if (await isAuthed(request, env)) {
       return opennextWorker.fetch(request, env, ctx);
     }
 
