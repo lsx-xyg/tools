@@ -51,6 +51,7 @@
 | T-23 | Markdown 编辑器 | 实时预览 · 代码高亮 · 多主题 · 转 HTML / 导出 PDF |
 | T-25 | WebSocket / SSE 测试 | 连接 ws/wss 收发消息·SSE 流式订阅（GET/POST、自定义 Headers），实时时间线日志 |
 | T-26 | Vercel 部署清理 | 连接 Vercel 账号，每个项目保留最新 N 个部署，其余批量并发删除；手动粘贴 Access Token，Token 仅存内存、关闭即清除 |
+| T-27 | GitHub Release 清理 | 连接 GitHub 账号，每个仓库保留最新 N 个 Release，其余批量并发删除；可选同时删除 Git tag；Token 仅存内存、关闭即清除 |
 | T-24 | 请求头解析 | 7 Tab：完整 HTTP 请求原文自动分离（请求行/Headers/Body）+ UA/Cookie/URL/Query/Header/Set-Cookie 结构化解析，Body 支持 JSON/XML/HTML 格式化高亮 + Form Data/Multipart 三列展示 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台

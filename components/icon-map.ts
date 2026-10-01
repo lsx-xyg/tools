@@ -30,4 +30,5 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   "http-parse": IconHttp,
   "ws-test": IconWifi,
   "vercel-clean": IconCloud,
+  "github-release-clean": IconGithub,
 };

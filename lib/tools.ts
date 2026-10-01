@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean";
 
 export interface Tool {
   id: ToolId;
@@ -59,7 +59,8 @@ export interface Tool {
     | "markdown"
     | "http-parse"
     | "ws-test"
-    | "vercel-clean";
+    | "vercel-clean"
+    | "github-release-clean";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -377,6 +378,18 @@ export const tools: Tool[] = [
     icon: "vercel-clean",
     lamp: "ok",
     tags: ["Vercel", "部署", "清理", "批量删除", "DevOps"],
+  },
+  {
+    id: "github-release-clean",
+    index: "T-27",
+    name: "GitHub Release 清理",
+    tagline: "批量删除旧 Release · 保留最新 N 个 · 可选删 Tag",
+    description:
+      "连接 GitHub 账号，拉取仓库与 Release 列表，每个仓库独立保留最新 N 个 Release，其余批量并发删除。可选同时删除对应的 Git tag。Token 仅存内存、关闭即清除，实时日志展示删除进度。",
+    path: "/tools/github-release-clean",
+    icon: "github-release-clean",
+    lamp: "ok",
+    tags: ["GitHub", "Release", "清理", "批量删除", "DevOps"],
   },
 ];
 
