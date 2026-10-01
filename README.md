@@ -2,15 +2,15 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-在线工具箱：26 个即开即用的小工具，无需注册登录，纯本地计算或到期自动销毁。
+在线工具箱：27 个即开即用的小工具，无需注册登录，纯本地计算或到期自动销毁。
 部署在 **Cloudflare Workers**（Next.js + OpenNext Cloudflare 适配器 + KV + R2），
 可自行部署、按需扩展新工具。
 
 ## ✨ 特性
 
-- **26 个即开即用的小工具**：文本 / 文件互传、二维码生成 / 解析、JSON 格式化、Base64、
+- **27 个即开即用的小工具**：文本 / 文件互传、二维码生成 / 解析、JSON 格式化、Base64、
   Cron 解析、格式互转、时间戳、Hash、UUID、Diff、正则、URL 编码、JWT、图片
-  处理、徽章生成、Markdown 编辑器、PDF 处理等（见下方完整清单）。
+  处理、徽章生成、Markdown 编辑器、PDF 处理、Vercel/GitHub 清理等（见下方完整清单）。
 - **在线直传（P2P）**：WebRTC 数据通道在设备间直传文本 / 文件，服务器只中转
   建连信令（SDP / ICE），**内容不经过、不存储在任何服务器**；凭 6 位提取码或扫码连接。
 - **离线暂存**：内容暂存云端，保留时长（1h / 6h / 24h / 3 天 / 7 天）与下载次数
