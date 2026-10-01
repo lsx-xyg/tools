@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="logo.svg" alt="工具箱 Logo" width="80" height="80" />
+<img src="docs/logo.svg" alt="工具箱 TOOLBOX" width="120" />
 
 # 工具箱 TOOLBOX
 
@@ -11,7 +11,7 @@
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare)](https://workers.cloudflare.com)
 [![Deploy](https://github.com/lsx-xyg/tools/actions/workflows/deploy.yml/badge.svg)](https://github.com/lsx-xyg/tools/actions)
 
-[在线体验](https://tools.dbthree.dpdns.org) · [文档](#-安装) · [反馈](https://github.com/lsx-xyg/tools/issues)
+[在线体验](https://tools.dbthree.dpdns.org) · [反馈](https://github.com/lsx-xyg/tools/issues)
 
 </div>
 
