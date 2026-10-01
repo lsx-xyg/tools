@@ -1,7 +1,6 @@
 <div align="center">
 
-<!-- 替换为实际 Logo：docs/logo.png -->
-<img src="docs/logo.png" alt="工具箱 Logo" width="80" height="80" />
+<img src="logo.png" alt="工具箱 Logo" width="80" height="80" />
 
 # 工具箱 TOOLBOX
 
