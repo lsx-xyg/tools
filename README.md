@@ -1,137 +1,156 @@
 # 工具箱 TOOLBOX
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare)](https://workers.cloudflare.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org)
+[![Deploy](https://github.com/lsx-xyg/tools/actions/workflows/deploy.yml/badge.svg)](https://github.com/lsx-xyg/tools/actions)
 
-在线工具箱：27 个即开即用的小工具，无需注册登录，纯本地计算或到期自动销毁。
-部署在 **Cloudflare Workers**（Next.js + OpenNext Cloudflare 适配器 + KV + R2），
-可自行部署、按需扩展新工具。
+一个部署在 Cloudflare Workers 上的在线工具箱，包含 27 个即开即用的小工具，无需注册登录，纯本地计算或到期自动销毁。可自行部署、按需扩展新工具。
 
-## ✨ 特性
+## 目录
 
-- **27 个即开即用的小工具**：文本 / 文件互传、二维码生成 / 解析、JSON 格式化、Base64、
-  Cron 解析、格式互转、时间戳、Hash、UUID、Diff、正则、URL 编码、JWT、图片
-  处理、徽章生成、Markdown 编辑器、PDF 处理、Vercel/GitHub 清理等（见下方完整清单）。
-- **在线直传（P2P）**：WebRTC 数据通道在设备间直传文本 / 文件，服务器只中转
-  建连信令（SDP / ICE），**内容不经过、不存储在任何服务器**；凭 6 位提取码或扫码连接。
-- **离线暂存**：内容暂存云端，保留时长（1h / 6h / 24h / 3 天 / 7 天）与下载次数
-  （1 / 3 / 10 / 100 次）均可自定义，到期自动清除，凭提取码或扫码取回。
-- **隐私优先**：绝大多数工具纯本地运行，内容不上传服务器。
-- **存储后端可切换**：KV ↔ Redis（Upstash REST）一键切换，密码保护。
-- **三态主题**：跟随系统 / 浅色 / 深色，实时响应系统变化，跨标签页同步。
-- **全站密码门**：可选部署。密码存环境变量，验证后写入 30 天 HttpOnly Cookie，
-  适合个人 / 小圈子私有部署，控制免费额度消耗。
-- **移动端友好**：抽屉菜单 + 底部触控优化，响应式适配到窄屏。
+- [安装](#安装)
+- [使用](#使用)
+- [工具清单](#工具清单)
+- [技术栈](#技术栈)
+- [配置](#配置)
+- [部署到 Cloudflare Workers](#部署到-cloudflare-workers)
+- [存储后端切换](#存储后端切换-kv--redis)
+- [API 一览](#api-一览)
+- [项目结构](#项目结构)
+- [扩展开发](#扩展开发)
+- [贡献](#贡献)
+- [License](#license)
 
-## 🧰 工具清单
+## 安装
+
+### 从源码安装
+
+需要 Node.js 18+。
+
+```bash
+git clone https://github.com/lsx-xyg/tools.git
+cd tools
+npm install
+```
+
+### 本地开发
+
+```bash
+npm run dev
+```
+
+访问 `http://localhost:3000`。本地开发时后端自动使用内存 KV + `.local-store/` 目录模拟 KV / R2，可完整跑通发送 / 接收流程（包括双开两个浏览器标签页测试在线直传）。
+
+## 使用
+
+打开网站后，通过左侧边栏或搜索（`Ctrl / ⌘ + K`）选择工具即可使用。大部分工具为纯前端计算，数据不离开浏览器；涉及传输的工具（T-01）支持在线 P2P 直传（内容不落服务器）与离线暂存（到期自动销毁）。
+
+## 工具清单
 
 | 编号 | 工具 | 说明 |
 | --- | --- | --- |
 | T-01 | 文本 / 文件互传 | 在线 P2P 直传（不落服务器）· 离线暂存（时长 / 次数可自定义）· 提取码 / 扫码 |
-| T-02 | 二维码生成 / 解析 | 文本/链接转二维码（尺寸颜色可调、PNG下载），或上传二维码图片解析内容 |
-| T-03 | Base64 编码 | 双向转换，UTF-8 安全（中文 / emoji 不乱码） |
-| T-04 | JSON 格式化 | 格式化 / 校验 / 压缩，报错定位到具体行 |
-| T-05 | Cron 表达式 | 5 / 6 段解析，预览未来执行时间，校验合法性，可视化生成 |
-| T-06 | 格式互转 | YAML / XML / CSV / INI / TOML / Properties ↔ JSON 双向互转 |
-| T-07 | 时间戳转换 | Unix ↔ 日期时间，自动识别秒 / 毫秒，实时当前时间戳 |
-| T-08 | Hash 计算 | MD5 / SHA-1 / SHA-256 / SHA-512，支持 HMAC 签名 |
-| T-09 | UUID 生成 | 批量 v4，大写 / 无横线格式 |
-| T-10 | 文本 Diff 对比 | 行级差异高亮，增删统计 |
-| T-11 | 正则测试器 | 实时匹配高亮，捕获组查看，g / i / m / s 标志 |
-| T-12 | 文本处理合集 | 大小写 / 排序 / 去重 / 提取等十余种操作，可叠加管线 |
-| T-13 | URL 编码 / 解码 | encodeURIComponent 安全转换，中文 / emoji 安全 |
-| T-14 | JWT 解析 / 生成 | 解码、HS / RS / ES / PS 签名验证与生成，多密钥类型 |
-| T-15 | 文件哈希校验 | 拖拽即算 MD5 / SHA 摘要，本地完成 |
-| T-16 | 设备信息 | 屏幕 / 系统 / 浏览器 / 网络环境，实时刷新 |
-| T-17 | Case converter | 10 种大小写与命名风格转换 |
-| T-18 | MIME types | 类型 ↔ 扩展名互查，模糊搜索 |
-| T-19 | HTTP 状态码 | 62 条状态码速查：数字、英文名、中文含义 |
-| T-20 | PDF 处理 | 多 PDF 合并 / 按页拆分提取，本地完成 |
-| T-21 | 图片处理 | 压缩 / 缩放 / 裁剪 / 格式转换，canvas 本地渲染 |
-| T-22 | 徽章生成 | shields.io 风格徽章，在线渲染，预设/hex 颜色 + Simple Icons Logo |
-| T-23 | Markdown 编辑器 | 实时预览 · 代码高亮 · 多主题 · 转 HTML / 导出 PDF |
-| T-25 | WebSocket / SSE 测试 | 连接 ws/wss 收发消息·SSE 流式订阅（GET/POST、自定义 Headers），实时时间线日志 |
-| T-26 | Vercel 部署清理 | 连接 Vercel 账号，每个项目保留最新 N 个部署，其余批量并发删除；手动粘贴 Access Token，Token 仅存内存、关闭即清除 |
-| T-27 | GitHub Release 清理 | 连接 GitHub 账号，每个仓库保留最新 N 个 Release，其余批量并发删除；可选同时删除 Git tag；Token 仅存内存、关闭即清除 |
-| T-24 | 请求头解析 | 7 Tab：完整 HTTP 请求原文自动分离（请求行/Headers/Body）+ UA/Cookie/URL/Query/Header/Set-Cookie 结构化解析，Body 支持 JSON/XML/HTML 格式化高亮 + Form Data/Multipart 三列展示 |
+| T-02 | 二维码生成 / 解析 | 生成二维码或解析二维码图片 |
+| T-03 | Base64 编码 | 编码 / 解码，中文安全 |
+| T-04 | JSON 格式化 | 格式化 / 校验 / 压缩 |
+| T-05 | Cron 表达式 | 解析下次执行时间，可视化生成 |
+| T-06 | 格式互转 | YAML / XML / CSV / INI / TOML / Properties ↔ JSON |
+| T-07 | 时间戳转换 | Unix 时间 ↔ 日期时间 |
+| T-08 | Hash 计算 | MD5 / SHA 系列 / HMAC |
+| T-09 | UUID 生成 | 批量 v4，本地随机 |
+| T-10 | 文本 Diff 对比 | 两栏对比，差异高亮 |
+| T-11 | 正则测试器 | 匹配预览与捕获组 |
+| T-12 | 文本处理合集 | 大小写 / 排序 / 去重等 |
+| T-13 | URL 编码 / 解码 | encodeURIComponent 安全转换 |
+| T-14 | JWT 解析 / 生成 | 解码 / 签名验证 / 生成 |
+| T-15 | 文件哈希校验 | 本地文件的 MD5 / SHA 摘要 |
+| T-16 | 设备信息 | 屏幕 / 系统 / 浏览器环境 |
+| T-17 | Case converter | 大小写与命名风格转换 |
+| T-18 | MIME types | MIME ↔ 扩展名互查 |
+| T-19 | HTTP 状态码 | 状态码速查 · 数字 / 英文 / 中文 |
+| T-20 | PDF 处理 | 合并 / 拆分 / 提取页面 |
+| T-21 | 图片处理 | 格式转换 / 压缩 / 缩放 / 裁剪 |
+| T-22 | 徽章生成 | shields.io 风格徽章 |
+| T-23 | Markdown 编辑器 | 实时预览 / 转 HTML / PDF |
+| T-24 | 请求头解析 | UA / Cookie / URL / Query / Header / Set-Cookie |
+| T-25 | WebSocket / SSE 测试 | 连接测试 · 收发消息 · 实时日志 |
+| T-26 | Vercel 部署清理 | 批量删除旧部署 · 保留最新 N 个 |
+| T-27 | GitHub Release 清理 | 批量删除旧 Release · 保留最新 N 个 · 可选删 Tag |
 
-> 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台
-> （见下方「如何新增一个工具」）。
+> 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台（见[扩展开发](#扩展开发)）。
 
-## 🛠 技术栈
+## 技术栈
 
 | 层 | 选型 |
 | --- | --- |
-| 前端 | Next.js 16（App Router）+ TypeScript + 自研 CSS 设计系统 |
+| 前端 | Next.js 16（App Router）+ TypeScript + Tailwind CSS + 自研 CSS 设计系统 |
 | 图标 / 组件 | lucide-react + shadcn/ui 风格 Button（Radix + cva + clsx + tailwind-merge） |
-| 代码高亮 | Prism.js（JSON / XML / HTML / Markdown / Bash 等 16 种语言，三套主题） |
+| 代码高亮 | Prism.js（JSON / XML / HTML / Markdown / Bash 等多语言，多套主题） |
 | 运行时 | Cloudflare Workers（`@opennextjs/cloudflare` 适配器） |
 | 存储 | KV（传输记录 + P2P 信令）、R2（离线文件对象）；可选 Redis（Upstash REST） |
 | 主题 | 三态（跟随系统 / 浅色 / 深色），`localStorage` 持久化 + matchMedia 实时监听 |
+| 字体 | LxgwWenKai Screen（开源中文字体） |
 
-## 🚀 快速开始
+## 配置
 
-```bash
-npm install
-npm run dev        # http://localhost:3000
-```
+### 环境变量
 
-本地开发时后端自动使用内存 KV + `.local-store/` 目录模拟 KV / R2，可完整跑通
-发送 / 接收流程（包括双开两个浏览器标签页测试在线直传）。
+| 变量 | 必需 | 说明 |
+| --- | --- | --- |
+| `SITE_PASSWORD` | 推荐 | 全站访问密码。未设置时全站拒绝访问（安全兜底） |
+| `TRANSFER_KV_ID` | 部署必需 | Cloudflare KV namespace id（通过 secret 或部署脚本注入，不入库） |
+| `REDIS_URL` | 可选 | Upstash REST 端点，启用 Redis 存储后端时需要 |
+| `REDIS_TOKEN` | 可选 | Upstash 访问令牌 |
+| `STORAGE_SWITCH_PASSWORD` | 可选 | 存储后端切换密码；未配置时可在网页首次设置 |
 
-## ☁️ 部署到 Cloudflare Workers
+### 限额
+
+| 项目 | 限制 |
+| --- | --- |
+| 文本 | ≤ 200,000 字符 |
+| 文件 | 单次 ≤ 10 个、单个 ≤ 10 MB、总量 ≤ 50 MB |
+| 离线保留时长 | 1h / 6h / 24h / 3 天 / 7 天 |
+| 文件下载次数 | 1 / 3 / 10 / 100 次 |
+| P2P 信令窗口 | 15 分钟；连接超时 90 秒 |
+
+## 部署到 Cloudflare Workers
 
 ### 1. 准备账号与资源
 
 ```bash
 npx wrangler login
 
-# 创建 KV 命名空间，把返回的 id 填入 wrangler.jsonc 的 TRANSFER_KV.id
+# 创建 KV 命名空间，把返回的 id 记下
 npx wrangler kv namespace create TRANSFER_KV
 
 # 创建 R2 存储桶（名字与 wrangler.jsonc 中一致）
 npx wrangler r2 bucket create tools-transfer
 ```
 
-### 2. KV namespace id：仓库只存占位符
+### 2. 注入 KV namespace id
 
-`wrangler.jsonc` 中的 KV id 是占位符（`TRANSFER_KV_ID_PLACEHOLDER`），**真实 id 永远
-不入库**，公开仓库也不泄露。部署时通过环境变量 / Secret 注入：
-
-- **本地部署**（推荐入口，自动注入 id 并部署）：
-
-  ```bash
-  TRANSFER_KV_ID=<你的id> ./scripts/deploy.sh
-  # 查 id：npx wrangler kv namespace list
-  ```
-
-- **GitHub Actions**：在仓库 Settings → Secrets 添加 `TRANSFER_KV_ID`，workflow 会
-  在部署前自动替换占位符（见 `.github/workflows/deploy.yml`）。
-
-> 也可以手动临时替换后部署：`sed "s/TRANSFER_KV_ID_PLACEHOLDER/<你的id>/" wrangler.jsonc > /tmp/w.jsonc && npx wrangler deploy -c /tmp/w.jsonc`
-
-### 3. 设置全站访问密码（可选，推荐）
-
-全站在 Worker 层做密码保护：未验证一律返回极简密码页，验证通过后写入 **30 天
-有效 HttpOnly Cookie**（SameSite=Lax，HTTPS 下带 Secure）。密码**只存在环境变量，
-不写死在代码**：
+`wrangler.jsonc` 中的 KV id 是占位符（`TRANSFER_KV_ID_PLACEHOLDER`），真实 id 不入库。部署时通过环境变量注入：
 
 ```bash
-# 生产：把密码设为 secret（部署前执行）
+TRANSFER_KV_ID=<你的id> ./scripts/deploy.sh
+# 查 id：npx wrangler kv namespace list
+```
+
+或使用 GitHub Actions：在仓库 Settings → Secrets 添加 `TRANSFER_KV_ID`，workflow 会在部署前自动替换占位符。
+
+### 3. 设置全站访问密码
+
+```bash
 npx wrangler secret put SITE_PASSWORD
 ```
 
-> ⚠️ **未设置 `SITE_PASSWORD` 时全站拒绝访问**（安全兜底，不会裸奔）。
-> 本地开发：`npx wrangler dev --var SITE_PASSWORD:你的密码`。
-> 若不需要密码门，删除 `wrangler.jsonc` 中 `main` 的 `worker-auth.ts` 引用并恢复
-> 默认入口即可。
+> 未设置 `SITE_PASSWORD` 时全站拒绝访问。本地开发：`npx wrangler dev --var SITE_PASSWORD:你的密码`。
 
-### 4. 配置 R2 生命周期（建议，物理清理兜底）
+### 4. 配置 R2 生命周期（建议）
 
-业务层已按 TTL 判断过期（返回 410），但 R2 对象本身没有原生 TTL——上线后请给桶配
-一条生命周期规则（控制台 → R2 → `tools-transfer` → 设置 → 生命周期规则）：
-
-- 规则类型：**删除对象**
-- 条件：**对象上传时间早于 7 天前**
+业务层已按 TTL 判断过期，但 R2 对象本身没有原生 TTL。请给桶配置生命周期规则（控制台 → R2 → `tools-transfer` → 设置 → 生命周期规则）：规则类型为删除对象，条件为对象上传时间早于 7 天前。
 
 ### 5. 部署
 
@@ -141,33 +160,23 @@ npm run deploy
 
 部署完成后访问 `https://tools.<你的子域>.workers.dev`。
 
-### 6.（可选）GitHub Actions 自动部署
+### 6. GitHub Actions 自动部署
 
-推送 `main` 分支即自动构建并部署（见 `.github/workflows/deploy.yml`）。
-在仓库 Settings → Secrets 中添加：
+推送 `main` 分支即自动构建并部署。在仓库 Settings → Secrets 中添加：
 
-- `CLOUDFLARE_API_TOKEN`（有 Workers 脚本与 KV / R2 写权限的 API Token）
-- `CLOUDFLARE_ACCOUNT_ID`（Cloudflare 账号 ID）
-- `TRANSFER_KV_ID`（你的 KV namespace id，见上文步骤 2）
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `TRANSFER_KV_ID`
 
-## 🔄 存储后端切换（KV / Redis）
+## 存储后端切换（KV / Redis）
 
-默认使用 Cloudflare KV；可一键切到 Redis（Upstash），用于降低 KV 免费额度消耗或做
-信令加速。
+默认使用 Cloudflare KV；可切换到 Redis（Upstash），用于降低 KV 免费额度消耗。
 
-- **为什么是 Upstash REST**：Cloudflare Workers 免费计划没有 TCP 出站
-  （`connect()` 仅付费），Upstash 提供 HTTPS REST 接口（标准 Redis 命令走 URL），
-  免费计划可直接调用。
-- **启用 Redis**：部署环境变量配置两个值后，仪表台底部「存储后端 · 管理员」卡片
-  即可切换：
-  - `REDIS_URL`：Upstash REST 端点，如 `https://xxx.upstash.io`
-  - `REDIS_TOKEN`：Upstash 访问令牌
-- **切换密码**：优先读环境变量 `STORAGE_SWITCH_PASSWORD`；未配置时可在网页首次
-  「设置密码」（≥6 位，SHA-256 哈希存绑定 KV）。切换后端必须输入正确密码。
-- 切换 Redis 后：P2P 信令与离线传输元数据都走 Redis；离线**文件内容仍存 R2**。
-- 未配置 REDIS_URL / REDIS_TOKEN 时切换会返回明确错误（防止伪切换）。
+- 启用 Redis：配置 `REDIS_URL` 和 `REDIS_TOKEN` 环境变量后，仪表台底部「存储后端 · 管理员」卡片即可切换。
+- 切换密码：优先读环境变量 `STORAGE_SWITCH_PASSWORD`；未配置时可在网页首次设置（≥6 位，SHA-256 哈希存绑定 KV）。
+- 切换 Redis 后：P2P 信令与离线传输元数据走 Redis；离线文件内容仍存 R2。
 
-## 📡 API 一览
+## API 一览
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
@@ -179,41 +188,72 @@ npm run deploy
 | GET | `/api/rtc/:code` | 轮询信令状态 |
 | POST | `/api/rtc/:code/offer` | 发送方提交 SDP offer |
 | POST | `/api/rtc/:code/answer` | 接收方提交 SDP answer |
-| POST | `/api/rtc/:code/candidate` | 提交 ICE candidate（body `{ role, sdp, seq }`） |
+| POST | `/api/rtc/:code/candidate` | 提交 ICE candidate |
 | DELETE | `/api/rtc/:code` | 关闭信令房间 |
-| GET | `/api/settings/storage` | 查询存储后端（kv / redis）与密码状态 |
+| GET | `/api/settings/storage` | 查询存储后端与密码状态 |
 | POST | `/api/settings/storage` | 切换后端 / 设置修改密码 |
 
-> 在线直传原理：浏览器 WebRTC 点对点直连，信令仅中转 SDP / ICE 不承载内容；
-> 文件 / 文本只在两台设备间传输，服务器不落盘。
+> 在线直传原理：浏览器 WebRTC 点对点直连，信令仅中转 SDP / ICE 不承载内容；文件 / 文本只在两台设备间传输，服务器不落盘。
 
-## ⚖️ 限额
+## 项目结构
 
-- 文本：≤ 200,000 字符
-- 文件：单次 ≤ 10 个、单个 ≤ 10 MB、总量 ≤ 50 MB
-- 离线保留时长：1h / 6h / 24h / 3 天 / 7 天（服务端 clamp）
-- 文件下载次数：1 / 3 / 10 / 100 次（服务端 clamp 到 1～100）
-- P2P 信令窗口 15 分钟；连接超时 90 秒
+```text
+tools/
+├── app/
+│   ├── api/                    # API 路由（传输、信令、设置）
+│   ├── tools/                  # 各工具页面（每个工具一个目录）
+│   │   ├── transfer/           # T-01 文本/文件互传
+│   │   ├── qr/                 # T-02 二维码
+│   │   ├── json/               # T-04 JSON 格式化
+│   │   ├── vercel-clean/       # T-26 Vercel 部署清理
+│   │   └── github-release-clean/ # T-27 GitHub Release 清理
+│   ├── globals.css             # 全站样式 + 设计系统
+│   ├── layout.tsx              # 根布局（侧边栏 + 内容区）
+│   └── page.tsx                # 仪表台首页
+├── components/
+│   ├── icons.tsx               # lucide 图标封装
+│   ├── icon-map.ts             # 工具图标映射
+│   ├── tool-head.tsx           # 工具页头部组件
+│   └── ui/                     # shadcn 风格组件
+├── lib/
+│   ├── tools.ts                # 工具注册清单（T-01 ~ T-27）
+│   ├── kv.ts                   # KV / R2 / Redis 存储抽象
+│   ├── site-auth.ts            # 全站密码认证（HMAC 签名 token）
+│   └── rtc-client.ts           # WebRTC 客户端
+├── worker-auth.ts              # Cloudflare Worker 入口（全站密码门）
+├── wrangler.jsonc              # Cloudflare Workers 配置
+├── scripts/
+│   └── deploy.sh               # 部署脚本（注入 KV id）
+├── .github/workflows/
+│   ├── deploy.yml              # 自动部署
+│   └── gitleaks.yml            # 密钥扫描
+└── package.json
+```
 
-## ⚠️ 已知限制
+## 扩展开发
 
-- 在线直传依赖 NAT 穿透（内置 Cloudflare STUN + 备用 STUN，**不含 Google**）。
-  同一局域网 / WiFi 下主要靠 host candidate 直连；跨网络对称 NAT 无法穿透时需要
-  自建 TURN，此时请改用离线模式。若同 WiFi 也无法直连，请检查路由器 AP / 客户端
-  隔离、iOS「本地网络」权限、以及是否在微信内置浏览器中打开。
-- 离线传输内容为明文暂存，到期自动销毁，不保证对抗取证级安全。
-- KV 为最终一致性，跨地区信令偶尔可能延迟数百毫秒到数秒，客户端按字段增量消费、
-  本地去重。
-
-## 🛠 如何新增一个工具
+### 新增一个工具
 
 1. 新建页面 `app/tools/<slug>/page.tsx`（参考现有工具，纯本地工具无需后端）。
-2. 在 `lib/tools.ts` 注册一项：`id`、`name`、`tagline`、`description`、`path`、
-   `icon`（`components/icon-map.ts` 中已定义或新增）、`tags`。
-3. 侧边栏、搜索面板（Ctrl / ⌘ + K）、仪表台自动出现该工具。
+2. 在 `lib/tools.ts` 注册一项：`id`、`name`、`tagline`、`description`、`path`、`icon`（`components/icon-map.ts` 中已定义或新增）、`tags`。
+3. 侧边栏、搜索面板（`Ctrl / ⌘ + K`）、仪表台自动出现该工具。
 
-## 📜 License
+### 开发命令
+
+```bash
+npm run dev       # 本地开发
+npm run build     # 构建（含 TypeScript 类型检查）
+npm run lint      # ESLint 检查
+npm run preview   # 本地预览 Cloudflare Workers 构建产物
+```
+
+## 贡献
+
+欢迎通过 GitHub Issues 提交工具想法或反馈问题，也欢迎 Pull Request 贡献新工具或修复。
+
+- 提交 Issue：[新建 Issue](https://github.com/lsx-xyg/tools/issues/new)
+- 提交 PR：Fork 仓库后创建分支，确保 `npm run build` 通过后提交
+
+## License
 
 [MIT](LICENSE) © 2026 lsx-xyg
-
-欢迎通过 GitHub Issues 提交工具想法或反馈问题。
