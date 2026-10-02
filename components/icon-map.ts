@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { IconActivity, IconBase64, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCloud, IconCron, IconDocText, IconFileCheck,
-  IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFingerprint, IconGithub, IconHash, IconHome, IconHttp, IconImage, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconWifi, IconX } from "./icons";
+  IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFingerprint, IconGithub, IconHash, IconHome, IconHttp, IconImage, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconSearch, IconSun, IconTextSearch, IconTransfer, IconVideo, IconWifi, IconX } from "./icons";
 
 export const ICONS: Record<string, (p: { width?: number; height?: number }) => ReactNode> = {
   transfer: IconTransfer,
@@ -31,4 +31,5 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   "ws-test": IconWifi,
   "vercel-clean": IconCloud,
   "github-release-clean": IconGithub,
+  video: IconVideo,
 };

@@ -31,6 +31,7 @@ import {
   FileStack,
   FileText,
   FileType,
+  Film,
   Fingerprint,
   Hash,
   Home,
@@ -42,12 +43,14 @@ import {
   Menu,
   Monitor,
   Moon,
+  Music,
   Plus,
   Printer,
   QrCode,
   RefreshCw,
   Repeat,
   ScanLine,
+  Scissors,
   Search,
   Server,
   ShieldCheck,
@@ -56,6 +59,7 @@ import {
   TextSearch,
   Trash2,
   Upload,
+  Video,
   Wifi,
   X,
   Zap,
@@ -159,3 +163,7 @@ export const IconZap = wrap(Zap);
 export const IconCloud = wrap(Cloud);
 export const IconEye = wrap(Eye);
 export const IconEyeOff = wrap(EyeOff);
+export const IconVideo = wrap(Video);
+export const IconScissors = wrap(Scissors);
+export const IconFilm = wrap(Film);
+export const IconMusic = wrap(Music);

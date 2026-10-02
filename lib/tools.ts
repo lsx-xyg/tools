@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video";
 
 export interface Tool {
   id: ToolId;
@@ -60,7 +60,8 @@ export interface Tool {
     | "http-parse"
     | "ws-test"
     | "vercel-clean"
-    | "github-release-clean";
+    | "github-release-clean"
+    | "video";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -390,6 +391,18 @@ export const tools: Tool[] = [
     icon: "github-release-clean",
     lamp: "ok",
     tags: ["GitHub", "Release", "清理", "批量删除", "DevOps"],
+  },
+  {
+    id: "video",
+    index: "T-28",
+    name: "视频处理",
+    tagline: "裁剪 / 转 GIF / 提取音频 / 转换 / 拼接 / 压缩",
+    description:
+      "基于 ffmpeg.wasm 的浏览器端视频处理：裁剪时间段、转 GIF、提取音频、格式转换、多片段拼接、按画质压缩。全部在本地完成，视频不上传服务器，关掉页面即彻底清除。",
+    path: "/tools/video",
+    icon: "video",
+    lamp: "ok",
+    tags: ["视频", "ffmpeg", "裁剪", "转GIF", "提取音频", "格式转换", "拼接", "压缩"],
   },
 ];
 
