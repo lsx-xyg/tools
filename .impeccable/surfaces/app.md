@@ -9,7 +9,7 @@ related_targets: []
 
 ## Scope & Visitor Mode
 
-全站壳（导航 + 首页 + 工具页框架），Operate 模式为主，首页带轻量发现（Persuade）元素。当前 27 个工具页（T-01 文本/文件互传 ～ T-27 GitHub Release 清理），注册于 `lib/tools.ts`。
+全站壳（导航 + 首页 + 工具页框架），Operate 模式为主，首页带轻量发现（Persuade）元素。当前 28 个工具页（T-01 文本/文件互传 ～ T-28 视频处理），注册于 `lib/tools.ts`。
 
 ## Audience
 

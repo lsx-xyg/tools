@@ -4,7 +4,7 @@
 
 # 工具箱 TOOLBOX
 
-**一个部署在 Cloudflare Workers 上的在线工具箱，27 个即开即用的小工具，无需注册登录。**
+**一个部署在 Cloudflare Workers 上的在线工具箱，28 个即开即用的小工具，无需注册登录。**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
@@ -76,6 +76,7 @@
 | 🔌 WebSocket / SSE 测试 | 连接测试 · 收发消息 · 实时日志 |
 | ☁️ Vercel 部署清理 | 批量删除旧部署 · 保留最新 N 个 |
 | 🐙 GitHub Release 清理 | 批量删除旧 Release · 保留最新 N 个 · 可选删 Tag |
+| 🎬 视频处理 | 裁剪 / 转 GIF / 提取音频 / 格式转换 / 拼接 / 压缩 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台。
 
@@ -219,7 +220,8 @@ tools/
 │   │   ├── qr/                 # T-02 二维码
 │   │   ├── json/               # T-04 JSON 格式化
 │   │   ├── vercel-clean/       # T-26 Vercel 部署清理
-│   │   └── github-release-clean/ # T-27 GitHub Release 清理
+│   │   ├── github-release-clean/ # T-27 GitHub Release 清理
+│   │   └── video/                # T-28 视频处理
 │   ├── globals.css             # 全站样式 + 设计系统
 │   ├── layout.tsx              # 根布局（侧边栏 + 内容区）
 │   └── page.tsx                # 仪表台首页
@@ -229,7 +231,7 @@ tools/
 │   ├── tool-head.tsx           # 工具页头部组件
 │   └── ui/                     # shadcn 风格组件
 ├── lib/
-│   ├── tools.ts                # 工具注册清单（T-01 ~ T-27）
+│   ├── tools.ts                # 工具注册清单（T-01 ~ T-28）
 │   ├── kv.ts                   # KV / R2 / Redis 存储抽象
 │   ├── site-auth.ts            # 全站密码认证（HMAC 签名 token）
 │   └── rtc-client.ts           # WebRTC 客户端
