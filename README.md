@@ -4,7 +4,7 @@
 
 # 工具箱 TOOLBOX
 
-**一个部署在 Cloudflare Workers 上的在线工具箱，28 个即开即用的小工具，无需注册登录。**
+**一个部署在 Cloudflare Workers 上的在线工具箱，36 个即开即用的小工具，无需注册登录。**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
@@ -77,6 +77,14 @@
 | ☁️ Vercel 部署清理 | 批量删除旧部署 · 保留最新 N 个 |
 | 🐙 GitHub Release 清理 | 批量删除旧 Release · 保留最新 N 个 · 可选删 Tag |
 | 🎬 视频处理 | 裁剪 / 转 GIF / 提取音频 / 格式转换 / 拼接 / 压缩 |
+| 🎵 音频处理 | 格式转换 / 拼接 / 裁剪 / 变速变调 |
+| 📊 媒体信息 | 容器 / 编码 / 时长 / 码率 / 流信息 |
+| 🎞️ 视频抽帧 / 倍速 | 按时间点抽帧 · GIF 转视频 · 倍速播放 |
+| 🖼️ 图片批量处理 | 批量压缩 / 加水印 / ZIP 打包 |
+| 📹 屏幕 / 摄像头录制 | 本地录制 · 预览 · 下载 |
+| 🔤 OCR 文字识别 | 简体中文 / English，tesseract.js 本地识别 |
+| 🌐 IP 归属地查询 | 归属地 / 运营商 / 时区 / ASN |
+| 🌍 DNS 解析查询 | 公共 DoH 多源（阿里 / DNSPod / Cloudflare） |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台。
 
@@ -221,7 +229,15 @@ tools/
 │   │   ├── json/               # T-04 JSON 格式化
 │   │   ├── vercel-clean/       # T-26 Vercel 部署清理
 │   │   ├── github-release-clean/ # T-27 GitHub Release 清理
-│   │   └── video/                # T-28 视频处理
+│   │   ├── video/                # T-28 视频处理
+│   │   ├── audio/                # T-29 音频处理
+│   │   ├── media-info/           # T-30 媒体信息
+│   │   ├── video-frames/         # T-31 视频抽帧 / 倍速
+│   │   ├── image-batch/          # T-32 图片批量处理
+│   │   ├── recorder/             # T-33 屏幕 / 摄像头录制
+│   │   ├── ocr/                  # T-34 OCR 文字识别
+│   │   ├── ip-lookup/            # T-35 IP 归属地查询
+│   │   └── dns-lookup/           # T-36 DNS 解析查询
 │   ├── globals.css             # 全站样式 + 设计系统
 │   ├── layout.tsx              # 根布局（侧边栏 + 内容区）
 │   └── page.tsx                # 仪表台首页
@@ -231,7 +247,7 @@ tools/
 │   ├── tool-head.tsx           # 工具页头部组件
 │   └── ui/                     # shadcn 风格组件
 ├── lib/
-│   ├── tools.ts                # 工具注册清单（T-01 ~ T-28）
+│   ├── tools.ts                # 工具注册清单（T-01 ~ T-36）
 │   ├── kv.ts                   # KV / R2 / Redis 存储抽象
 │   ├── site-auth.ts            # 全站密码认证（HMAC 签名 token）
 │   └── rtc-client.ts           # WebRTC 客户端
