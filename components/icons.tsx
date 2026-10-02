@@ -4,10 +4,12 @@ import {
   ArrowDown,
   ArrowLeftRight,
   ArrowUp,
+  AudioWaveform,
   Binary,
   CaseSensitive,
   Braces,
   CalendarClock,
+  Camera,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -16,11 +18,13 @@ import {
   ClipboardPaste,
   Clock,
   Cloud,
+  Combine,
   Copy,
   Database,
   BadgeCheck,
   Crop,
   Download,
+  Droplet,
   ExternalLink,
   Eye,
   EyeOff,
@@ -33,9 +37,12 @@ import {
   FileType,
   Film,
   Fingerprint,
+  Gauge,
+  Globe,
   Hash,
   Home,
   Image,
+  Info,
   KeyRound,
   Laptop,
   Link,
@@ -167,3 +174,11 @@ export const IconVideo = wrap(Video);
 export const IconScissors = wrap(Scissors);
 export const IconFilm = wrap(Film);
 export const IconMusic = wrap(Music);
+export const IconAudioWave = wrap(AudioWaveform);
+export const IconConcat = wrap(Combine);
+export const IconGauge = wrap(Gauge);
+export const IconInfo = wrap(Info);
+export const IconDrop = wrap(Droplet);
+export const IconCamera = wrap(Camera);
+export const IconGlobe = wrap(Globe);
+export const IconChevron = wrap(ChevronRight);

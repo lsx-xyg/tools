@@ -4921,3 +4921,174 @@ mark.re-match {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== T-29~T-36 新工具样式 ===== */
+.vc-hint {
+  font-size: 12px;
+  color: var(--muted, #8a8a8a);
+  margin-top: 4px;
+  display: block;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--danger, #d9534f);
+  background: var(--danger, #d9534f);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.88;
+}
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 媒体信息表 */
+.mi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.mi-table th,
+.mi-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, rgba(120, 120, 120, 0.18));
+  text-align: left;
+  vertical-align: top;
+}
+.mi-table thead th {
+  font-weight: 600;
+  color: var(--muted, #8a8a8a);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.mi-table .mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12.5px;
+  word-break: break-all;
+}
+.mi-value {
+  font-size: 14px;
+  font-weight: 500;
+}
+.mi-raw {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--bg-soft, rgba(120, 120, 120, 0.06));
+  border-radius: 8px;
+  padding: 12px;
+}
+.ip-label {
+  font-weight: 600;
+  width: 130px;
+  white-space: nowrap;
+}
+
+/* 图片批量 */
+.ib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.ib-card {
+  position: relative;
+  border: 1px solid var(--border, rgba(120, 120, 120, 0.18));
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-card, rgba(255, 255, 255, 0.5));
+}
+.ib-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: repeating-conic-gradient(#eee 0% 25%, #fafafa 0% 50%) 0 0 / 16px 16px;
+}
+.ib-meta {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ib-name {
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ib-sub {
+  font-size: 11.5px;
+  color: var(--muted, #8a8a8a);
+}
+.ib-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: none;
+}
+
+/* 录制 */
+.rc-tips {
+  font-size: 13px;
+  color: var(--muted, #8a8a8a);
+  margin-bottom: 12px;
+}
+.rc-tips ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rc-player {
+  width: 100%;
+  max-width: 720px;
+  border-radius: 10px;
+  background: #000;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* OCR */
+.ocr-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ocr-img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(120, 120, 120, 0.18));
+}
+.ocr-result {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 420px;
+  overflow: auto;
+  background: var(--bg-soft, rgba(120, 120, 120, 0.06));
+  border-radius: 8px;
+  padding: 14px;
+}
