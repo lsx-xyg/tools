@@ -34,6 +34,23 @@ const TYPE_NAMES: Record<number, string> = {
   257: "CAA",
 };
 
+/* Cloudflare 代理常见 IP 段（CNAME 压平后 A 记录常落在这些段内） */
+const CF_CIDRS: Array<[number, number]> = [
+  [0x68100000, 0x681fffff], // 104.16.0.0/13
+  [0xac400000, 0xac4fffff], // 172.64.0.0/13
+  [0xadf53000, 0xadf53fff], // 173.245.48.0/20
+  [0xbc726000, 0xbc726fff], // 188.114.96.0/20
+  [0xbe5df000, 0xbe5dffff], // 190.93.240.0/20
+  [0xa29ef000, 0xa29effff], // 162.159.0.0/16
+];
+
+function ipInCidrs(ip: string): boolean {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return false;
+  const n = parts.reduce((acc, p) => (acc << 8) | Number(p), 0) >>> 0;
+  return CF_CIDRS.some(([lo, hi]) => n >= lo && n <= hi);
+}
+
 const DOH_PROVIDERS = [
   { key: "alidns", label: "阿里 DNS", url: "https://dns.alidns.com/resolve" },
   { key: "dnspod", label: "DNSPod", url: "https://doh.pub/dns-query" },
@@ -47,6 +64,7 @@ export default function DnsLookupPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<DnsResult | null>(null);
   const [err, setErr] = useState("");
+  const [usedProvider, setUsedProvider] = useState<string>("");
 
   const doh = DOH_PROVIDERS.find((p) => p.key === provider) ?? DOH_PROVIDERS[0];
 
@@ -59,21 +77,40 @@ export default function DnsLookupPage() {
     setBusy(true);
     setErr("");
     setResult(null);
+    setUsedProvider("");
+    /* 自动容错：从选中源开始依次尝试，失败自动切换下一个可达源 */
+    const order = [doh, ...DOH_PROVIDERS.filter((p) => p.key !== doh.key)];
+    let lastErr = "";
     try {
-      const url = `${doh.url}?name=${encodeURIComponent(name)}&type=${type}`;
-      const res = await fetch(url, { headers: { Accept: "application/dns-json" } });
-      if (!res.ok) throw new Error(`DoH 接口返回 ${res.status}`);
-      const data = (await res.json()) as DnsResult;
-      if (data.Status !== 0) {
-        setErr(`DNS 响应状态码 ${data.Status}（0 = NOERROR；3 = 域名不存在；2 = SERVFAIL）。`);
-      } else if (!data.Answer?.length) {
-        setResult(data);
-        setErr(`查询成功，但该域名没有 ${type} 记录。`);
-      } else {
-        setResult(data);
+      for (const p of order) {
+        try {
+          const url = `${p.url}?name=${encodeURIComponent(name)}&type=${type}`;
+          const res = await fetch(url, { headers: { Accept: "application/dns-json" } });
+          if (!res.ok) throw new Error(`DoH 接口返回 ${res.status}`);
+          const data = (await res.json()) as DnsResult;
+          if (data.Status !== 0) {
+            setUsedProvider(p.label);
+            setResult(data);
+            setErr(`DNS 响应状态码 ${data.Status}（0 = NOERROR；3 = 域名不存在；2 = SERVFAIL）。`);
+            return;
+          }
+          setUsedProvider(p.label);
+          setResult(data);
+          /* 空结果解释 */
+          if (!data.Answer?.length) {
+            if (type === "CNAME" && data.Authority?.some((a) => a.type === 6)) {
+              setErr(`该域名没有可返回的 CNAME 记录。常见原因：域名托管在 Cloudflare 等 CDN 并开启代理（CNAME 压平），公共 DNS 会隐藏 CNAME、直接返回目标 IP；可查询 A 记录查看实际解析结果。`);
+            } else {
+              setErr(`查询成功，但该域名没有 ${type} 记录。`);
+            }
+          }
+          return;
+        } catch (e) {
+          lastErr = e instanceof Error ? e.message : String(e);
+          /* 该源不可达，继续尝试下一个 */
+        }
       }
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "查询失败，请稍后重试。");
+      setErr(`所有 DoH 源均查询失败（最后错误：${lastErr}）。国内网络下建议使用「阿里 DNS」或「DNSPod」源。`);
     } finally {
       setBusy(false);
     }
@@ -139,7 +176,10 @@ export default function DnsLookupPage() {
             <span className="label">
               {domain.trim()} · {type} 记录
             </span>
-            <span className="right subtle">{result.Answer.length} 条</span>
+            <span className="right subtle">
+              {usedProvider ? `${usedProvider} · ` : ""}
+              {result.Answer.length} 条
+            </span>
           </div>
           <div className="panel-body">
             <table className="mi-table">
@@ -162,6 +202,11 @@ export default function DnsLookupPage() {
                 ))}
               </tbody>
             </table>
+            {type === "A" && result.Answer.some((a) => a.type === 1 && ipInCidrs(a.data)) && (
+              <div className="vc-hint" style={{ marginTop: 10 }}>
+                ⚠ 检测到 Cloudflare 代理 IP：该域名可能开启了 Cloudflare 代理（橙色云），解析结果返回的是 CDN 节点 IP 而非源站 IP。
+              </div>
+            )}
           </div>
         </div>
       )}
