@@ -97,13 +97,19 @@ export default function VideoFramesPage() {
           } else {
             const iv = Math.max(0.1, frameInterval);
             const inName = wname(ext);
-            const outName = `frames_${Date.now()}.png`;
+            /* 多帧输出必须使用 %d 序号模式，否则 ffmpeg 会因无法推断序号而报错只写 1 帧 */
+            const base = `frames_${Date.now()}`;
+            const outName = `${base}-%d.png`;
             await ff.FS("writeFile", inName, await window.FFmpeg!.fetchFile(src));
-            await ff.run("-i", inName, "-vf", `fps=1/${iv}`, outName);
+            try {
+              await ff.run("-i", inName, "-vf", `fps=1/${iv}`, outName);
+            } catch {
+              /* 0.11 在部分滤镜下会抛错，但帧文件已写入 FS */
+            }
             /* 多帧输出：ffmpeg 生成 frames_N-1.png, frames_N-2.png... */
             let i = 1;
             for (;;) {
-              const candidate = outName.replace(".png", `-${i}.png`);
+              const candidate = `${base}-${i}.png`;
               try {
                 const data = ff.FS("readFile", candidate) as Uint8Array;
                 outs.push({ name: candidate, url: URL.createObjectURL(dataToBlob(data, "image/png")), size: data.length });
@@ -116,9 +122,9 @@ export default function VideoFramesPage() {
             /* 兜底：如果只有一帧输出（无序号） */
             if (outs.length === 0) {
               try {
-                const data = ff.FS("readFile", outName) as Uint8Array;
-                outs.push({ name: outName, url: URL.createObjectURL(dataToBlob(data, "image/png")), size: data.length });
-                await ff.FS("unlink", outName);
+                const data = ff.FS("readFile", `${base}.png`) as Uint8Array;
+                outs.push({ name: `${base}.png`, url: URL.createObjectURL(dataToBlob(data, "image/png")), size: data.length });
+                await ff.FS("unlink", `${base}.png`);
               } catch {
                 /* 无帧 */
               }
@@ -305,7 +311,7 @@ export default function VideoFramesPage() {
       </div>
 
       <div className="vc-actions">
-        <button type="button" className="btn-primary" onClick={run} disabled={busy || files.length < rule.min}>
+        <button type="button" className="btn btn-primary" onClick={run} disabled={busy || files.length < rule.min}>
           {busy ? <IconLoader width={14} height={14} /> : null}
           {busy ? "处理中…" : "开始处理"}
         </button>
@@ -330,7 +336,7 @@ export default function VideoFramesPage() {
               <span className="vd-output-name">
                 {o.name}（{(o.size / 1024 / 1024).toFixed(2)} MB）
               </span>
-              <a className="btn-primary" href={o.url} download={o.name}>
+              <a className="btn btn-primary" href={o.url} download={o.name}>
                 <IconDownload width={14} height={14} />
                 下载
               </a>

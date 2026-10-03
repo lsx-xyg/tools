@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { useFFmpeg } from "@/lib/use-ffmpeg";
+import { useFFmpeg, type FFmpegInstance } from "@/lib/use-ffmpeg";
 import { IconInfo, IconTrash, IconLoader, IconUpload, IconChevron } from "@/components/icons";
 
 interface StreamInfo {
@@ -31,7 +31,7 @@ export default function MediaInfoPage() {
   const [showRaw, setShowRaw] = useState(false);
   const [err, setErr] = useState("");
 
-  const { ensureEngine, runTask, wname, busy, loadingEngine, engineReady, log, setLog } = useFFmpeg();
+  const { ensureEngine, runTask, runBatch, wname, busy, loadingEngine, engineReady, log, setLog } = useFFmpeg();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,12 +92,12 @@ export default function MediaInfoPage() {
     setResults([]);
     setRawLog("");
     setShowRaw(false);
-    const allRaw: string[] = [];
+    const infoList: MediaInfo[] = [];
+    const linesAll: string[] = [];
     try {
-      await runTask(async (ff) => {
-        const infoList: MediaInfo[] = [];
-        const linesAll: string[] = [];
-        for (const f of files) {
+      /* 每个文件独立实例运行（规避 0.11 单实例多次 run 时 logger 失效） */
+      await runBatch(
+        files.map((f) => async (ff: FFmpegInstance) => {
           const ext = (f.name.split(".").pop() || "bin").toLowerCase();
           const inName = wname(ext);
           const ffLines: string[] = [];
@@ -115,11 +115,11 @@ export default function MediaInfoPage() {
           if (info) infoList.push(info);
           linesAll.push(`===== ${f.name} =====\n` + ffLines.join("\n"));
           await ff.FS("unlink", inName);
-        }
-        setResults(infoList);
-        setRawLog(linesAll.join("\n"));
-        if (!infoList.length) setErr("未能解析出媒体信息，请确认文件为有效音视频。");
-      });
+        })
+      );
+      setResults(infoList);
+      setRawLog(linesAll.join("\n"));
+      if (!infoList.length) setErr("未能解析出媒体信息，请确认文件为有效音视频。");
     } catch {
       /* 错误已由 hook 记录 */
     }
@@ -192,7 +192,7 @@ export default function MediaInfoPage() {
       </div>
 
       <div className="vc-actions">
-        <button type="button" className="btn-primary" onClick={analyze} disabled={busy || !files.length}>
+        <button type="button" className="btn btn-primary" onClick={analyze} disabled={busy || !files.length}>
           {busy ? <IconLoader width={14} height={14} /> : null}
           {busy ? "解析中…" : "解析媒体信息"}
         </button>
