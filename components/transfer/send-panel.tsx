@@ -13,8 +13,7 @@ import {
 } from "@/lib/api";
 import { startSender, type RtcPhase } from "@/lib/rtc-client";
 import { copyText } from "@/lib/clipboard";
-import { countChars, fmtBytes, fmtTtlHours, LIMITS, OFFLINE_DOWNLOAD_OPTIONS, OFFLINE_TTL_OPTIONS, validateFiles } from "@/lib/limits";
-import { useCountdown } from "@/lib/use-countdown";
+import { countChars, fmtBytes, fmtTtlHours, LIMITS, OFFLINE_DOWNLOAD_OPTIONS, OFFLINE_TTL_OPTIONS, RTC_LIMITS, validateFiles } from "@/lib/limits";import { useCountdown } from "@/lib/use-countdown";
 import { CodeDisplay } from "./code-display";
 import {
   IconBolt,
@@ -252,7 +251,7 @@ export function SendPanel() {
         if (!t) return setError("请输入要发送的文本");
         if (textOver) return setError(`文本超过 ${LIMITS.textMaxChars.toLocaleString()} 字符上限`);
       } else {
-        const e = validateFiles(files);
+        const e = validateFiles(files, true); // 在线直传套用宽松限制（4 GB / 8 GB）
         if (e) return setError(e);
       }
       setPhase("creating");
@@ -475,7 +474,9 @@ export function SendPanel() {
                 >
                   <IconUpload />
                   <span className="dz-main">点击选择或拖拽文件到这里</span>
-                  <span className="dz-sub">最多 {LIMITS.filesMaxCount} 个 · 单个 ≤ 10 MB · 总量 ≤ 50 MB</span>
+                  <span className="dz-sub">
+                    最多 {LIMITS.filesMaxCount} 个 · 单个 ≤ {fmtBytes(sendMode === "rtc" ? RTC_LIMITS.fileMaxBytes : LIMITS.fileMaxBytes)} · 总量 ≤ {fmtBytes(sendMode === "rtc" ? RTC_LIMITS.filesTotalMaxBytes : LIMITS.filesTotalMaxBytes)}
+                  </span>
                 </div>
                 {files.length > 0 && (
                   <div className="file-list">

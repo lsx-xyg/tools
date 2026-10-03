@@ -3,8 +3,8 @@
 export const LIMITS = {
   textMaxChars: 200_000,
   filesMaxCount: 10,
-  fileMaxBytes: 10 * 1024 * 1024, // 10 MB
-  filesTotalMaxBytes: 50 * 1024 * 1024, // 50 MB
+  fileMaxBytes: 200 * 1024 * 1024, // 200 MB（Cloudflare Workers 付费计划请求体上限）
+  filesTotalMaxBytes: 200 * 1024 * 1024, // 200 MB
   offlineTtlMs: 24 * 60 * 60 * 1000, // 默认 24h
   offlineMaxDownloads: 10, // 默认 10 次
   offlineTtlMinMs: 60 * 60 * 1000, // 自定义时长下限 1h
@@ -13,6 +13,15 @@ export const LIMITS = {
   offlineDownloadsMax: 100,
   rtcTtlMs: 15 * 60 * 1000, // 信令窗口 15 分钟
   rtcConnectTimeoutMs: 90 * 1000, // 客户端连接超时
+} as const;
+
+/**
+ * 在线 P2P 直传（WebRTC DataChannel）不经过服务器存储与请求体，
+ * 分片发送不整读进内存，因此限制可比离线宽松得多（单文件 4 GB / 总量 8 GB）。
+ */
+export const RTC_LIMITS = {
+  fileMaxBytes: 4 * 1024 * 1024 * 1024, // 4 GB
+  filesTotalMaxBytes: 8 * 1024 * 1024 * 1024, // 8 GB
 } as const;
 
 /** 离线传输可选的持续时长（小时），对应 UI 选择器 */
@@ -45,8 +54,17 @@ export function countChars(s: string): number {
 
 export function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  const kb = n / 1024;
+  if (n < 1024 * 1024) return `${trim1(kb)} KB`;
+  const mb = n / 1024 / 1024;
+  if (n < 1024 * 1024 * 1024) return `${trim1(mb)} MB`;
+  return `${trim1(n / 1024 / 1024 / 1024)} GB`;
+}
+
+/** 整数省略小数：200.0 → "200"，199.4 → "199.4" */
+function trim1(x: number): string {
+  const r = Math.round(x * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
 }
 
 export function fmtCountdown(ms: number): string {
@@ -58,19 +76,20 @@ export function fmtCountdown(ms: number): string {
   return `${p(h)}:${p(m)}:${p(sec)}`;
 }
 
-/** 校验文件数组，返回错误信息（无错误返回 null） */
-export function validateFiles(files: File[]): string | null {
+/** 校验文件数组，返回错误信息（无错误返回 null）。rtc=true 时套用在线直传的宽松限制。 */
+export function validateFiles(files: File[], rtc = false): string | null {
+  const L = rtc ? RTC_LIMITS : LIMITS;
   if (files.length === 0) return "请选择至少一个文件";
   if (files.length > LIMITS.filesMaxCount)
     return `一次最多发送 ${LIMITS.filesMaxCount} 个文件`;
   let total = 0;
   for (const f of files) {
     if (f.size <= 0) return "存在空文件，请移除后重试";
-    if (f.size > LIMITS.fileMaxBytes)
-      return `单个文件不能超过 10 MB（「${f.name}」过大）`;
+    if (f.size > L.fileMaxBytes)
+      return `单个文件不能超过 ${fmtBytes(L.fileMaxBytes)}（「${f.name}」过大）`;
     total += f.size;
   }
-  if (total > LIMITS.filesTotalMaxBytes)
-    return "所有文件总大小不能超过 50 MB";
+  if (total > L.filesTotalMaxBytes)
+    return `所有文件总大小不能超过 ${fmtBytes(L.filesTotalMaxBytes)}`;
   return null;
 }

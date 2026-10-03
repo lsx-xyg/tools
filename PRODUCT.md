@@ -29,7 +29,7 @@ Next.js（App Router + TypeScript），经 `@opennextjs/cloudflare` 适配器部
 ## Capabilities and Constraints
 
 - 文本传输：≤ 200,000 字符。
-- 文件传输：单次 ≤ 10 个文件、单个 ≤ 10 MB、总量 ≤ 50 MB。
+- 文件传输（离线暂存）：单次 ≤ 10 个文件、单个 ≤ 200 MB、总量 ≤ 200 MB；在线 P2P 直传限制更宽松：单次 ≤ 10 个、单个 ≤ 4 GB、总量 ≤ 8 GB（分片发送，不走服务器存储）。
 - 离线保留时长可自定义：1h / 6h / 24h / 3 天 / 7 天；下载次数可自定义：1 / 3 / 10 / 100（服务端 clamp）。
 - 提取码：6 位数字，内容到期自动销毁。
 - 在线直传：WebRTC P2P，服务器仅中转信令（SDP/ICE），内容不落盘；NAT 穿透依赖 host candidate（不含 Google STUN）。
