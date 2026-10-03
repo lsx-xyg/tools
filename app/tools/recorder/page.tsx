@@ -41,6 +41,23 @@ export default function RecorderPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* 录制中实时预览：把采集到的 MediaStream 直接输出到 video 元素 */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (state === "recording" && streamRef.current) {
+      v.srcObject = streamRef.current;
+      v.muted = true;
+      v.playsInline = true;
+      v.controls = false;
+      v.play().catch(() => undefined);
+    } else if (state !== "recording") {
+      v.srcObject = null;
+      v.controls = true;
+      v.muted = false;
+    }
+  }, [state]);
+
   function stopStream() {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -62,6 +79,11 @@ export default function RecorderPage() {
     setErr("");
     setStarting(true);
     try {
+      /* 移动端浏览器普遍不支持 getDisplayMedia（微信 / Safari 等），提前给出明确提示 */
+      if (tab === "screen" && typeof (navigator.mediaDevices as MediaDevices & { getDisplayMedia?: unknown })?.getDisplayMedia !== "function") {
+        setErr("当前浏览器不支持屏幕共享（getDisplayMedia 不可用）。请使用 Chrome / Edge 桌面版进行屏幕录制；移动端可切换到「摄像头录制」。");
+        return;
+      }
       const constraints: MediaStreamConstraints =
         tab === "screen"
           ? {
@@ -92,6 +114,16 @@ export default function RecorderPage() {
         stopStream();
         setState("idle");
         setElapsed(0);
+        /* 停止后自动把刚录制的文件切到预览区 */
+        const url = URL.createObjectURL(blob);
+        const v = videoRef.current;
+        if (v) {
+          v.srcObject = null;
+          v.src = url;
+          v.controls = true;
+          v.play().catch(() => undefined);
+        }
+        URL.revokeObjectURL(url);
       };
       mediaRef.current = rec;
       rec.start(1000);
@@ -209,10 +241,14 @@ export default function RecorderPage() {
       <div className="panel" style={{ marginBottom: 16 }}>
         <div className="panel-head">
           <span className="label">播放预览</span>
+          <span className="right subtle">
+            {state === "recording" ? "实时预览（录制中）" : recs.length > 0 ? "已录制文件" : ""}
+          </span>
         </div>
         <div className="panel-body">
-          <video ref={videoRef} controls className="rc-player" />
-          {recs.length === 0 && <div className="subtle">录制完成后选择下方录制文件即可在此预览。</div>}
+          <video ref={videoRef} controls className="rc-player" playsInline muted />
+          {recs.length === 0 && state !== "recording" && <div className="subtle">录制完成后选择下方录制文件即可在此预览。</div>}
+          {state === "recording" && <div className="subtle">实时显示正在录制的内容，无需等待录制结束。</div>}
         </div>
       </div>
 
