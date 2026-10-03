@@ -4692,6 +4692,13 @@ mark.re-match {
   color: var(--ink);
 }
 
+.dns-sel-p {
+  max-width: 132px;
+}
+.dns-sel-t {
+  max-width: 116px;
+}
+
 @media (max-width: 768px) {
   .vc-layout {
     grid-template-columns: 1fr;
@@ -4710,6 +4717,22 @@ mark.re-match {
   .vc-project-row .btn {
     width: 100%;
     justify-content: center;
+  }
+  .vc-token-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .vc-token-row .input,
+  .vc-token-row .btn {
+    width: 100%;
+    flex-basis: auto;
+  }
+  .vc-token-row .btn {
+    justify-content: center;
+  }
+  .dns-sel-p,
+  .dns-sel-t {
+    max-width: 100%;
   }
   .vc-log {
     max-height: 300px;
