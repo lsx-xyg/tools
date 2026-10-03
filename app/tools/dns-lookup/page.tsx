@@ -109,21 +109,21 @@ export default function DnsLookupPage() {
               }}
               disabled={busy}
             />
-            <select className="input" style={{ maxWidth: 132 }} value={provider} onChange={(e) => setProvider(e.target.value as (typeof DOH_PROVIDERS)[number]["key"])} disabled={busy} title="DoH 服务源">
+            <select className="input dns-sel-p" value={provider} onChange={(e) => setProvider(e.target.value as (typeof DOH_PROVIDERS)[number]["key"])} disabled={busy} title="DoH 服务源">
               {DOH_PROVIDERS.map((p) => (
                 <option key={p.key} value={p.key}>
                   {p.label}
                 </option>
               ))}
             </select>
-            <select className="input" style={{ maxWidth: 116 }} value={type} onChange={(e) => setType(e.target.value as RrType)} disabled={busy}>
+            <select className="input dns-sel-t" value={type} onChange={(e) => setType(e.target.value as RrType)} disabled={busy}>
               {TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
               ))}
             </select>
-            <button type="button" className="btn-primary" onClick={query} disabled={busy}>
+            <button type="button" className="btn btn-primary" onClick={query} disabled={busy}>
               {busy ? <IconLoader width={14} height={14} /> : <IconSearch width={14} height={14} />}
               查询
             </button>

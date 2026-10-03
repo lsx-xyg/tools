@@ -411,7 +411,7 @@ export default function ImageBatchPage() {
       </div>
 
       <div className="vc-actions">
-        <button type="button" className="btn-primary" onClick={tab === "compress" ? runCompress : runWatermark} disabled={busy || !rows.length}>
+        <button type="button" className="btn btn-primary" onClick={tab === "compress" ? runCompress : runWatermark} disabled={busy || !rows.length}>
           {busy ? <IconLoader width={14} height={14} /> : null}
           {busy ? "处理中…" : tab === "compress" ? "压缩并打包 ZIP" : "添加水印并打包 ZIP"}
         </button>
@@ -429,7 +429,7 @@ export default function ImageBatchPage() {
               <span className="vd-output-name">
                 {o.name}（{(o.size / 1024 / 1024).toFixed(2)} MB）
               </span>
-              <a className="btn-primary" href={o.url} download={o.name}>
+              <a className="btn btn-primary" href={o.url} download={o.name}>
                 <IconDownload width={14} height={14} />
                 下载
               </a>

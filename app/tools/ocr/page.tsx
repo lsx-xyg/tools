@@ -204,7 +204,7 @@ export default function OcrPage() {
       </div>
 
       <div className="vc-actions">
-        <button type="button" className="btn-primary" onClick={run} disabled={busy || !img}>
+        <button type="button" className="btn btn-primary" onClick={run} disabled={busy || !img}>
           {busy ? <IconLoader width={14} height={14} /> : null}
           {busy ? "识别中…" : "开始识别"}
         </button>

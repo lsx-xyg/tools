@@ -109,7 +109,7 @@ export default function IpLookupPage() {
               }}
               disabled={busy}
             />
-            <button type="button" className="btn-primary" onClick={() => query(input || undefined)} disabled={busy}>
+            <button type="button" className="btn btn-primary" onClick={() => query(input || undefined)} disabled={busy}>
               {busy ? <IconLoader width={14} height={14} /> : <IconSearch width={14} height={14} />}
               查询
             </button>

@@ -193,12 +193,12 @@ export default function RecorderPage() {
 
           <div className="vc-actions">
             {state !== "recording" ? (
-              <button type="button" className="btn-primary" onClick={start} disabled={starting}>
+              <button type="button" className="btn btn-primary" onClick={start} disabled={starting}>
                 {starting ? <IconLoader width={14} height={14} /> : null}
                 {starting ? "请求中…" : "开始录制"}
               </button>
             ) : (
-              <button type="button" className="btn-danger" onClick={stop}>
+              <button type="button" className="btn btn-danger" onClick={stop}>
                 停止录制
               </button>
             )}
@@ -236,7 +236,7 @@ export default function RecorderPage() {
                     <button type="button" className="btn" onClick={() => playPreview(r.url)}>
                       预览
                     </button>
-                    <a className="btn-primary" href={r.url} download={r.name}>
+                    <a className="btn btn-primary" href={r.url} download={r.name}>
                       <IconDownload width={14} height={14} />
                       下载
                     </a>
