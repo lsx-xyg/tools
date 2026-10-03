@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { IconCheck, IconCopy, IconMonitor, IconShield } from "@/components/icons";
 
@@ -9,7 +9,46 @@ interface DeviceInfo {
   value: string;
 }
 
-function collect(): DeviceInfo[] {
+/* UA 字符串回退解析架构（现代 Chrome 已移除 UA 架构标记，仅作低版本/其他浏览器兜底） */
+function archFromUA(ua: string): string | null {
+  if (/aarch64|arm64/i.test(ua)) return "ARM64 (aarch64)";
+  if (/x86_64|amd64|Win64; ?x64|\bx64\b/i.test(ua)) return "x86_64 (amd64)";
+  if (/\bi386\b|\bi686\b|\bx86\b/i.test(ua)) return "x86 (i386)";
+  if (/\barm\b|ARM;|Android.*arm/i.test(ua)) return "ARM (32-bit)";
+  return null;
+}
+
+/* 优先 User-Agent Client Hints 高熵值（Chrome / Edge），可同时拿到架构、位数与移动端型号 */
+async function readArch(): Promise<string> {
+  const uad = (navigator as Navigator & {
+    userAgentData?: {
+      getHighEntropyValues?: (hints: string[]) => Promise<{ architecture?: string; bitness?: string; model?: string }>;
+    };
+  }).userAgentData;
+  if (uad?.getHighEntropyValues) {
+    try {
+      const h = await uad.getHighEntropyValues(["architecture", "bitness", "model"]);
+      if (h.architecture && h.bitness) {
+        const core =
+          h.architecture === "x86"
+            ? h.bitness === "64"
+              ? "x86_64 (amd64)"
+              : "x86 (i386)"
+            : h.architecture === "arm"
+              ? h.bitness === "64"
+                ? "ARM64 (aarch64)"
+                : "ARM (32-bit)"
+              : `${h.architecture} (${h.bitness}-bit)`;
+        return h.model ? `${core} · ${h.model}` : core;
+      }
+    } catch {
+      /* 高熵值被拒，走 UA 回退 */
+    }
+  }
+  return archFromUA(navigator.userAgent) ?? "未知（浏览器未暴露）";
+}
+
+function collect(arch: string): DeviceInfo[] {
   const nav = navigator;
   const ua = nav.userAgent;
   const screen = screenSize();
@@ -31,6 +70,7 @@ function collect(): DeviceInfo[] {
     { label: "颜色深度", value: `${window.screen.colorDepth ?? "—"} bit` },
     { label: "操作系统", value: osName(ua) },
     { label: "设备类型", value: isMobile(ua) ? "移动端" : "桌面端" },
+    { label: "设备架构", value: arch },
     { label: "语言", value: nav.language ?? "—" },
     { label: "时区", value: `${Intl.DateTimeFormat().resolvedOptions().timeZone ?? "—"} · UTC${-new Date().getTimezoneOffset() / 60 >= 0 ? "+" : ""}${-new Date().getTimezoneOffset() / 60}` },
     { label: "在线状态", value: nav.onLine ? "在线" : "离线" },
@@ -65,14 +105,19 @@ export default function DeviceInfoPage() {
   const [info, setInfo] = useState<DeviceInfo[]>([]);
   const [summary, setSummary] = useState("");
   const [copied, setCopied] = useState(false);
+  const archRef = useRef("读取中…");
 
   useEffect(() => {
     const refresh = () => {
-      setInfo(collect());
+      setInfo(collect(archRef.current));
       const s = screenSize();
       setSummary(`${s.width}×${s.height} · ${window.devicePixelRatio.toFixed(2)} DPR · ${osName(navigator.userAgent)}`);
     };
     refresh();
+    void readArch().then((a) => {
+      archRef.current = a;
+      refresh();
+    });
     window.addEventListener("resize", refresh);
     window.addEventListener("orientationchange", refresh);
     window.addEventListener("online", refresh);
