@@ -85,6 +85,7 @@
 | 🔤 OCR 文字识别 | 简体中文 / English，tesseract.js 本地识别 |
 | 🌐 IP 归属地查询 | 归属地 / 运营商 / 时区 / ASN |
 | 🌍 DNS 解析查询 | DoH 多源自动容错 · CNAME 压平提示 · 代理 IP 识别 |
+| 📊 Excel 函数快查 | 63 个常用函数 · 语法 / 参数 / 示例 · 交互模拟器 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台。
 
@@ -238,7 +239,8 @@ tools/
 │   │   ├── recorder/             # T-33 屏幕 / 摄像头录制
 │   │   ├── ocr/                  # T-34 OCR 文字识别
 │   │   ├── ip-lookup/            # T-35 IP 归属地查询
-│   │   └── dns-lookup/           # T-36 DNS 解析查询
+│   │   ├── dns-lookup/           # T-36 DNS 解析查询
+│   │   └── excel-functions/      # T-37 Excel 函数快查（含 [slug] 详情页）
 │   ├── globals.css             # 全站样式 + 设计系统
 │   ├── layout.tsx              # 根布局（侧边栏 + 内容区）
 │   └── page.tsx                # 仪表台首页
@@ -248,7 +250,7 @@ tools/
 │   ├── tool-head.tsx           # 工具页头部组件
 │   └── ui/                     # shadcn 风格组件
 ├── lib/
-│   ├── tools.ts                # 工具注册清单（T-01 ~ T-36）
+│   ├── tools.ts                # 工具注册清单（T-01 ~ T-37）
 │   ├── kv.ts                   # KV / R2 / Redis 存储抽象
 │   ├── site-auth.ts            # 全站密码认证（HMAC 签名 token）
 │   └── rtc-client.ts           # WebRTC 客户端

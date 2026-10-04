@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { IconActivity, IconAudioWave, IconBase64, IconCamera, IconCase, IconChevronsLeft, IconChevronsRight, IconClock, IconCloud, IconCron, IconDocText, IconFileCheck,
-  IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFilm, IconFingerprint, IconGithub, IconGlobe, IconHash, IconHome, IconHttp, IconImage, IconInfo, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconScan, IconSearch, IconSun, IconTextSearch, IconTransfer, IconVideo, IconWifi, IconX } from "./icons";
+  IconFileStack, IconFileDiff, IconFileType, IconBadgeCheck, IconFilm, IconFingerprint, IconGithub, IconGlobe, IconHash, IconHome, IconHttp, IconImage, IconInfo, IconJson, IconKey, IconLink, IconMenu, IconMonitor, IconMoon, IconPlus, IconQr, IconRepeat, IconScan, IconSearch, IconSun, IconTable, IconTextSearch, IconTransfer, IconVideo, IconWifi, IconX } from "./icons";
 
 export const ICONS: Record<string, (p: { width?: number; height?: number }) => ReactNode> = {
   transfer: IconTransfer,
@@ -40,4 +40,5 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   ocr: IconScan,
   "ip-lookup": IconGlobe,
   "dns-lookup": IconGlobe,
+  "excel-functions": IconTable,
 };

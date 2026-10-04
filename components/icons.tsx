@@ -20,6 +20,9 @@ import {
   Cloud,
   Combine,
   Copy,
+  Table,
+  ArrowRight,
+  Star,
   Database,
   BadgeCheck,
   Crop,
@@ -108,6 +111,9 @@ export const IconChevronsRight = wrap(ChevronsRight);
 export const IconClock = wrap(Clock);
 export const IconCopy = wrap(Copy);
 export const IconCron = wrap(CalendarClock);
+export const IconTable = wrap(Table);
+export const IconArrowRight = wrap(ArrowRight);
+export const IconStar = wrap(Star);
 export const IconDatabase = wrap(Database);
 export const IconDocText = wrap(FileText);
 export const IconDownload = wrap(Download);

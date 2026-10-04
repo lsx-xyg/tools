@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup" | "excel-functions";
 
 export interface Tool {
   id: ToolId;
@@ -69,7 +69,8 @@ export interface Tool {
     | "recorder"
     | "ocr"
     | "ip-lookup"
-    | "dns-lookup";
+    | "dns-lookup"
+    | "excel-functions";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -507,6 +508,18 @@ export const tools: Tool[] = [
     icon: "dns-lookup",
     lamp: "ok",
     tags: ["DNS", "DoH", "解析", "域名", "Cloudflare"],
+  },
+  {
+    id: "excel-functions",
+    index: "T-37",
+    name: "Excel 函数快查",
+    tagline: "63 个常用函数 · 语法 / 参数 / 示例 / 交互模拟",
+    description:
+      "Excel 常用函数速查：列表展示函数名与简介，常用函数置顶；点击进入详情查看语法、参数说明与示例，并附可交互的迷你模拟器（输入参数实时出结果，VLOOKUP 带模拟表高亮）。",
+    path: "/tools/excel-functions",
+    icon: "excel-functions",
+    lamp: "ok",
+    tags: ["Excel", "函数", "速查", "SUM", "VLOOKUP", "教程"],
   },
 ];
 
