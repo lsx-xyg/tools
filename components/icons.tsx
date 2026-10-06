@@ -59,6 +59,7 @@ import {
   QrCode,
   RefreshCw,
   Repeat,
+  RotateCw,
   ScanLine,
   Scissors,
   Search,
@@ -188,3 +189,5 @@ export const IconDrop = wrap(Droplet);
 export const IconCamera = wrap(Camera);
 export const IconGlobe = wrap(Globe);
 export const IconChevron = wrap(ChevronRight);
+export const IconRotateCw = wrap(RotateCw);
+export const IconRotate = IconRotateCw;

@@ -5187,3 +5187,56 @@ mark.re-match {
   .ex-example-io { align-items: flex-start; flex-direction: column; gap: 6px; }
   .ex-detail-name { font-size: 22px; }
 }
+
+/* ========== T-38 PDF 自动旋转 ========== */
+.vc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 860px) { .vc-two-col { grid-template-columns: 1fr; } }
+
+.vc-file-list { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.vc-file-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border, rgba(120,120,120,0.15)); background: var(--bg-soft, rgba(120,120,120,0.04)); }
+.vc-file-ico { flex-shrink: 0; opacity: 0.6; }
+.vc-file-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vc-file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vc-file-sub { font-size: 11.5px; color: var(--text-soft, rgba(120,120,120,0.8)); }
+.vc-file-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+.vc-status-pending { background: rgba(120,120,120,0.12); color: var(--text-soft, #888); }
+.vc-status-processing { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.vc-status-done { background: rgba(34,197,94,0.12); color: #22c55e; }
+.vc-status-error { background: rgba(239,68,68,0.12); color: #ef4444; }
+.vc-file-del { background: none; border: none; cursor: pointer; opacity: 0.4; padding: 4px; border-radius: 4px; flex-shrink: 0; }
+.vc-file-del:hover { opacity: 0.8; background: rgba(0,0,0,0.05); }
+
+.vc-mode-row { display: flex; align-items: center; gap: 12px; margin: 14px 0 6px; }
+.vc-mode-label { font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.vc-mode-seg { display: inline-flex; border-radius: 8px; border: 1px solid var(--border, rgba(120,120,120,0.2)); overflow: hidden; }
+.vc-mode-btn { padding: 6px 14px; font-size: 12.5px; border: none; background: transparent; cursor: pointer; color: var(--text-soft, #888); transition: all 0.15s; }
+.vc-mode-btn.active { background: var(--accent, #2563eb); color: #fff; }
+.vc-mode-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+.vc-mode-hint { font-size: 11.5px; color: var(--text-soft, rgba(120,120,120,0.75)); line-height: 1.6; margin: 0 0 14px; }
+
+.vc-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vc-progress { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.vc-progress-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(120,120,120,0.15); overflow: hidden; }
+.vc-progress-fill { height: 100%; border-radius: 3px; background: var(--accent, #2563eb); transition: width 0.3s; }
+.vc-progress-text { font-size: 12px; font-weight: 600; min-width: 36px; text-align: right; }
+
+.vc-log-panel { display: flex; flex-direction: column; }
+.vc-log-body { flex: 1; min-height: 320px; max-height: 480px; overflow-y: auto; }
+.vc-log-fullscreen { position: fixed; inset: 24px; z-index: 100; max-height: none; }
+.vc-log-fullscreen .vc-log-body { max-height: none; height: calc(100vh - 120px); }
+.vc-log-empty { display: flex; align-items: center; justify-content: center; height: 200px; font-size: 13px; color: var(--text-soft, #999); text-align: center; padding: 20px; }
+.vc-log-list { display: flex; flex-direction: column; gap: 2px; }
+.vc-log-line { display: flex; gap: 10px; padding: 5px 8px; border-radius: 4px; font-size: 12.5px; line-height: 1.5; }
+.vc-log-time { color: var(--text-soft, #999); font-family: monospace; flex-shrink: 0; font-size: 11px; padding-top: 1px; }
+.vc-log-text { flex: 1; word-break: break-all; }
+.vc-log-info .vc-log-text { color: var(--text, #333); }
+.vc-log-ok .vc-log-text { color: #16a34a; font-weight: 500; }
+.vc-log-warn .vc-log-text { color: #d97706; }
+.vc-log-err .vc-log-text { color: #dc2626; font-weight: 500; }
+.vc-log-fs { background: none; border: none; cursor: pointer; opacity: 0.5; padding: 4px; border-radius: 4px; margin-left: 8px; }
+.vc-log-fs:hover { opacity: 0.9; }
+.vc-footer { margin-top: 16px; padding: 12px 16px; border-radius: 10px; background: var(--bg-soft, rgba(120,120,120,0.05)); font-size: 12.5px; line-height: 1.7; color: var(--text-soft, rgba(90,90,90,0.85)); }
+@media (max-width: 640px) {
+  .vc-mode-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .vc-actions .btn { flex: 1; justify-content: center; }
+}

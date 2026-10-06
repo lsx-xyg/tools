@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup" | "excel-functions";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup" | "excel-functions" | "pdf-auto-rotate";
 
 export interface Tool {
   id: ToolId;
@@ -70,7 +70,8 @@ export interface Tool {
     | "ocr"
     | "ip-lookup"
     | "dns-lookup"
-    | "excel-functions";
+    | "excel-functions"
+    | "pdf-auto-rotate";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -520,6 +521,18 @@ export const tools: Tool[] = [
     icon: "excel-functions",
     lamp: "ok",
     tags: ["Excel", "函数", "速查", "SUM", "VLOOKUP", "教程"],
+  },
+  {
+    id: "pdf-auto-rotate",
+    index: "T-38",
+    name: "PDF 自动旋转",
+    tagline: "批量识别方向并旋转正 · 快速 / OCR 深度双模式",
+    description:
+      "上传多个 PDF 或 ZIP 压缩包，自动识别每页方向并旋转正。快速模式读取 /Rotate 属性修正误设旋转；深度模式通过 OCR 识别文字实际方向（0°/90°/180°/270°），适合扫描件。全部本地处理，文件不上传。",
+    path: "/tools/pdf-auto-rotate",
+    icon: "pdf-auto-rotate",
+    lamp: "ok",
+    tags: ["PDF", "旋转", "自动", "OCR", "扫描件", "批量"],
   },
 ];
 
