@@ -5241,13 +5241,8 @@ mark.re-match {
   .vc-actions .btn { flex: 1; justify-content: center; }
 }
 
-/* T-38 手动模式角度选择 */
-.vc-manual-row { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
-@media (max-width: 640px) {
-  .vc-manual-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-}
 
-/* ========== T-38 PDF 预览旋转（v3） ========== */
+/* ========== T-38 PDF 自动旋转（拼接预览 + 逐页旋转） ========== */
 .vc-toolbar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   margin: 16px 0; padding: 10px 14px;
@@ -5255,57 +5250,80 @@ mark.re-match {
 }
 .vc-toolbar-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
 
-.vc-preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px; margin: 16px 0;
+/* 拼接式主容器：文件块纵向依次排列 */
+.vc-stack {
+  display: flex; flex-direction: column; gap: 12px; margin: 16px 0;
 }
-.vc-preview-card {
+.vc-file-block {
   background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
-  overflow: hidden; display: flex; flex-direction: column;
-  transition: border-color .2s, box-shadow .2s;
+  overflow: hidden;
 }
-.vc-preview-card.vc-rotated { border-color: var(--accent, #f97316); }
-.vc-preview-card:hover { box-shadow: 0 4px 16px rgb(0 0 0 / .08); }
+.vc-file-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle, #fafaf9);
+  flex-wrap: wrap;
+}
+.vc-file-head-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.vc-file-name {
+  font-size: 13px; font-weight: 600; max-width: 320px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text, #1c1917);
+}
+.vc-file-meta { font-size: 12px; color: var(--text-subtle, #78716c); white-space: nowrap; }
+.vc-suggested-badge {
+  background: var(--success, #16a34a); color: #fff; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.vc-rotated-badge {
+  background: var(--accent, #f97316); color: #fff; font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.vc-file-head-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.vc-ctrl-sm { padding: 0 10px; font-size: 12px; gap: 4px; }
 
-.vc-preview-area {
+/* 文件内容：全部页缩略图横向排列 */
+.vc-file-body { padding: 12px 14px; }
+.vc-pages {
+  display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 8px;
+  scrollbar-width: thin;
+}
+.vc-page-thumb {
+  flex: 0 0 auto; width: 168px;
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  background: var(--card-bg);
+  transition: border-color .2s;
+}
+.vc-page-thumb.vc-rotated { border-color: var(--accent, #f97316); }
+.vc-page-thumb-area {
   position: relative; background: var(--bg-subtle, #f5f5f4);
   display: flex; align-items: center; justify-content: center;
-  min-height: 200px; padding: 12px; overflow: hidden;
+  min-height: 150px; padding: 8px;
 }
-.vc-preview-canvas-wrap { position: relative; max-width: 100%; max-height: 260px; }
-.vc-preview-canvas { max-width: 100%; max-height: 260px; object-fit: contain; display: block; border-radius: 4px; box-shadow: 0 1px 4px rgb(0 0 0 / .1); }
-.vc-preview-loading {
+.vc-page-canvas {
+  max-width: 100%; max-height: 200px; width: auto; height: auto;
+  display: block; border-radius: 3px; box-shadow: 0 1px 4px rgb(0 0 0 / .1);
+}
+.vc-page-loading {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgb(0 0 0 / .15); border-radius: 4px;
-}
-.vc-preview-error {
-  display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--danger, #dc2626);
-  font-size: 13px;
+  background: rgb(0 0 0 / .12); border-radius: 3px;
 }
 .vc-rotation-badge {
-  position: absolute; top: 8px; right: 8px;
+  position: absolute; top: 6px; right: 6px;
   background: var(--accent, #f97316); color: #fff; font-size: 11px; font-weight: 600;
-  padding: 2px 8px; border-radius: 999px;
+  padding: 1px 7px; border-radius: 999px;
 }
-.vc-suggested-badge {
-  position: absolute; top: 8px; left: 8px;
-  background: var(--success, #16a34a); color: #fff; font-size: 11px; font-weight: 600;
-  padding: 2px 8px; border-radius: 999px;
+.vc-page-num {
+  position: absolute; bottom: 6px; left: 6px;
+  background: rgb(0 0 0 / .55); color: #fff; font-size: 10px; font-weight: 500;
+  padding: 1px 7px; border-radius: 999px;
 }
+.vc-page-ctrls { display: flex; gap: 5px; padding: 6px 8px; }
+.vc-page-ctrls .vc-ctrl-btn { flex: 1; height: 30px; }
 
-.vc-preview-info { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
-.vc-preview-name {
-  display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.vc-preview-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vc-preview-meta { font-size: 12px; color: var(--text-subtle, #78716c); }
-
-.vc-preview-controls { display: flex; gap: 6px; margin-top: 4px; }
 .vc-ctrl-btn {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  height: 32px; border: 1px solid var(--border); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 8px;
   background: var(--card-bg); cursor: pointer; transition: all .15s;
   color: var(--text, #1c1917);
 }
@@ -5314,12 +5332,21 @@ mark.re-match {
 .vc-ctrl-reset:hover:not(:disabled) { border-color: var(--info, #3b82f6); }
 .vc-ctrl-del:hover:not(:disabled) { border-color: var(--danger, #dc2626); color: var(--danger, #dc2626); }
 
+.vc-preview-error {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--danger, #dc2626);
+  font-size: 13px; padding: 24px 0;
+}
+
 .vc-log-panel-inline { margin-top: 16px; }
 
 @media (max-width: 640px) {
-  .vc-preview-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-  .vc-preview-area { min-height: 140px; }
-  .vc-preview-canvas { max-height: 180px; }
+  .vc-file-head { padding: 8px 10px; }
+  .vc-file-name { max-width: 160px; font-size: 12px; }
+  .vc-file-body { padding: 8px 10px; }
+  .vc-pages { gap: 8px; }
+  .vc-page-thumb { width: 130px; }
+  .vc-page-thumb-area { min-height: 120px; }
   .vc-toolbar { gap: 6px; padding: 8px 10px; }
   .vc-toolbar .btn { padding: 6px 10px; font-size: 12px; }
+  .vc-file-head-actions .vc-ctrl-sm { padding: 0 8px; font-size: 11px; }
 }
