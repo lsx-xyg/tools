@@ -5240,3 +5240,9 @@ mark.re-match {
   .vc-mode-row { flex-direction: column; align-items: flex-start; gap: 8px; }
   .vc-actions .btn { flex: 1; justify-content: center; }
 }
+
+/* T-38 手动模式角度选择 */
+.vc-manual-row { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; }
+@media (max-width: 640px) {
+  .vc-manual-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+}

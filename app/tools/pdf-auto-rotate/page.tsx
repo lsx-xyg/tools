@@ -31,17 +31,8 @@ type TesseractGlobal = {
   ) => Promise<TesseractWorker>;
 };
 
-const loadScript = (src: string): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = src;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`加载脚本失败：${src}`));
-    document.head.appendChild(s);
-  });
-
 /* ---------- 类型 ---------- */
-type Mode = "fast" | "deep";
+type Mode = "smart" | "deep" | "manual";
 
 interface FileRow {
   name: string;
@@ -72,9 +63,49 @@ const now = () => {
   ).padStart(2, "0")}`;
 };
 
+const loadScript = (src: string): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error(`加载脚本失败：${src}`));
+    document.head.appendChild(s);
+  });
+
+/* ---------- PDF 字节级分析：检测页面尺寸和内部图片尺寸 ---------- */
+function getPageSizeFromBytes(bytes: ArrayBuffer): { w: number; h: number } {
+  const s = new TextDecoder("latin1").decode(bytes);
+  const m = s.match(/\/MediaBox\s*\[\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/);
+  if (m) return { w: parseFloat(m[3]) - parseFloat(m[1]), h: parseFloat(m[4]) - parseFloat(m[2]) };
+  return { w: 595, h: 842 };
+}
+
+function getImageDimsFromBytes(bytes: ArrayBuffer): { w: number; h: number } | null {
+  const s = new TextDecoder("latin1").decode(bytes);
+  /* 匹配 /Width N ... /Height N（Image XObject 常见顺序） */
+  const m1 = s.match(/\/Width\s+(\d+)[\s\S]{0,500}?\/Height\s+(\d+)/);
+  if (m1) return { w: parseInt(m1[1], 10), h: parseInt(m1[2], 10) };
+  /* 反向顺序 */
+  const m2 = s.match(/\/Height\s+(\d+)[\s\S]{0,500}?\/Width\s+(\d+)/);
+  if (m2) return { w: parseInt(m2[2], 10), h: parseInt(m2[1], 10) };
+  return null;
+}
+
+/** 检测图片方向与页面方向是否不一致（横图竖页 / 竖图横页），返回需要旋转的角度（90 或 null） */
+function detectImageRotation(bytes: ArrayBuffer): number | null {
+  const page = getPageSizeFromBytes(bytes);
+  const img = getImageDimsFromBytes(bytes);
+  if (!img) return null;
+  const pageOrient = page.h > page.w ? "portrait" : "landscape";
+  const imgOrient = img.h > img.w ? "portrait" : "landscape";
+  if (pageOrient !== imgOrient) return 90; /* 默认顺时针 90°；若方向反了可用手动模式选 270° */
+  return null;
+}
+
 export default function PdfAutoRotatePage() {
   const [rows, setRows] = useState<FileRow[]>([]);
-  const [mode, setMode] = useState<Mode>("fast");
+  const [mode, setMode] = useState<Mode>("smart");
+  const [manualAngle, setManualAngle] = useState<number>(90);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<LogLine[]>([]);
@@ -102,13 +133,15 @@ export default function PdfAutoRotatePage() {
         if (f.name.toLowerCase().endsWith(".zip")) {
           try {
             const zip = await JSZip.loadAsync(f);
+            let count = 0;
             for (const [name, entry] of Object.entries(zip.files)) {
               if (!entry.dir && name.toLowerCase().endsWith(".pdf")) {
                 const blob = await entry.async("blob");
                 pdfs.push({ name: name.split("/").pop() || name, blob });
+                count++;
               }
             }
-            log(`从压缩包 ${f.name} 中提取 ${pdfs.length} 个 PDF`, "ok");
+            log(`从压缩包 ${f.name} 中提取 ${count} 个 PDF`, "ok");
           } catch {
             log(`压缩包 ${f.name} 解析失败`, "err");
           }
@@ -183,7 +216,8 @@ export default function PdfAutoRotatePage() {
     setBusy(true);
     setProgress(0);
     setLogs([]);
-    log(`开始处理（模式：${mode === "fast" ? "快速（检测 /Rotate 属性）" : "深度（OCR 识别文字方向）"}）`, "info");
+    const modeLabel = mode === "smart" ? "智能（/Rotate + 图片方向检测）" : mode === "deep" ? "深度（智能 + OCR 文字方向）" : `手动（旋转至 ${manualAngle}°）`;
+    log(`开始处理（模式：${modeLabel}）`, "info");
 
     let pdfjsLib: typeof import("pdfjs-dist") | null = null;
     let tesseractWorker: TesseractWorker | null = null;
@@ -198,7 +232,7 @@ export default function PdfAutoRotatePage() {
           import.meta.url,
         ).toString();
 
-        log("正在加载 OCR 方向检测引擎（首次需下载数据）…", "info");
+        log("正在加载 OCR 方向检测引擎…", "info");
         if (!window.Tesseract) await loadScript("/tesseract/tesseract.min.js");
         tesseractWorker = await (window.Tesseract as unknown as TesseractGlobal).createWorker("osd", 1, {
           workerPath: "/tesseract/worker.min.js",
@@ -236,6 +270,21 @@ export default function PdfAutoRotatePage() {
           const pages = doc.getPages();
           let rotatedCount = 0;
 
+          /* 智能/深度模式：文件级图片方向检测（横图竖页 → 旋转 90°） */
+          let fileImageRotation: number | null = null;
+          if (mode === "smart" || mode === "deep") {
+            fileImageRotation = detectImageRotation(buf);
+            if (fileImageRotation !== null) {
+              const page = getPageSizeFromBytes(buf);
+              const img = getImageDimsFromBytes(buf);
+              log(
+                `  图片方向检测：页面 ${Math.round(page.w)}x${Math.round(page.h)}（${page.h > page.w ? "竖" : "横"}版），` +
+                  `图片 ${img?.w}x${img?.h}（${img && img.h > img.w ? "竖" : "横"}向）→ 需旋转 ${fileImageRotation}°`,
+                "info",
+              );
+            }
+          }
+
           /* 深度模式：用 pdf.js 加载同一份 PDF 用于渲染 */
           let pdfDocForRender: import("pdfjs-dist").PDFDocumentProxy | null = null;
           if (mode === "deep" && pdfjsLib) {
@@ -246,28 +295,53 @@ export default function PdfAutoRotatePage() {
             if (cancelRef.current) break;
             const page = pages[pi];
             const currentRot = page.getRotation().angle;
+            let targetRot = currentRot;
+            let reason = "";
 
-            if (mode === "fast") {
+            if (mode === "manual") {
+              /* 手动模式：所有页旋转至指定角度 */
+              targetRot = manualAngle;
+              if (currentRot !== manualAngle) reason = `手动旋转 ${currentRot}° → ${manualAngle}°`;
+            } else {
+              /* 智能/深度模式：逐层检测 */
+
+              /* 第 1 层：/Rotate 属性修正 */
               if (currentRot !== 0) {
-                page.setRotation(degrees(0));
-                rotatedCount++;
-                log(`  第 ${pi + 1} 页：修正旋转 ${currentRot}° → 0°`, "ok");
+                targetRot = 0;
+                reason = `修正 /Rotate ${currentRot}° → 0°`;
               }
-            } else if (mode === "deep" && pdfjsLib && pdfDocForRender && tesseractWorker) {
-              try {
-                const imgBlob = await renderPageToBlob(pdfjsLib, pdfDocForRender, pi + 1);
-                const { data } = await tesseractWorker.recognize(imgBlob);
-                const osd = data.orientationDegrees ?? 0;
-                const conf = data.orientationConfidence ?? 0;
-                if (osd !== 0 && conf >= 40) {
-                  const newRot = (currentRot + osd) % 360;
-                  page.setRotation(degrees(newRot));
-                  rotatedCount++;
-                  log(`  第 ${pi + 1} 页：检测到文字方向 ${osd}°（置信度 ${conf.toFixed(0)}%），旋转至 ${newRot}°`, "ok");
+
+              /* 第 2 层：图片方向检测（横图竖页） */
+              if (fileImageRotation !== null && targetRot === currentRot) {
+                targetRot = (currentRot + fileImageRotation) % 360;
+                reason = `图片方向不匹配，旋转 ${fileImageRotation}° → ${targetRot}°`;
+              }
+
+              /* 第 3 层（仅深度模式）：OCR OSD 检测文字方向（覆盖 180° 倒转） */
+              if (mode === "deep" && pdfjsLib && pdfDocForRender && tesseractWorker) {
+                try {
+                  const imgBlob = await renderPageToBlob(pdfjsLib, pdfDocForRender, pi + 1);
+                  const { data } = await tesseractWorker.recognize(imgBlob);
+                  const osd = data.orientationDegrees ?? 0;
+                  const conf = data.orientationConfidence ?? 0;
+                  if (osd !== 0 && conf >= 20) {
+                    /* 在已有旋转基础上叠加 OSD 检测角度 */
+                    targetRot = (targetRot + osd) % 360;
+                    reason = `${reason ? reason + "；" : ""}OCR 检测文字方向 ${osd}°（置信度 ${conf.toFixed(0)}%）→ ${targetRot}°`;
+                  } else if (osd === 0 && conf > 0) {
+                    /* OSD 确认方向正确，不额外旋转 */
+                  }
+                } catch {
+                  log(`  第 ${pi + 1} 页：OCR 检测失败，跳过该层`, "warn");
                 }
-              } catch {
-                log(`  第 ${pi + 1} 页：方向检测失败，跳过`, "warn");
               }
+            }
+
+            /* 应用旋转 */
+            if (targetRot !== currentRot) {
+              page.setRotation(degrees(targetRot));
+              rotatedCount++;
+              log(`  第 ${pi + 1} 页：${reason}`, "ok");
             }
 
             processedPages++;
@@ -330,6 +404,12 @@ export default function PdfAutoRotatePage() {
   };
 
   const doneCount = rows.filter((r) => r.status === "done").length;
+  const modeHint =
+    mode === "smart"
+      ? "智能模式：先修正 PDF 的 /Rotate 属性，再通过分析内部图片宽高比检测横图竖页（自动旋转 90°）。速度快，覆盖绝大多数扫描件。"
+      : mode === "deep"
+        ? "深度模式：在智能模式基础上，用 OCR（tesseract.js）逐页检测文字实际方向，可识别 180° 倒转。速度较慢，适合内容倒置的扫描件。"
+        : "手动模式：将所有 PDF 的每一页旋转至你指定的角度。适合智能/深度模式判断方向相反的情况（如横图竖页应旋转 270° 而非 90°）。";
 
   return (
     <div className="fade-rise">
@@ -420,11 +500,11 @@ export default function PdfAutoRotatePage() {
               <div className="vc-mode-seg">
                 <button
                   type="button"
-                  className={`vc-mode-btn ${mode === "fast" ? "active" : ""}`}
-                  onClick={() => setMode("fast")}
+                  className={`vc-mode-btn ${mode === "smart" ? "active" : ""}`}
+                  onClick={() => setMode("smart")}
                   disabled={busy}
                 >
-                  快速
+                  智能
                 </button>
                 <button
                   type="button"
@@ -434,13 +514,38 @@ export default function PdfAutoRotatePage() {
                 >
                   深度（OCR）
                 </button>
+                <button
+                  type="button"
+                  className={`vc-mode-btn ${mode === "manual" ? "active" : ""}`}
+                  onClick={() => setMode("manual")}
+                  disabled={busy}
+                >
+                  手动
+                </button>
               </div>
             </div>
-            <p className="vc-mode-hint">
-              {mode === "fast"
-                ? "快速模式：读取 PDF 每页的 /Rotate 属性，非 0 则修正为 0。速度快，适合被误设旋转的 PDF。"
-                : "深度模式：用 OCR 识别每页文字的实际方向（支持 0°/90°/180°/270°），自动旋转正。速度较慢，适合扫描件内容本身歪斜的场景。"}
-            </p>
+
+            {/* 手动模式角度选择 */}
+            {mode === "manual" && (
+              <div className="vc-manual-row">
+                <span className="vc-mode-label">旋转角度</span>
+                <div className="vc-mode-seg">
+                  {[0, 90, 180, 270].map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      className={`vc-mode-btn ${manualAngle === a ? "active" : ""}`}
+                      onClick={() => setManualAngle(a)}
+                      disabled={busy}
+                    >
+                      {a}°
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="vc-mode-hint">{modeHint}</p>
 
             {/* 操作按钮 */}
             <div className="vc-actions">
@@ -505,7 +610,7 @@ export default function PdfAutoRotatePage() {
 
       <div className="vc-footer">
         <strong>说明：</strong>
-        所有处理在浏览器本地完成，PDF 文件不上传服务器。快速模式通过读取 PDF 的 /Rotate 属性修正误设的旋转；深度模式通过 OCR（tesseract.js）识别文字实际方向后旋转，适合扫描件。深度模式首次使用需下载 OCR 语言数据（约 4MB）。
+        所有处理在浏览器本地完成，PDF 文件不上传服务器。智能模式通过 /Rotate 属性 + 内部图片宽高比检测自动旋转（横图竖页旋转 90°）；深度模式额外用 OCR 逐页检测文字方向（可识别 180° 倒转）；手动模式可指定角度。若智能模式旋转后方向相反（应为 270° 而非 90°），请切换手动模式选 270°。
       </div>
     </div>
   );
