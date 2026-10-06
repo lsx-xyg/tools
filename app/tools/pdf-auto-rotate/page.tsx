@@ -96,8 +96,12 @@ export default function PdfAutoRotatePage() {
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [dragging, setDragging] = useState(false);
+  /* 大预览模态：点击缩略图打开，viewer 为当前查看的文件与页码 */
+  const [viewer, setViewer] = useState<{ name: string; pageIndex: number } | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const viewCanvasRef = useRef<HTMLCanvasElement>(null);
   /* ref 存储 pdf.js 文档和 canvas（key: 文件名#页码），避免 setState 重渲染 */
   const pdfDocsRef = useRef<Map<string, import("pdfjs-dist").PDFDocumentProxy>>(new Map());
   const canvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
@@ -112,13 +116,27 @@ export default function PdfAutoRotatePage() {
     logEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [logs]);
 
-  /* ---------- 渲染单页 ---------- */
-  const renderPage = useCallback(
-    async (row: FileRow, pageIndex: number, rotation: number) => {
-      const key = `${row.name}#${pageIndex}`;
-      const canvas = canvasesRef.current.get(key);
-      if (!canvas || !row.blob) return;
-      /* 取消该页旧的渲染任务，避免同一 canvas 并发渲染冲突 */
+  /* Esc 关闭大预览 */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setViewer(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  /* ---------- 通用渲染：任意 canvas 渲染一页（缩略图与大预览共用） ---------- */
+  const renderPageToCanvas = useCallback(
+    async (
+      canvas: HTMLCanvasElement,
+      row: FileRow,
+      pageIndex: number,
+      rotation: number,
+      scale: number,
+      kind: "t" | "v",
+    ) => {
+      const key = `${kind}:${row.name}#${pageIndex}`;
+      /* 取消同 key 旧的渲染任务，避免同一 canvas 并发渲染冲突 */
       const oldTask = renderTasksRef.current.get(key);
       if (oldTask) {
         try {
@@ -131,13 +149,13 @@ export default function PdfAutoRotatePage() {
         const pdfjs = await getPdfjs();
         let pdfDoc = pdfDocsRef.current.get(row.name);
         if (!pdfDoc) {
-          const buf = await row.blob.arrayBuffer();
+          const buf = await row.blob!.arrayBuffer();
           pdfDoc = await pdfjs.getDocument({ data: buf.slice(0) }).promise;
           pdfDocsRef.current.set(row.name, pdfDoc);
         }
         const page = await pdfDoc.getPage(pageIndex + 1);
         /* 用旋转后的 viewport 渲染，canvas 本身就是正的 */
-        const viewport = page.getViewport({ scale: 1.2, rotation });
+        const viewport = page.getViewport({ scale, rotation });
         canvas.width = Math.floor(viewport.width);
         canvas.height = Math.floor(viewport.height);
         const ctx = canvas.getContext("2d")!;
@@ -150,6 +168,35 @@ export default function PdfAutoRotatePage() {
       } catch (e) {
         /* 被新渲染任务取消不算错误 */
         if (e instanceof Error && /cancel/i.test(e.message)) return;
+        throw e;
+      }
+    },
+    [],
+  );
+
+  /* viewer 变化（打开/翻页/旋转）时渲染大预览，高分辨率保证文字清晰 */
+  useEffect(() => {
+    if (!viewer) return;
+    const row = rows.find((r) => r.name === viewer.name);
+    const canvas = viewCanvasRef.current;
+    if (!row || !canvas || row.status === "error" || !row.blob) return;
+    setViewLoading(true);
+    renderPageToCanvas(canvas, row, viewer.pageIndex, row.rotations[viewer.pageIndex] ?? 0, 2.2, "v")
+      .catch(() => {
+        /* 大预览渲染失败：保持静默，由 loading 遮罩消失即可 */
+      })
+      .finally(() => setViewLoading(false));
+  }, [viewer, rows, renderPageToCanvas]);
+
+  /* ---------- 渲染缩略图单页 ---------- */
+  const renderPage = useCallback(
+    async (row: FileRow, pageIndex: number, rotation: number) => {
+      const key = `${row.name}#${pageIndex}`;
+      const canvas = canvasesRef.current.get(key);
+      if (!canvas || !row.blob) return;
+      try {
+        await renderPageToCanvas(canvas, row, pageIndex, rotation, 1.2, "t");
+      } catch (e) {
         const msg = e instanceof Error ? e.message : "渲染失败";
         setRows((prev) =>
           prev.map((r) =>
@@ -158,7 +205,7 @@ export default function PdfAutoRotatePage() {
         );
       }
     },
-    [],
+    [renderPageToCanvas],
   );
 
   /* ---------- 渲染文件的所有页 ---------- */
@@ -374,6 +421,40 @@ export default function PdfAutoRotatePage() {
     );
   };
 
+  /* ---------- 按当前角度生成单个 PDF ---------- */
+  const buildRotatedBlob = useCallback(async (row: FileRow) => {
+    const buf = await row.blob!.arrayBuffer();
+    const doc = await PDFDocument.load(buf);
+    const pages = doc.getPages();
+    pages.forEach((page, i) => {
+      const rot = row.rotations[i] ?? 0;
+      if (rot) page.setRotation(degrees(rot));
+    });
+    const outBytes = await doc.save();
+    return new Blob([outBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+  }, []);
+
+  /* ---------- 下载单个文件 ---------- */
+  const downloadOne = async (name: string) => {
+    const row = rows.find((r) => r.name === name);
+    if (!row || row.status === "error" || !row.blob) return;
+    setBusy(true);
+    try {
+      const blob = await buildRotatedBlob(row);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = row.name.replace(/\.pdf$/i, "_rotated.pdf");
+      a.click();
+      URL.revokeObjectURL(url);
+      log(`已下载 ${row.name.replace(/\.pdf$/i, "_rotated.pdf")}`, "ok");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "处理失败";
+      log(`  ${row.name}：${msg}`, "err");
+    }
+    setBusy(false);
+  };
+
   /* ---------- 下载（逐页按各自角度） ---------- */
   const download = async () => {
     const valid = rows.filter((r) => r.status !== "error" && r.blob);
@@ -384,15 +465,7 @@ export default function PdfAutoRotatePage() {
     const results: { name: string; blob: Blob }[] = [];
     for (const row of valid) {
       try {
-        const buf = await row.blob!.arrayBuffer();
-        const doc = await PDFDocument.load(buf);
-        const pages = doc.getPages();
-        pages.forEach((page, i) => {
-          const rot = row.rotations[i] ?? 0;
-          if (rot) page.setRotation(degrees(rot));
-        });
-        const outBytes = await doc.save();
-        const outBlob = new Blob([outBytes.buffer as ArrayBuffer], { type: "application/pdf" });
+        const outBlob = await buildRotatedBlob(row);
         results.push({ name: row.name.replace(/\.pdf$/i, "_rotated.pdf"), blob: outBlob });
         const rotatedPages = row.rotations.filter((x) => x !== 0).length;
         log(
@@ -583,7 +656,11 @@ export default function PdfAutoRotatePage() {
                         key={pi}
                         className={`vc-page-thumb ${row.rotations[pi] ? "vc-rotated" : ""}`}
                       >
-                        <div className="vc-page-thumb-area">
+                        <div
+                          className="vc-page-thumb-area"
+                          onClick={() => setViewer({ name: row.name, pageIndex: pi })}
+                          title="点击放大预览"
+                        >
                           <canvas
                             ref={(el) => {
                               if (el) canvasesRef.current.set(`${row.name}#${pi}`, el);
@@ -661,8 +738,124 @@ export default function PdfAutoRotatePage() {
         <strong>使用说明：</strong>
         所有处理在浏览器本地完成，PDF 不上传服务器。上传后点击「智能检测」自动分析内部图片宽高比并给横图竖页的文件建议旋转方向；
         页面按「文件名 → 全部页预览 → 下一个文件」纵向拼接展示，每个文件块顶部有整文件旋转按钮，每页缩略图下方有单页左旋/右旋/重置按钮，可单独调整任一页；
+        <strong>点击任一页缩略图可放大预览</strong>（支持翻页、旋转、下载当前文件）；
         确认后批量下载（逐页按各自角度输出）。
       </div>
+
+      {/* 大预览模态：点击缩略图打开，像浏览器直接查看 PDF */}
+      {viewer &&
+        (() => {
+          const row = rows.find((r) => r.name === viewer.name);
+          if (!row) return null;
+          const pi = viewer.pageIndex;
+          const rot = row.rotations[pi] ?? 0;
+          const hasPrev = pi > 0;
+          const hasNext = pi < row.pages - 1;
+          return (
+            <div
+              className="vc-viewer"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setViewer(null)}
+            >
+              <div
+                className="vc-viewer-card"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="vc-viewer-head">
+                  <div className="vc-viewer-title">
+                    <IconFile width={16} height={16} />
+                    <span className="vc-viewer-name" title={row.name}>
+                      {row.name}
+                    </span>
+                    <span className="vc-viewer-meta">
+                      {pi + 1} / {row.pages} 页
+                    </span>
+                    {rot !== 0 && <span className="vc-rotation-badge-static">{rot}°</span>}
+                  </div>
+                  <div className="vc-viewer-actions">
+                    <button
+                      className="vc-ctrl-btn vc-ctrl-sm"
+                      onClick={() => rotatePage(row.name, pi, -90)}
+                      disabled={busy}
+                      title="本页左旋 90°"
+                    >
+                      <IconRotate width={14} height={14} />
+                      左旋
+                    </button>
+                    <button
+                      className="vc-ctrl-btn vc-ctrl-sm"
+                      onClick={() => rotatePage(row.name, pi, 90)}
+                      disabled={busy}
+                      title="本页右旋 90°"
+                    >
+                      <IconRotateCw width={14} height={14} />
+                      右旋
+                    </button>
+                    <button
+                      className="vc-ctrl-btn vc-ctrl-sm"
+                      onClick={() => resetPage(row.name, pi)}
+                      disabled={busy || rot === 0}
+                      title="本页重置为 0°"
+                    >
+                      <IconRefresh width={14} height={14} />
+                      重置
+                    </button>
+                    <button
+                      className="vc-ctrl-btn vc-ctrl-sm"
+                      onClick={() => downloadOne(row.name)}
+                      disabled={busy}
+                      title="下载当前文件（按当前角度）"
+                    >
+                      <IconDownload width={14} height={14} />
+                      下载
+                    </button>
+                    <button
+                      className="vc-ctrl-btn vc-ctrl-sm vc-viewer-close"
+                      onClick={() => setViewer(null)}
+                      title="关闭（Esc）"
+                    >
+                      <IconX width={14} height={14} />
+                      关闭
+                    </button>
+                  </div>
+                </div>
+                <div className="vc-viewer-body">
+                  {hasPrev && (
+                    <button
+                      className="vc-viewer-nav"
+                      onClick={() =>
+                        setViewer({ name: row.name, pageIndex: pi - 1 })
+                      }
+                      title="上一页"
+                    >
+                      ‹
+                    </button>
+                  )}
+                  <div className="vc-viewer-canvas-wrap">
+                    <canvas ref={viewCanvasRef} className="vc-viewer-canvas" />
+                    {viewLoading && (
+                      <div className="vc-viewer-loading">
+                        <IconLoader width={28} height={28} className="spin" />
+                      </div>
+                    )}
+                  </div>
+                  {hasNext && (
+                    <button
+                      className="vc-viewer-nav"
+                      onClick={() =>
+                        setViewer({ name: row.name, pageIndex: pi + 1 })
+                      }
+                      title="下一页"
+                    >
+                      ›
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }

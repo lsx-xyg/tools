@@ -9,7 +9,7 @@ related_targets: []
 
 ## Scope & Visitor Mode
 
-全站壳（导航 + 首页 + 工具页框架），Operate 模式为主，首页带轻量发现（Persuade）元素。当前 38 个工具页（T-01 文本/文件互传 ～ T-38 PDF 自动旋转），注册于 `lib/tools.ts`。第二批（T-29~T-36）延续「精密仪器台」视觉：音频/媒体/抽帧复用 ffmpeg.wasm hook（lib/use-ffmpeg.ts），图片批量/录制/OCR 为浏览器本地能力，IP/DNS 为外部接口查询页；录制支持录制中实时预览与移动端 getDisplayMedia 兼容提示，DNS 查询支持多源自动容错与 Cloudflare CNAME 压平 / 代理 IP 识别。T-37 Excel 函数快查：列表→详情两级结构，函数库在 `lib/excel-functions.ts`，详情页交互模拟器在 `components/excel-demo.tsx`（输入参数实时出结果，VLOOKUP/INDEX 等带模拟表高亮）；列表搜索在 `components/excel-search.tsx`（客户端）。T-38 PDF 自动旋转：快速模式用 pdf-lib 读 /Rotate 修正，深度模式用 pdfjs-dist 渲染页面 + tesseract.js OSD 检测文字方向后旋转；支持多 PDF / ZIP 输入，输出打包 ZIP。
+全站壳（导航 + 首页 + 工具页框架），Operate 模式为主，首页带轻量发现（Persuade）元素。当前 38 个工具页（T-01 文本/文件互传 ～ T-38 PDF 自动旋转），注册于 `lib/tools.ts`。第二批（T-29~T-36）延续「精密仪器台」视觉：音频/媒体/抽帧复用 ffmpeg.wasm hook（lib/use-ffmpeg.ts），图片批量/录制/OCR 为浏览器本地能力，IP/DNS 为外部接口查询页；录制支持录制中实时预览与移动端 getDisplayMedia 兼容提示，DNS 查询支持多源自动容错与 Cloudflare CNAME 压平 / 代理 IP 识别。T-37 Excel 函数快查：列表→详情两级结构，函数库在 `lib/excel-functions.ts`，详情页交互模拟器在 `components/excel-demo.tsx`（输入参数实时出结果，VLOOKUP/INDEX 等带模拟表高亮）；列表搜索在 `components/excel-search.tsx`（客户端）。T-38 PDF 自动旋转：上传多个 PDF 或 ZIP，页面以「文件名 → 全部页预览 → 下一个文件」纵向拼接展示所有 PDF。pdf.js 渲染每页缩略图，支持逐页独立旋转（左旋/右旋/重置，含文件级批量按钮），点击任一页缩略图可打开全屏大预览模态（高分辨率 scale 2.2 渲染，文字清晰可读，支持翻页、旋转、下载当前文件，Esc/遮罩点击关闭），智能检测分析内部图片宽高比自动建议方向（横图竖页 90°），下载时逐页按各自角度输出。解决了纯自动检测无法区分顺时针 90° 与逆时针 270°、竖向图片检测不到的问题。全部本地处理。
 
 ## Audience
 
