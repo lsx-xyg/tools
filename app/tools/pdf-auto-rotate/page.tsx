@@ -99,9 +99,14 @@ export default function PdfAutoRotatePage() {
   /* 大预览模态：点击缩略图打开，viewer 为当前查看的文件与页码 */
   const [viewer, setViewer] = useState<{ name: string; pageIndex: number } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  /* 大预览缩放：基准 2.2 = 100%，范围 0.8~6.0 */
+  const [viewZoom, setViewZoom] = useState(2.2);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const viewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const viewWrapRef = useRef<HTMLDivElement>(null);
+  /* 记录上一次 viewer 是否为 null，用于检测"打开"动作（翻页不重置缩放） */
+  const prevViewerNullRef = useRef(true);
   /* ref 存储 pdf.js 文档和 canvas（key: 文件名#页码），避免 setState 重渲染 */
   const pdfDocsRef = useRef<Map<string, import("pdfjs-dist").PDFDocumentProxy>>(new Map());
   const canvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
@@ -174,19 +179,44 @@ export default function PdfAutoRotatePage() {
     [],
   );
 
-  /* viewer 变化（打开/翻页/旋转）时渲染大预览，高分辨率保证文字清晰 */
+  /* viewer 变化（打开/翻页/旋转）时渲染大预览，高分辨率保证文字清晰；缩放变化也重渲染 */
   useEffect(() => {
     if (!viewer) return;
     const row = rows.find((r) => r.name === viewer.name);
     const canvas = viewCanvasRef.current;
     if (!row || !canvas || row.status === "error" || !row.blob) return;
     setViewLoading(true);
-    renderPageToCanvas(canvas, row, viewer.pageIndex, row.rotations[viewer.pageIndex] ?? 0, 2.2, "v")
+    renderPageToCanvas(canvas, row, viewer.pageIndex, row.rotations[viewer.pageIndex] ?? 0, viewZoom, "v")
       .catch(() => {
         /* 大预览渲染失败：保持静默，由 loading 遮罩消失即可 */
       })
       .finally(() => setViewLoading(false));
-  }, [viewer, rows, renderPageToCanvas]);
+  }, [viewer, rows, renderPageToCanvas, viewZoom]);
+
+  /* 打开大预览时重置缩放为 100%（翻页不重置） */
+  useEffect(() => {
+    if (viewer && prevViewerNullRef.current) {
+      setViewZoom(2.2);
+    }
+    prevViewerNullRef.current = !viewer;
+  }, [viewer]);
+
+  /* 大预览内拦截 Ctrl/Cmd + 滚轮：缩放 PDF 而非浏览器 */
+  useEffect(() => {
+    if (!viewer) return;
+    const wrap = viewWrapRef.current;
+    if (!wrap) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setViewZoom((z) => {
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        return Math.min(6, Math.max(0.8, +(z + delta).toFixed(1)));
+      });
+    };
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+  }, [viewer]);
 
   /* ---------- 渲染缩略图单页 ---------- */
   const renderPage = useCallback(
@@ -224,6 +254,16 @@ export default function PdfAutoRotatePage() {
     },
     [renderPage],
   );
+
+  /* 上传后自动渲染：等 DOM 挂载后再渲染缩略图（修复上传后空白） */
+  useEffect(() => {
+    const pending = rows.filter((r) => r.status === "pending" && r.blob);
+    if (pending.length === 0) return;
+    const t = setTimeout(() => {
+      for (const row of pending) renderAllPages(row);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [rows, renderAllPages]);
 
   /* ---------- 解析上传文件（支持 zip） ---------- */
   const addFiles = useCallback(
@@ -285,9 +325,7 @@ export default function PdfAutoRotatePage() {
       setRows((prev) => [...prev, ...newRows]);
       if (newRows.length) {
         log(`已添加 ${newRows.length} 个 PDF`, "ok");
-        for (const row of newRows) {
-          renderAllPages(row);
-        }
+        /* 缩略图渲染由 useEffect 监听 pending 行自动触发（等 DOM 挂载后） */
       }
     },
     [log, renderAllPages],
@@ -774,6 +812,31 @@ export default function PdfAutoRotatePage() {
                     {rot !== 0 && <span className="vc-rotation-badge-static">{rot}°</span>}
                   </div>
                   <div className="vc-viewer-actions">
+                    <div className="vc-viewer-zoom">
+                      <button
+                        className="vc-ctrl-btn vc-ctrl-sm"
+                        onClick={() => setViewZoom((z) => Math.max(0.8, +(z - 0.2).toFixed(1)))}
+                        disabled={busy}
+                        title="缩小（Ctrl + 滚轮）"
+                      >
+                        −
+                      </button>
+                      <button
+                        className="vc-ctrl-btn vc-ctrl-sm vc-viewer-zoom-val"
+                        onClick={() => setViewZoom(2.2)}
+                        title="点击重置为 100%"
+                      >
+                        {Math.round((viewZoom / 2.2) * 100)}%
+                      </button>
+                      <button
+                        className="vc-ctrl-btn vc-ctrl-sm"
+                        onClick={() => setViewZoom((z) => Math.min(6, +(z + 0.2).toFixed(1)))}
+                        disabled={busy}
+                        title="放大（Ctrl + 滚轮）"
+                      >
+                        +
+                      </button>
+                    </div>
                     <button
                       className="vc-ctrl-btn vc-ctrl-sm"
                       onClick={() => rotatePage(row.name, pi, -90)}
@@ -832,7 +895,7 @@ export default function PdfAutoRotatePage() {
                       ‹
                     </button>
                   )}
-                  <div className="vc-viewer-canvas-wrap">
+                  <div className="vc-viewer-canvas-wrap" ref={viewWrapRef}>
                     <canvas ref={viewCanvasRef} className="vc-viewer-canvas" />
                     {viewLoading && (
                       <div className="vc-viewer-loading">
