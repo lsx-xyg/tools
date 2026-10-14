@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import {
+  IconFileStack,
+  IconLoader,
+  IconPlus,
+} from "@/components/icons";
+import { addPageNumbers, downloadBytes, pdfError, pdfPages } from "@/lib/pdf-utils";
+
+export function PageNumTab() {
+  const [file, setFile] = useState<{ name: string; bytes: ArrayBuffer; pages: number } | null>(null);
+  const [position, setPosition] = useState<"bottom-center" | "bottom-left" | "bottom-right">("bottom-center");
+  const [format, setFormat] = useState<"full" | "slash" | "number">("slash");
+  const [startAt, setStartAt] = useState("1");
+  const [fontSize, setFontSize] = useState(11);
+  const [margin, setMargin] = useState(36);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const addFile = async (files: File[]) => {
+    const f = files.find((x) => x.type === "application/pdf" || /\.pdf$/i.test(x.name));
+    if (!f) {
+      setErr("请选择 PDF 文件");
+      return;
+    }
+    setErr("");
+    try {
+      const bytes = await f.arrayBuffer();
+      const pages = await pdfPages(bytes);
+      setFile({ name: f.name, bytes, pages });
+    } catch (e) {
+      setErr(pdfError(e));
+    }
+  };
+
+  async function run() {
+    if (!file) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const out = await addPageNumbers(file.bytes, {
+        position,
+        format,
+        startAt: Number(startAt) || 1,
+        fontSize,
+        margin,
+      });
+      downloadBytes(out, file.name.replace(/\.pdf$/i, "-pagenum.pdf"));
+    } catch (e) {
+      setErr(pdfError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="single-panel tab-anim">
+      <div
+        className="dropzone"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          void addFile(Array.from(e.dataTransfer.files));
+        }}
+      >
+        <input
+          type="file"
+          accept="application/pdf,.pdf"
+          id="pdf-pagenum-input"
+          hidden
+          onChange={(e) => void addFile(Array.from(e.target.files ?? []))}
+        />
+        <label htmlFor="pdf-pagenum-input" className="dropzone-inner">
+          <span className="dropzone-ic">
+            <IconPlus width={18} height={18} />
+          </span>
+          {file ? `已选择：${file.name}（${file.pages} 页）` : "拖入 PDF，或点击选择文件"}
+        </label>
+      </div>
+
+      {file && (
+        <div className="vd-grid" style={{ marginTop: 14 }}>
+          <div className="vd-field">
+            <label className="vc-label">位置</label>
+            <select className="input" value={position} onChange={(e) => setPosition(e.target.value as typeof position)}>
+              <option value="bottom-center">底部居中</option>
+              <option value="bottom-left">左下角</option>
+              <option value="bottom-right">右下角</option>
+            </select>
+          </div>
+          <div className="vd-field">
+            <label className="vc-label">格式</label>
+            <select className="input" value={format} onChange={(e) => setFormat(e.target.value as typeof format)}>
+              <option value="full">第 X 页 / 共 N 页</option>
+              <option value="slash">X / N</option>
+              <option value="number">仅数字</option>
+            </select>
+          </div>
+          <div className="vd-field">
+            <label className="vc-label">起始页码</label>
+            <input className="input" inputMode="numeric" value={startAt} onChange={(e) => setStartAt(e.target.value.replace(/[^\d]/g, ""))} />
+          </div>
+          <div className="vd-field">
+            <label className="vc-label">字号（{fontSize} pt）</label>
+            <input type="range" min={8} max={24} step={1} value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} style={{ width: "100%" }} />
+          </div>
+          <div className="vd-field">
+            <label className="vc-label">边距（{margin} pt）</label>
+            <input type="range" min={18} max={72} step={2} value={margin} onChange={(e) => setMargin(Number(e.target.value))} style={{ width: "100%" }} />
+          </div>
+        </div>
+      )}
+
+      {err && <p className="count-hint warn" style={{ marginTop: 10 }}>{err}</p>}
+
+      <div className="tool-row" style={{ marginTop: 14 }}>
+        <span className="count-hint">{file ? `将为 ${file.pages} 页添加页码` : "未选择文件"}</span>
+        <span className="spacer" />
+        <button className="btn btn-primary" onClick={() => void run()} type="button" disabled={busy || !file}>
+          {busy ? <IconLoader width={15} height={15} className="spin" /> : <IconFileStack width={15} height={15} />}
+          {busy ? "处理中…" : "添加页码并下载"}
+        </button>
+      </div>
+    </div>
+  );
+}
