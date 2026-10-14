@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
   /* PaddleOCR.js 依赖 @techstark/opencv-js，其在浏览器端引用了 Node 内置模块（fs 等），
@@ -27,6 +28,14 @@ const nextConfig: NextConfig = {
       constants: false,
       module: false,
     };
+    /* onnxruntime-web 会引用各 ExecutionProvider 的 wasm（jsep/asyncify 等），
+       jsep(27MiB)/asyncify(26MiB) 超 CF Workers 单资产 25MiB 上限且运行时不会用到
+       （OCR 用 backend:"wasm"，主 wasm 从 /onnx/ 自托管），拦截为空 so 不被打包。 */
+    config.module.rules.push({
+      test: /onnxruntime-web.*ort-wasm-simd-threaded\.(jsep|asyncify)\.wasm$/,
+      type: "javascript/auto",
+      use: [{ loader: path.join(__dirname, "lib/empty-wasm-loader.js") }],
+    });
     return config;
   },
 };
