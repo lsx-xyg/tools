@@ -1,4 +1,5 @@
 import { PDFDocument } from "pdf-lib";
+import CryptoJS from "crypto-js";
 
 /** 读取 PDF 页数；加密/损坏时抛出可读错误 */
 export async function pdfPages(bytes: ArrayBuffer): Promise<number> {
@@ -87,4 +88,558 @@ export function pdfError(e: unknown): string {
     return "无法解析该 PDF，文件可能已损坏或不是有效的 PDF";
   }
   return `处理失败：${msg}`;
+}
+
+/* ===================== 共享 pdf.js 懒加载 ===================== */
+
+let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+/** 共享的 pdf.js 懒加载（worker 用 new URL 模式，Next 打包友好） */
+export async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
+  if (!pdfjsPromise) {
+    pdfjsPromise = import("pdfjs-dist").then((mod) => {
+      mod.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url,
+      ).toString();
+      return mod;
+    });
+  }
+  return pdfjsPromise;
+}
+
+/* ===================== 压缩 ===================== */
+
+/** 在浏览器内重建 PDF 结构（useObjectStreams），剔除冗余对象；返回新字节与前后大小 */
+export async function compressPdf(
+  bytes: ArrayBuffer,
+): Promise<{ data: Uint8Array; before: number; after: number }> {
+  const before = bytes.byteLength;
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  const data = await doc.save({ useObjectStreams: true });
+  return { data, before, after: data.length };
+}
+
+/* ===================== PDF 转图片 ===================== */
+
+/** 把 PDF 每页渲染成图片（PNG/JPEG），返回 { name, blob } 列表 */
+export async function pdfToImages(
+  bytes: ArrayBuffer,
+  opts: { scale: number; format: "png" | "jpeg"; quality: number },
+): Promise<{ name: string; blob: Blob }[]> {
+  const pdfjs = await getPdfjs();
+  const doc = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
+  const out: { name: string; blob: Blob }[] = [];
+  const ext = opts.format === "png" ? "png" : "jpg";
+  for (let i = 1; i <= doc.numPages; i += 1) {
+    const page = await doc.getPage(i);
+    const viewport = page.getViewport({ scale: opts.scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("图片编码失败"))),
+        opts.format === "png" ? "image/png" : "image/jpeg",
+        opts.quality,
+      );
+    });
+    out.push({ name: `page-${String(i).padStart(3, "0")}.${ext}`, blob });
+  }
+  await doc.destroy();
+  return out;
+}
+
+/* ===================== 图片转 PDF ===================== */
+
+export interface ImgSource {
+  blob: Blob;
+  width: number;
+  height: number;
+}
+
+/** 多图按顺序合并为一个 PDF；白底 contain 绘制，统一经 canvas 转 JPEG 嵌入 */
+export async function imagesToPdf(
+  files: ImgSource[],
+  opts: { pageSize: "a4" | "auto"; orientation: "portrait" | "landscape" },
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const A4W = 595.28;
+  const A4H = 841.89;
+  for (const f of files) {
+    let pageW: number;
+    let pageH: number;
+    if (opts.pageSize === "auto") {
+      pageW = (f.width * 72) / 96;
+      pageH = (f.height * 72) / 96;
+      const maxSide = Math.max(pageW, pageH);
+      if (maxSide > 14400) {
+        const s = 14400 / maxSide;
+        pageW *= s;
+        pageH *= s;
+      }
+    } else if (opts.orientation === "landscape") {
+      pageW = A4H;
+      pageH = A4W;
+    } else {
+      pageW = A4W;
+      pageH = A4H;
+    }
+    const pxW = Math.max(1, Math.round(pageW / 0.75));
+    const pxH = Math.max(1, Math.round(pageH / 0.75));
+    const canvas = document.createElement("canvas");
+    canvas.width = pxW;
+    canvas.height = pxH;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, pxW, pxH);
+    const bmp = await createImageBitmap(f.blob);
+    const margin = opts.pageSize === "auto" ? 0 : Math.round(pxW * 0.04);
+    const s = Math.min((pxW - margin * 2) / f.width, (pxH - margin * 2) / f.height);
+    const dw = f.width * s;
+    const dh = f.height * s;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bmp, (pxW - dw) / 2, (pxH - dh) / 2, dw, dh);
+    bmp.close();
+    const jpg = await canvasToBytes(canvas, "image/jpeg", 0.92);
+    const img = await doc.embedJpg(jpg);
+    const page = doc.addPage([pageW, pageH]);
+    page.drawImage(img, { x: 0, y: 0, width: pageW, height: pageH });
+  }
+  return doc.save();
+}
+
+/* ===================== 删页 / 组织 ===================== */
+
+/** 按保留的页顺序（0 起下标）输出新 PDF */
+export async function organizePdf(bytes: ArrayBuffer, keptIndices: number[]): Promise<Uint8Array> {
+  return extractPages(bytes, keptIndices);
+}
+
+/* ===================== 页码 ===================== */
+
+export interface PageNumOpts {
+  position: "bottom-center" | "bottom-left" | "bottom-right";
+  format: "full" | "slash" | "number";
+  startAt: number;
+  fontSize: number;
+  margin: number;
+}
+
+function canvasToBytes(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      async (b) => {
+        if (!b) return reject(new Error("图片编码失败"));
+        resolve(new Uint8Array(await b.arrayBuffer()));
+      },
+      type,
+      quality,
+    );
+  });
+}
+
+/** 给每页加页码（文字经 canvas 渲染为 PNG，支持中文） */
+export async function addPageNumbers(bytes: ArrayBuffer, opts: PageNumOpts): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  const total = doc.getPageCount();
+  const dpr = 3;
+  for (let i = 0; i < total; i += 1) {
+    const page = doc.getPage(i);
+    const { width, height } = page.getSize();
+    const num = i + Math.max(1, Math.floor(opts.startAt || 1));
+    const label =
+      opts.format === "full"
+        ? `第 ${num} 页 / 共 ${total} 页`
+        : opts.format === "slash"
+          ? `${num} / ${total}`
+          : `${num}`;
+    const fontPx = opts.fontSize;
+    const canvas = document.createElement("canvas");
+    let ctx = canvas.getContext("2d")!;
+    ctx.font = `${fontPx * dpr}px system-ui, sans-serif`;
+    const tw = ctx.measureText(label).width;
+    canvas.width = Math.ceil(tw) + 12;
+    canvas.height = Math.ceil(fontPx * dpr * 1.5);
+    ctx = canvas.getContext("2d")!;
+    ctx.font = `${fontPx * dpr}px system-ui, sans-serif`;
+    ctx.fillStyle = "#333333";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, 6, canvas.height / 2);
+    const png = await canvasToBytes(canvas, "image/png");
+    const img = await doc.embedPng(png);
+    const drawW = canvas.width / dpr;
+    const drawH = canvas.height / dpr;
+    const y = opts.margin;
+    let x: number;
+    if (opts.position === "bottom-center") x = (width - drawW) / 2;
+    else if (opts.position === "bottom-left") x = opts.margin;
+    else x = width - opts.margin - drawW;
+    page.drawImage(img, { x, y, width: drawW, height: drawH });
+  }
+  return doc.save();
+}
+
+/* ===================== 文字水印 ===================== */
+
+export interface WatermarkOpts {
+  text: string;
+  fontSize: number;
+  opacity: number; // 0.1 ~ 0.5
+  angle: number;
+  color: string; // css color
+  tiled: boolean;
+}
+
+/** 给每页加文字水印（canvas 平铺/居中 → PNG 整页叠加，透明度由 canvas 控制） */
+export async function addWatermark(bytes: ArrayBuffer, opts: WatermarkOpts): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  const pages = doc.getPages();
+  const dpr = 2;
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = opts.opacity;
+    ctx.fillStyle = opts.color;
+    ctx.font = `${opts.fontSize * dpr}px system-ui, sans-serif`;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((opts.angle * Math.PI) / 180);
+    if (opts.tiled) {
+      const stepX = ctx.measureText(opts.text).width + 120 * dpr;
+      const stepY = (opts.fontSize + 60) * dpr;
+      for (let y = -canvas.height; y < canvas.height; y += stepY) {
+        for (let x = -canvas.width; x < canvas.width; x += stepX) {
+          ctx.fillText(opts.text, x, y);
+        }
+      }
+    } else {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(opts.text, 0, 0);
+    }
+    const png = await canvasToBytes(canvas, "image/png");
+    const img = await doc.embedPng(png);
+    page.drawImage(img, { x: 0, y: 0, width, height });
+  }
+  return doc.save();
+}
+
+/* ===================== 加密 / 解密（RC4 Standard security handler） ===================== */
+
+/* pdf-lib 1.17 不支持加密，这里以后处理方式注入 PDF Standard 安全处理器（V1/R2 RC4 40-bit）。
+   AES 加密（V>=4）的 PDF 无法在浏览器内解密，会给出明确提示。 */
+
+const PDF_PAD = [
+  0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08,
+  0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a,
+];
+
+class Rc4 {
+  private s: number[];
+  private i = 0;
+  private j = 0;
+  constructor(key: number[]) {
+    this.s = Array.from({ length: 256 }, (_, k) => k);
+    let j = 0;
+    for (let i = 0; i < 256; i += 1) {
+      j = (j + this.s[i] + key[i % key.length]) & 0xff;
+      [this.s[i], this.s[j]] = [this.s[j], this.s[i]];
+    }
+  }
+  process(data: number[]): number[] {
+    const out: number[] = [];
+    for (const b of data) {
+      this.i = (this.i + 1) & 0xff;
+      this.j = (this.j + this.s[this.i]) & 0xff;
+      [this.s[this.i], this.s[this.j]] = [this.s[this.j], this.s[this.i]];
+      out.push(b ^ this.s[(this.s[this.i] + this.s[this.j]) & 0xff]);
+    }
+    return out;
+  }
+}
+
+function md5Bytes(data: number[]): number[] {
+  const s = String.fromCharCode(...data);
+  const words = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(s)).words;
+  const out: number[] = [];
+  for (const w of words) {
+    out.push((w >>> 24) & 0xff, (w >>> 16) & 0xff, (w >>> 8) & 0xff, w & 0xff);
+  }
+  return out;
+}
+
+function padPassword(pw: string): number[] {
+  const bytes: number[] = [];
+  for (let i = 0; i < 32; i += 1) {
+    bytes.push(i < pw.length ? pw.charCodeAt(i) & 0xff : PDF_PAD[i]);
+  }
+  return bytes;
+}
+
+const toBytes = (s: string): number[] => Array.from(s, (c) => c.charCodeAt(0));
+const toLatin1 = (b: number[]): string => b.map((x) => String.fromCharCode(x)).join("");
+const toHex = (b: number[]): string => b.map((x) => x.toString(16).padStart(2, "0")).join("");
+
+function hexToBytes(hex: string): number[] {
+  const out: number[] = [];
+  for (let i = 0; i + 1 < hex.length; i += 2) out.push(parseInt(hex.slice(i, i + 2), 16));
+  return out;
+}
+
+function int32LE(n: number): number[] {
+  return [n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >> 24) & 0xff];
+}
+
+function objKeyOf(base: number[], num: number, gen: number, keylen: number): number[] {
+  return md5Bytes([...base, num & 0xff, (num >> 8) & 0xff, gen & 0xff, (gen >> 8) & 0xff]).slice(0, keylen);
+}
+
+/**
+ * 统一处理一个对象体内的字符串：
+ * - `<<` `>>` 是字典括号，原样保留，绝不参与加解密；
+ * - `<hex>` 与 `(literal)` 都是字符串，按对象密钥做 RC4，密文统一写成 hex `<...>`。
+ * 加密与解密共用此函数（RC4 对称）：加密时字面串/已有 hex 串都会被加密；
+ * 解密时所有 hex 串被还原，字典键 `/Name` 始终不受影响。
+ */
+function walkStrings(rc4: Rc4, body: string): string {
+  let out = "";
+  let i = 0;
+  const n = body.length;
+  while (i < n) {
+    const ch = body[i];
+    /* 字典开始 << */
+    if (ch === "<" && body[i + 1] === "<") {
+      out += "<<";
+      i += 2;
+      continue;
+    }
+    /* 字典结束 >> */
+    if (ch === ">" && body[i + 1] === ">") {
+      out += ">>";
+      i += 2;
+      continue;
+    }
+    /* hex 字符串 <...> */
+    if (ch === "<") {
+      let j = i + 1;
+      while (j < n && body[j] !== ">") j += 1;
+      const hex = body.slice(i + 1, j).replace(/\s/g, "");
+      const dec = rc4.process(hexToBytes(hex));
+      out += `<${toHex(dec)}>`;
+      i = j + 1;
+      continue;
+    }
+    /* 字面字符串 (...) */
+    if (ch === "(") {
+      let depth = 1;
+      let j = i + 1;
+      let content = "";
+      while (j < n && depth > 0) {
+        const c = body[j];
+        if (c === "\\") {
+          content += c + body[j + 1];
+          j += 2;
+          continue;
+        }
+        if (c === "(") depth += 1;
+        else if (c === ")") {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+        content += c;
+        j += 1;
+      }
+      out += `<${toHex(rc4.process(toBytes(content)))}>`;
+      i = j + 1;
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/** 加密对象体：先抽出 stream 占位（避免把二进制当字符串），处理字典字符串，再按序加密 stream */
+function encryptBody(rc4: Rc4, body: string): string {
+  const streams: string[] = [];
+  let text = body.replace(/stream\r?\n([\s\S]*?)\r?\nendstream/g, (_m, content: string) => {
+    streams.push(content);
+    return `stream@@${streams.length - 1}@@endstream`;
+  });
+  text = walkStrings(rc4, text);
+  return text.replace(/stream@@(\d+)@@endstream/g, (_m, idx: string) => {
+    const enc = rc4.process(toBytes(streams[Number(idx)]));
+    return `stream\n${toLatin1(enc)}\nendstream`;
+  });
+}
+
+/** 解密对象体：与加密对称，stream 占位 + walkStrings 还原字符串 */
+function decryptBody(rc4: Rc4, body: string): string {
+  const streams: string[] = [];
+  let text = body.replace(/stream\r?\n([\s\S]*?)\r?\nendstream/g, (_m, content: string) => {
+    streams.push(content);
+    return `stream@@${streams.length - 1}@@endstream`;
+  });
+  text = walkStrings(rc4, text);
+  return text.replace(/stream@@(\d+)@@endstream/g, (_m, idx: string) => {
+    const dec = rc4.process(toBytes(streams[Number(idx)]));
+    return `stream\n${toLatin1(dec)}\nendstream`;
+  });
+}
+
+/** 加密 PDF：用户密码必填，可选所有者密码与打印/复制权限 */
+export async function encryptPdf(
+  bytes: ArrayBuffer,
+  opts: { userPassword: string; ownerPassword?: string; printing: boolean; copying: boolean },
+): Promise<Uint8Array> {
+  if (!opts.userPassword) throw new Error("请设置用户密码");
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  const norm = await doc.save({ useObjectStreams: false });
+  let s = toLatin1(Array.from(norm));
+
+  const userPw = opts.userPassword;
+  const ownerPw = opts.ownerPassword && opts.ownerPassword.length ? opts.ownerPassword : userPw;
+  const keylen = 5; // 40-bit
+
+  const fileId = Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+
+  // O（Algorithm 3）
+  const oKey = md5Bytes(padPassword(ownerPw)).slice(0, keylen);
+  const O = new Rc4(oKey).process(padPassword(userPw));
+
+  let P = -44;
+  if (!opts.printing) P -= 4;
+  if (!opts.copying) P -= 16;
+
+  // 加密 key（Algorithm 2）
+  let key = md5Bytes([...padPassword(userPw), ...O, ...int32LE(P), ...fileId]).slice(0, keylen);
+
+  // U（Algorithm 4, R2）
+  const U = new Rc4(key).process(md5Bytes([...padPassword(""), ...fileId]));
+
+  // 解析 trailer
+  const trailerMatch = s.match(/trailer\s*<<([\s\S]*?)>>\s*startxref/);
+  let rootRef = "2 0 R";
+  let infoRef: string | null = null;
+  if (trailerMatch) {
+    const rm = trailerMatch[1].match(/\/Root\s+(\d+\s+\d+\s+R)/);
+    if (rm) rootRef = rm[1];
+    const im = trailerMatch[1].match(/\/Info\s+(\d+\s+\d+\s+R)/);
+    if (im) infoRef = im[1];
+  }
+
+  const objRe = /(\d+)\s+(\d+)\s+obj([\s\S]*?)endobj/g;
+  const objs: { num: number; gen: number; body: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = objRe.exec(s))) objs.push({ num: Number(m[1]), gen: Number(m[2]), body: m[3] });
+
+  const encObjs = objs.map((o) => ({
+    num: o.num,
+    gen: o.gen,
+    body: encryptBody(new Rc4(objKeyOf(key, o.num, o.gen, keylen)), o.body),
+  }));
+
+  const encObjNum = Math.max(...objs.map((o) => o.num)) + 1;
+  const encDict = `<< /Filter /Standard /V 1 /R 2 /Length 40 /O <${toHex(O)}> /U <${toHex(U)}> /P ${P} >>`;
+
+  let out = "%PDF-1.7\n";
+  const offsets: { num: number; offset: number }[] = [];
+  for (const o of encObjs) {
+    offsets.push({ num: o.num, offset: out.length });
+    out += `${o.num} ${o.gen} obj${o.body}endobj\n`;
+  }
+  offsets.push({ num: encObjNum, offset: out.length });
+  out += `${encObjNum} 0 obj\n${encDict}\nendobj\n`;
+  const xrefPos = out.length;
+  const size = encObjNum + 1;
+  out += `xref\n0 ${size}\n0000000000 65535 f \n`;
+  for (let i = 1; i < size; i += 1) {
+    const o = offsets.find((x) => x.num === i);
+    out += o ? `${String(o.offset).padStart(10, "0")} 00000 n \n` : `0000000000 00000 f \n`;
+  }
+  out += `trailer\n<< /Size ${size} /Root ${rootRef}${infoRef ? ` /Info ${infoRef}` : ""} /Encrypt ${encObjNum} 0 R /ID [<${toHex(fileId)}> <${toHex(fileId)}>] >>\n`;
+  out += `startxref\n${xrefPos}\n%%EOF\n`;
+  return Uint8Array.from(toBytes(out));
+}
+
+/** 解密 PDF：返回 { bytes, wasEncrypted }。未加密直接返回；AES 抛错。 */
+export async function decryptPdf(
+  bytes: ArrayBuffer,
+  password: string,
+): Promise<{ bytes: Uint8Array; wasEncrypted: boolean }> {
+  const s = toLatin1(Array.from(new Uint8Array(bytes)));
+
+  /* 先扫原始字节有无 /Encrypt；没有（含 object-stream 产物）直接视为未加密 */
+  if (!/\/Encrypt\s+\d+\s+\d+\s+R/.test(s)) {
+    return { bytes: new Uint8Array(bytes), wasEncrypted: false };
+  }
+
+  const trailerMatch = s.match(/trailer\s*<<([\s\S]*?)>>\s*startxref/);
+  const trailerBody = trailerMatch ? trailerMatch[1] : s;
+
+  const encRefMatch = trailerBody.match(/\/Encrypt\s+(\d+)\s+(\d+)\s+R/);
+  if (!encRefMatch) return { bytes: new Uint8Array(bytes), wasEncrypted: false };
+  const encNum = Number(encRefMatch[1]);
+
+  const objRe = /(\d+)\s+(\d+)\s+obj([\s\S]*?)endobj/g;
+  const objs: { num: number; gen: number; body: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = objRe.exec(s))) objs.push({ num: Number(m[1]), gen: Number(m[2]), body: m[3] });
+
+  const encObj = objs.find((o) => o.num === encNum);
+  if (!encObj) throw new Error("加密字典缺失");
+
+  const V = Number((encObj.body.match(/\/V\s+(\d+)/) || [])[1] || 0);
+  if (V >= 4) {
+    throw new Error("该 PDF 使用 AES 加密（V≥4），浏览器内暂不支持解密，请先在专业工具解除密码");
+  }
+  const keylen = Number((encObj.body.match(/\/Length\s+(\d+)/) || [])[1] || 40) / 8;
+  const O = hexToBytes((encObj.body.match(/\/O\s+<([0-9A-Fa-f]+)>/) || [])[1] || "");
+  const U = hexToBytes((encObj.body.match(/\/U\s+<([0-9A-Fa-f]+)>/) || [])[1] || "");
+  const P = Number((encObj.body.match(/\/P\s+(-?\d+)/) || [])[1] || -44);
+  const fileId = hexToBytes((trailerBody.match(/\/ID\s*\[\s*<([0-9A-Fa-f]+)>/) || [])[1] || "");
+
+  const key = md5Bytes([...padPassword(password), ...O, ...int32LE(P), ...fileId]).slice(0, keylen);
+  const computedU = new Rc4(key).process(md5Bytes([...padPassword(""), ...fileId]));
+  const cmpLen = Math.min(computedU.length, U.length);
+  for (let i = 0; i < cmpLen; i += 1) {
+    if (computedU[i] !== U[i]) throw new Error("密码错误");
+  }
+
+  const rootM = trailerBody.match(/\/Root\s+(\d+\s+\d+\s+R)/);
+  const rootRef = rootM ? rootM[1] : "2 0 R";
+  const infoM = trailerBody.match(/\/Info\s+(\d+\s+\d+\s+R)/);
+  const infoRef = infoM ? infoM[1] : null;
+
+  const decObjs = objs
+    .filter((o) => o.num !== encNum)
+    .map((o) => ({
+      num: o.num,
+      gen: o.gen,
+      body: decryptBody(new Rc4(objKeyOf(key, o.num, o.gen, keylen)), o.body),
+    }));
+
+  let out = "%PDF-1.7\n";
+  const offsets: { num: number; offset: number }[] = [];
+  for (const o of decObjs) {
+    offsets.push({ num: o.num, offset: out.length });
+    out += `${o.num} ${o.gen} obj${o.body}endobj\n`;
+  }
+  const xrefPos = out.length;
+  const size = Math.max(...decObjs.map((o) => o.num)) + 1;
+  out += `xref\n0 ${size}\n0000000000 65535 f \n`;
+  for (let i = 1; i < size; i += 1) {
+    const o = offsets.find((x) => x.num === i);
+    out += o ? `${String(o.offset).padStart(10, "0")} 00000 n \n` : `0000000000 00000 f \n`;
+  }
+  out += `trailer\n<< /Size ${size} /Root ${rootRef}${infoRef ? ` /Info ${infoRef}` : ""} /ID [<${toHex(fileId)}> <${toHex(fileId)}>] >>\n`;
+  out += `startxref\n${xrefPos}\n%%EOF\n`;
+  return { bytes: Uint8Array.from(toBytes(out)), wasEncrypted: true };
 }
