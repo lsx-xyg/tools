@@ -32,7 +32,7 @@ export default async function ExcelFnDetailPage({
   ).slice(0, 6);
 
   return (
-    <div className="fade-rise">
+    <div className="fade-rise ex-detail">
       <div className="transfer-head">
         <Link href="/tools/excel-functions" className="back-link">
           <IconChevronLeft width={15} height={15} />
