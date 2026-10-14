@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { IconDownload, IconImage, IconRefresh, IconShield } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 type Mode = "compress" | "resize" | "crop" | "convert";
 
@@ -225,20 +226,16 @@ export default function ImagePage() {
         />
 
         {!img ? (
-          <div
-            className="drop-zone clickable"
-            onClick={() => inputRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const f = e.dataTransfer.files?.[0];
+          <FileDropZone
+            accept="image/*"
+            icon={<IconImage width={18} height={18} />}
+            label="拖入图片，或点击选择"
+            hint="支持 PNG / JPG / WebP / BMP / GIF，全程本地处理"
+            onFiles={(files) => {
+              const f = files[0];
               if (f) onFile(f);
             }}
-          >
-            <IconImage width={22} height={22} />
-            <p>拖拽图片到这里，或点击选择</p>
-            <p className="count-hint">支持 PNG / JPG / WebP / BMP / GIF，全程本地处理</p>
-          </div>
+          />
         ) : (
           <>
             <div className="preview-area">

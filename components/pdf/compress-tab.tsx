@@ -10,6 +10,7 @@ import {
   IconTrash,
 } from "@/components/icons";
 import { compressPdf, downloadBytes, pdfError } from "@/lib/pdf-utils";
+import { FileDropZone } from "@/components/drop-zone";
 
 interface Row {
   id: number;
@@ -82,29 +83,13 @@ export function CompressTab() {
 
   return (
     <div className="single-panel tab-anim">
-      <div
-        className="dropzone"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          void addFiles(Array.from(e.dataTransfer.files));
-        }}
-      >
-        <input
-          type="file"
-          accept="application/pdf,.pdf"
-          multiple
-          id="pdf-compress-input"
-          hidden
-          onChange={(e) => void addFiles(Array.from(e.target.files ?? []))}
-        />
-        <label htmlFor="pdf-compress-input" className="dropzone-inner">
-          <span className="dropzone-ic">
-            <IconPlus width={18} height={18} />
-          </span>
-          拖入多个 PDF，或点击选择文件
-        </label>
-      </div>
+      <FileDropZone
+        accept="application/pdf,.pdf"
+        multiple
+        icon={<IconPlus width={18} height={18} />}
+        label="拖入多个 PDF，或点击选择文件"
+        onFiles={(files) => void addFiles(files)}
+      />
 
       <p className="count-hint" style={{ marginTop: 10 }}>
         在浏览器内重建 PDF 结构、剔除冗余对象；对文本型 PDF 效果较好，扫描图片型效果有限。不做图片重采样，不改变画质。

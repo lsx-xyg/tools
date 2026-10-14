@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
-import { IconVideo, IconScissors, IconFilm, IconMusic, IconRepeat, IconFileStack, IconSliders, IconTrash, IconDownload, IconLoader, IconUpload } from "@/components/icons";
+import { IconVideo, IconScissors, IconFilm, IconMusic, IconRepeat, IconFileStack, IconSliders, IconTrash, IconDownload, IconLoader } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 /* ffmpeg.wasm 0.11 通过 UMD 自托管加载（绕开打包器对 import.meta.resolve 的限制） */
 interface FFmpegInstance {
@@ -101,7 +102,6 @@ export default function VideoPage() {
   const [tab, setTab] = useState<TabId>("trim");
   const [files, setFiles] = useState<File[]>([]);
   const [durations, setDurations] = useState<Record<string, number | null>>({});
-  const [dragging, setDragging] = useState(false);
 
   /* 引擎状态 */
   const ffRef = useRef<FFmpegInstance | null>(null);
@@ -127,7 +127,6 @@ export default function VideoPage() {
   const [crf, setCrf] = useState(28);
   const [scaleTo, setScaleTo] = useState("0");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* 加载 ffmpeg 引擎（懒加载，首次处理时才下载核心） */
   const ensureEngine = useCallback(async () => {
@@ -412,35 +411,14 @@ export default function VideoPage() {
           <span className="right subtle">{rule.hint}</span>
         </div>
         <div className="panel-body">
-          {/* 拖拽上传 */}
-          <div
-            className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              addFiles(e.dataTransfer.files);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <IconUpload width={22} height={22} />
-            <span>点击或拖拽视频到此处</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*,.mp4,.webm,.mov,.avi,.mkv,.m4v,.gif"
-              multiple
-              hidden
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <FileDropZone
+            accept="video/*,.mp4,.webm,.mov,.avi,.mkv,.m4v,.gif"
+            multiple
+            icon={<IconVideo width={18} height={18} />}
+            label="拖入视频，或点击选择文件"
+            hint="可多选 · MP4 / WebM / MOV / AVI / MKV"
+            onFiles={(files) => addFiles(files)}
+          />
 
           {/* 文件列表 */}
           {files.length > 0 && (

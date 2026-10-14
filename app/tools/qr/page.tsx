@@ -8,12 +8,11 @@ import {
   IconCheck,
   IconCopy,
   IconDownload,
-  IconImage,
   IconQr,
   IconScan,
   IconShield,
-  IconUpload,
 } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 const SIZES = [256, 512, 1024];
 type Mode = "generate" | "decode";
@@ -76,8 +75,6 @@ export default function QrPage() {
   const [decErr, setDecErr] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [decCopied, setDecCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
 
   async function decodeFile(file: File) {
     if (!file.type.startsWith("image/")) {
@@ -113,19 +110,6 @@ export default function QrPage() {
     } catch {
       setDecErr("图片解析失败，请换一张试试");
     }
-  }
-
-  function onFilePick(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) void decodeFile(f);
-    e.target.value = "";
-  }
-
-  function onDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragOver(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) void decodeFile(f);
   }
 
   async function copyResult() {
@@ -288,48 +272,25 @@ export default function QrPage() {
               <span className="label">上传二维码图片</span>
             </div>
             <div className="panel-body">
-              <input
-                ref={fileInputRef}
-                type="file"
+              <FileDropZone
                 accept="image/*"
-                style={{ display: "none" }}
-                onChange={onFilePick}
-              />
-              <div
-                className={`drop-zone clickable ${dragOver ? "drag-over" : ""}`}
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
+                icon={<IconQr width={18} height={18} />}
+                label={previewUrl ? "重新选择二维码图片" : "拖入二维码图片，或点击选择"}
+                hint="支持 PNG / JPG / WebP 等，全程本地解析"
+                onFiles={(files) => {
+                  const f = files[0];
+                  if (f) void decodeFile(f);
                 }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={onDrop}
-              >
-                {previewUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
+              />
+              {previewUrl && (
+                <div style={{ marginTop: 12, textAlign: "center" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={previewUrl}
                     alt="待解析的二维码"
                     style={{ maxWidth: "100%", maxHeight: 280, objectFit: "contain" }}
                   />
-                ) : (
-                  <>
-                    <IconUpload width={22} height={22} />
-                    <p>拖拽二维码图片到这里，或点击选择</p>
-                    <p className="count-hint">支持 PNG / JPG / WebP 等，全程本地解析</p>
-                  </>
-                )}
-              </div>
-              {previewUrl && (
-                <button
-                  className="btn btn-ghost btn-sm"
-                  style={{ marginTop: 12 }}
-                  onClick={() => fileInputRef.current?.click()}
-                  type="button"
-                >
-                  <IconImage width={14} height={14} />
-                  重新选择
-                </button>
+                </div>
               )}
             </div>
           </section>

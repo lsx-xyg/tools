@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { useFFmpeg, dataToBlob } from "@/lib/use-ffmpeg";
-import { IconAudioWave, IconConcat, IconScissors, IconRepeat, IconGauge, IconTrash, IconDownload, IconLoader, IconUpload } from "@/components/icons";
+import { IconAudioWave, IconConcat, IconScissors, IconRepeat, IconGauge, IconTrash, IconDownload, IconLoader } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 type TabId = "convert" | "concat" | "trim" | "tempo";
 
@@ -58,7 +59,6 @@ export default function AudioPage() {
   const [tab, setTab] = useState<TabId>("convert");
   const [files, setFiles] = useState<File[]>([]);
   const [durations, setDurations] = useState<Record<string, number | null>>({});
-  const [dragging, setDragging] = useState(false);
   const [outputs, setOutputs] = useState<OutFile[]>([]);
 
   const { runTask, wname, busy, progress, engineReady, loadingEngine, log } = useFFmpeg();
@@ -69,8 +69,6 @@ export default function AudioPage() {
   const [trimDur, setTrimDur] = useState("");
   const [tempo, setTempo] = useState(1.25);
   const [pitch, setPitch] = useState(0);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback(
     async (list: FileList | File[]) => {
@@ -259,34 +257,14 @@ export default function AudioPage() {
           <span className="right subtle">{rule.hint}</span>
         </div>
         <div className="panel-body">
-          <div
-            className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              addFiles(e.dataTransfer.files);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <IconUpload width={22} height={22} />
-            <span>点击或拖拽音频到此处</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma"
-              multiple
-              hidden
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <FileDropZone
+            accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus,.wma"
+            multiple
+            icon={<IconAudioWave width={18} height={18} />}
+            label="拖入音频，或点击选择文件"
+            hint="可多选 · MP3 / WAV / M4A / OGG / FLAC"
+            onFiles={(files) => addFiles(files)}
+          />
 
           {files.length > 0 && (
             <div className="vd-filelist">

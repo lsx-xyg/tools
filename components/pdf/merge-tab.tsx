@@ -11,6 +11,7 @@ import {
   IconTrash,
 } from "@/components/icons";
 import { downloadBytes, mergePdfs, pdfError, pdfPages } from "@/lib/pdf-utils";
+import { FileDropZone } from "@/components/drop-zone";
 
 interface PdfItem {
   id: number;
@@ -76,29 +77,13 @@ export function MergeTab() {
 
   return (
     <div className="single-panel tab-anim">
-      <div
-        className="dropzone"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          void addFiles(Array.from(e.dataTransfer.files));
-        }}
-      >
-        <input
-          type="file"
-          accept="application/pdf,.pdf"
-          multiple
-          id="pdf-merge-input"
-          hidden
-          onChange={(e) => void addFiles(Array.from(e.target.files ?? []))}
-        />
-        <label htmlFor="pdf-merge-input" className="dropzone-inner">
-          <span className="dropzone-ic">
-            <IconPlus width={18} height={18} />
-          </span>
-          拖入多个 PDF，或点击选择文件
-        </label>
-      </div>
+      <FileDropZone
+        accept="application/pdf,.pdf"
+        multiple
+        icon={<IconPlus width={18} height={18} />}
+        label="拖入多个 PDF，或点击选择文件"
+        onFiles={(files) => void addFiles(files)}
+      />
 
       {items.length > 0 && (
         <div className="pdf-list">

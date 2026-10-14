@@ -9,6 +9,7 @@ import {
   IconPlus,
 } from "@/components/icons";
 import { decryptPdf, downloadBytes, encryptPdf, pdfError } from "@/lib/pdf-utils";
+import { FileDropZone } from "@/components/drop-zone";
 
 type Sub = "encrypt" | "decrypt";
 
@@ -101,28 +102,13 @@ export function SecurityTab() {
         </button>
       </div>
 
-      <div
-        className="dropzone"
-        style={{ marginTop: 14 }}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          void addFile(Array.from(e.dataTransfer.files));
-        }}
-      >
-        <input
-          type="file"
+      <div style={{ marginTop: 14 }}>
+        <FileDropZone
           accept="application/pdf,.pdf"
-          id="pdf-security-input"
-          hidden
-          onChange={(e) => void addFile(Array.from(e.target.files ?? []))}
+          icon={<IconPlus width={18} height={18} />}
+          label={file ? `已选择：${file.name}` : "拖入 PDF，或点击选择文件"}
+          onFiles={(files) => void addFile(files)}
         />
-        <label htmlFor="pdf-security-input" className="dropzone-inner">
-          <span className="dropzone-ic">
-            <IconPlus width={18} height={18} />
-          </span>
-          {file ? `已选择：${file.name}` : "拖入 PDF，或点击选择文件"}
-        </label>
       </div>
 
       {file && (

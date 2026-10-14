@@ -7,6 +7,7 @@ import {
   IconPlus,
 } from "@/components/icons";
 import { addWatermark, downloadBytes, pdfError, pdfPages } from "@/lib/pdf-utils";
+import { FileDropZone } from "@/components/drop-zone";
 
 const COLORS: { label: string; value: string }[] = [
   { label: "黑", value: "#000000" },
@@ -69,28 +70,12 @@ export function WatermarkTab() {
 
   return (
     <div className="single-panel tab-anim">
-      <div
-        className="dropzone"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          void addFile(Array.from(e.dataTransfer.files));
-        }}
-      >
-        <input
-          type="file"
-          accept="application/pdf,.pdf"
-          id="pdf-watermark-input"
-          hidden
-          onChange={(e) => void addFile(Array.from(e.target.files ?? []))}
-        />
-        <label htmlFor="pdf-watermark-input" className="dropzone-inner">
-          <span className="dropzone-ic">
-            <IconPlus width={18} height={18} />
-          </span>
-          {file ? `已选择：${file.name}（${file.pages} 页）` : "拖入 PDF，或点击选择文件"}
-        </label>
-      </div>
+      <FileDropZone
+        accept="application/pdf,.pdf"
+        icon={<IconPlus width={18} height={18} />}
+        label={file ? `已选择：${file.name}（${file.pages} 页）` : "拖入 PDF，或点击选择文件"}
+        onFiles={(files) => void addFile(files)}
+      />
 
       {file && (
         <div className="vd-grid" style={{ marginTop: 14 }}>

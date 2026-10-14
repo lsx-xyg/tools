@@ -26,10 +26,10 @@ import {
   IconRefresh,
   IconServer,
   IconTrash,
-  IconUpload,
   IconWifi,
   IconX,
 } from "../icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 type SendMode = "rtc" | "offline";
 type ContentMode = "text" | "file";
@@ -188,7 +188,6 @@ export function SendPanel() {
   const [contentMode, setContentMode] = useState<ContentMode>("text");
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [drag, setDrag] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [code, setCode] = useState("");
   const [expiresAt, setExpiresAt] = useState<number>(0);
@@ -198,7 +197,6 @@ export function SendPanel() {
   const [offlineDownloads, setOfflineDownloads] = useState<number>(10);
   const [converted, setConverted] = useState<string[]>([]);
   const senderRef = useRef<{ cancel(): void } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const doneRef = useRef(false);
 
   const chars = countChars(text);
@@ -442,42 +440,13 @@ export function SendPanel() {
               </div>
             ) : (
               <div className="field">
-                <input
-                  ref={inputRef}
-                  type="file"
+                <FileDropZone
                   multiple
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    if (e.target.files) addFiles(e.target.files);
-                    e.target.value = "";
-                  }}
+                  icon={<IconFile width={18} height={18} />}
+                  label="点击选择或拖拽文件到这里"
+                  hint={`最多 ${LIMITS.filesMaxCount} 个 · 单个 ≤ ${fmtBytes(sendMode === "rtc" ? RTC_LIMITS.fileMaxBytes : LIMITS.fileMaxBytes)} · 总量 ≤ ${fmtBytes(sendMode === "rtc" ? RTC_LIMITS.filesTotalMaxBytes : LIMITS.filesTotalMaxBytes)}`}
+                  onFiles={(files) => addFiles(files)}
                 />
-                <div
-                  className={`dropzone ${drag ? "drag" : ""}`}
-                  onClick={() => inputRef.current?.click()}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDrag(true);
-                  }}
-                  onDragLeave={() => setDrag(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDrag(false);
-                    if (e.dataTransfer.files) addFiles(e.dataTransfer.files);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
-                  }}
-                  aria-label="选择或拖拽文件"
-                >
-                  <IconUpload />
-                  <span className="dz-main">点击选择或拖拽文件到这里</span>
-                  <span className="dz-sub">
-                    最多 {LIMITS.filesMaxCount} 个 · 单个 ≤ {fmtBytes(sendMode === "rtc" ? RTC_LIMITS.fileMaxBytes : LIMITS.fileMaxBytes)} · 总量 ≤ {fmtBytes(sendMode === "rtc" ? RTC_LIMITS.filesTotalMaxBytes : LIMITS.filesTotalMaxBytes)}
-                  </span>
-                </div>
                 {files.length > 0 && (
                   <div className="file-list">
                     {files.map((f, i) => (

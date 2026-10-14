@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  IconUpload,
   IconTrash,
   IconLoader,
   IconRotate,
@@ -16,6 +15,7 @@ import {
 import JSZip from "jszip";
 import { PDFDocument, degrees } from "pdf-lib";
 import { getPdfjs } from "@/lib/pdf-utils";
+import { FileDropZone } from "@/components/drop-zone";
 
 /* ---------- 类型 ---------- */
 interface FileRow {
@@ -80,13 +80,11 @@ export function RotateTab() {
   const [rows, setRows] = useState<FileRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<LogLine[]>([]);
-  const [dragging, setDragging] = useState(false);
   /* 大预览模态：点击缩略图打开，viewer 为当前查看的文件与页码 */
   const [viewer, setViewer] = useState<{ name: string; pageIndex: number } | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   /* 大预览缩放：基准 2.2 = 100%，范围 0.8~6.0 */
   const [viewZoom, setViewZoom] = useState(2.2);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const viewCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewWrapRef = useRef<HTMLDivElement>(null);
@@ -529,34 +527,14 @@ export function RotateTab() {
   return (
     <div className="tab-anim">
       {/* 上传区 */}
-      <div
-        className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          addFiles(e.dataTransfer.files);
-        }}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <IconUpload width={22} height={22} />
-        <span>点击或拖拽 PDF / ZIP 到此处（可多选）</span>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.zip"
-          multiple
-          hidden
-          onChange={(e) => {
-            if (e.target.files?.length) addFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-      </div>
+      <FileDropZone
+        accept=".pdf,.zip"
+        multiple
+        icon={<IconFile width={18} height={18} />}
+        label="拖入 PDF / ZIP，或点击选择文件"
+        hint="可多选 · 自动从 ZIP 中提取 PDF"
+        onFiles={(files) => void addFiles(files)}
+      />
 
       {/* 工具栏 */}
       {rows.length > 0 && (

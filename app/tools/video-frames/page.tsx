@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { useFFmpeg, dataToBlob } from "@/lib/use-ffmpeg";
-import { IconImage, IconFilm, IconGauge, IconRepeat, IconTrash, IconDownload, IconLoader, IconUpload } from "@/components/icons";
+import { IconImage, IconFilm, IconGauge, IconRepeat, IconTrash, IconDownload, IconLoader } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 type TabId = "frame" | "gif2video" | "speed";
 
@@ -30,7 +31,6 @@ const VIDEO_EXT = /\.(mp4|webm|mov|avi|mkv|m4v|gif)$/i;
 export default function VideoFramesPage() {
   const [tab, setTab] = useState<TabId>("frame");
   const [files, setFiles] = useState<File[]>([]);
-  const [dragging, setDragging] = useState(false);
   const [outputs, setOutputs] = useState<OutFile[]>([]);
 
   const { runTask, runBatch, wname, busy, progress, engineReady, loadingEngine, log } = useFFmpeg();
@@ -40,8 +40,6 @@ export default function VideoFramesPage() {
   const [frameInterval, setFrameInterval] = useState(1);
   const [speedRate, setSpeedRate] = useState(2);
   const [gifFmt, setGifFmt] = useState("mp4");
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback(
     (list: FileList | File[]) => {
@@ -229,33 +227,12 @@ export default function VideoFramesPage() {
           <span className="right subtle">{rule.hint}</span>
         </div>
         <div className="panel-body">
-          <div
-            className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              addFiles(e.dataTransfer.files);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <IconUpload width={22} height={22} />
-            <span>{tab === "gif2video" ? "点击或拖拽 GIF 到此处" : "点击或拖拽视频到此处"}</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={tab === "gif2video" ? "image/gif,.gif" : "video/*,.mp4,.webm,.mov,.avi,.mkv,.m4v"}
-              hidden
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <FileDropZone
+            accept={tab === "gif2video" ? "image/gif,.gif" : "video/*,.mp4,.webm,.mov,.avi,.mkv,.m4v"}
+            icon={tab === "gif2video" ? <IconImage width={18} height={18} /> : <IconFilm width={18} height={18} />}
+            label={tab === "gif2video" ? "拖入 GIF，或点击选择文件" : "拖入视频，或点击选择文件"}
+            onFiles={(files) => addFiles(files)}
+          />
 
           {files.length > 0 && (
             <div className="vd-filelist">

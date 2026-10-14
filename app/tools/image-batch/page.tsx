@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { ToolHead } from "@/components/tool-head";
-import { IconImage, IconDrop, IconTrash, IconDownload, IconLoader, IconUpload, IconFile, IconArrowUp, IconArrowDown } from "@/components/icons";
+import { IconImage, IconDrop, IconTrash, IconDownload, IconLoader, IconFile, IconArrowUp, IconArrowDown } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 type TabId = "compress" | "watermark" | "topdf";
 
@@ -47,7 +48,6 @@ function loadImage(file: File): Promise<{ img: HTMLImageElement; url: string }> 
 export default function ImageBatchPage() {
   const [tab, setTab] = useState<TabId>("compress");
   const [rows, setRows] = useState<ImageRow[]>([]);
-  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [outputs, setOutputs] = useState<OutFile[]>([]);
@@ -67,7 +67,6 @@ export default function ImageBatchPage() {
   const [pageSize, setPageSize] = useState<"a4" | "a3" | "original">("a4");
   const [fitMode, setFitMode] = useState<"contain" | "cover">("contain");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback(
@@ -371,34 +370,14 @@ export default function ImageBatchPage() {
           <span className="right subtle">最多 30 张</span>
         </div>
         <div className="panel-body">
-          <div
-            className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              addFiles(e.dataTransfer.files);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <IconUpload width={22} height={22} />
-            <span>点击或拖拽图片到此处（可多选）</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp"
-              multiple
-              hidden
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <FileDropZone
+            accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp"
+            multiple
+            icon={<IconImage width={18} height={18} />}
+            label="拖入图片，或点击选择文件"
+            hint="可多选 · 最多 30 张"
+            onFiles={(files) => addFiles(files)}
+          />
 
           {rows.length > 0 && (
             <div className="ib-grid">

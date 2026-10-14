@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { useFFmpeg, type FFmpegInstance } from "@/lib/use-ffmpeg";
-import { IconInfo, IconTrash, IconLoader, IconUpload, IconChevron } from "@/components/icons";
+import { IconInfo, IconTrash, IconLoader, IconChevron } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 
 interface StreamInfo {
   index: string;
@@ -25,15 +26,12 @@ const MEDIA_EXT = /\.(mp4|webm|mov|avi|mkv|m4v|gif|mp3|wav|m4a|ogg|flac|aac|opus
 
 export default function MediaInfoPage() {
   const [files, setFiles] = useState<File[]>([]);
-  const [dragging, setDragging] = useState(false);
   const [results, setResults] = useState<MediaInfo[]>([]);
   const [rawLog, setRawLog] = useState("");
   const [showRaw, setShowRaw] = useState(false);
   const [err, setErr] = useState("");
 
   const { ensureEngine, runTask, runBatch, wname, busy, loadingEngine, engineReady, log, setLog } = useFFmpeg();
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((list: FileList | File[]) => {
     const arr = Array.from(list).filter((f) => MEDIA_EXT.test(f.name));
@@ -144,34 +142,14 @@ export default function MediaInfoPage() {
           <span className="right subtle">上传 1 ~ 10 个音视频</span>
         </div>
         <div className="panel-body">
-          <div
-            className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              addFiles(e.dataTransfer.files);
-            }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <IconUpload width={22} height={22} />
-            <span>点击或拖拽音视频到此处</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*,audio/*,.mp4,.webm,.mov,.avi,.mkv,.m4v,.gif,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus"
-              multiple
-              hidden
-              onChange={(e) => {
-                if (e.target.files?.length) addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <FileDropZone
+            accept="video/*,audio/*,.mp4,.webm,.mov,.avi,.mkv,.m4v,.gif,.mp3,.wav,.m4a,.ogg,.flac,.aac,.opus"
+            multiple
+            icon={<IconInfo width={18} height={18} />}
+            label="拖入音视频，或点击选择文件"
+            hint="可多选 · 解析分辨率 / 码率 / 时长等信息"
+            onFiles={(files) => addFiles(files)}
+          />
 
           {files.length > 0 && (
             <div className="vd-filelist">
