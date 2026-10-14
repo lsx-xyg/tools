@@ -1,4 +1,4 @@
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PageSizes } from "pdf-lib";
 import CryptoJS from "crypto-js";
 
 /** 读取 PDF 页数；加密/损坏时抛出可读错误 */
@@ -159,22 +159,32 @@ export interface ImgSource {
   blob: Blob;
   width: number;
   height: number;
+  /** 顺时针旋转 0/90/180/270（度），默认 0 */
+  rotation?: 0 | 90 | 180 | 270;
 }
 
-/** 多图按顺序合并为一个 PDF；白底 contain 绘制，统一经 canvas 转 JPEG 嵌入 */
+/**
+ * 多图按顺序合并为一个 PDF；白底 contain 绘制（不拉伸变形），统一经 canvas 转 JPEG 嵌入。
+ * - A4 模式：严格使用 pdf-lib 的 PageSizes.A4，每页尺寸恒为 595.28×841.89（纵向）/841.89×595.28（横向）；
+ *   图片在所选纸张内 contain 居中、白底留白，不随图片尺寸改变页面。
+ * - auto 模式：页面尺寸跟随图片（旋转 90/270 时交换宽高）。
+ */
 export async function imagesToPdf(
   files: ImgSource[],
   opts: { pageSize: "a4" | "auto"; orientation: "portrait" | "landscape" },
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const A4W = 595.28;
-  const A4H = 841.89;
+  // 渲染分辨率：约 144 DPI（2×），保证文字/线条清晰；按页面宽高比精确取整，避免拉伸
+  const RENDER = 2;
   for (const f of files) {
+    const rot = ((f.rotation ?? 0) + 360) % 360;
+    const swapped = rot === 90 || rot === 270;
+    // 页面尺寸（pt）
     let pageW: number;
     let pageH: number;
     if (opts.pageSize === "auto") {
-      pageW = (f.width * 72) / 96;
-      pageH = (f.height * 72) / 96;
+      pageW = (swapped ? f.height : f.width) * (72 / 96);
+      pageH = (swapped ? f.width : f.height) * (72 / 96);
       const maxSide = Math.max(pageW, pageH);
       if (maxSide > 14400) {
         const s = 14400 / maxSide;
@@ -182,14 +192,15 @@ export async function imagesToPdf(
         pageH *= s;
       }
     } else if (opts.orientation === "landscape") {
-      pageW = A4H;
-      pageH = A4W;
+      pageW = PageSizes.A4[1];
+      pageH = PageSizes.A4[0];
     } else {
-      pageW = A4W;
-      pageH = A4H;
+      pageW = PageSizes.A4[0];
+      pageH = PageSizes.A4[1];
     }
-    const pxW = Math.max(1, Math.round(pageW / 0.75));
-    const pxH = Math.max(1, Math.round(pageH / 0.75));
+    // 画布按页面宽高比取整（以宽为基准），保证与页面同比例，整页贴图不拉伸
+    const pxW = Math.max(1, Math.round(pageW * RENDER));
+    const pxH = Math.max(1, Math.round((pxW * pageH) / pageW));
     const canvas = document.createElement("canvas");
     canvas.width = pxW;
     canvas.height = pxH;
@@ -198,11 +209,18 @@ export async function imagesToPdf(
     ctx.fillRect(0, 0, pxW, pxH);
     const bmp = await createImageBitmap(f.blob);
     const margin = opts.pageSize === "auto" ? 0 : Math.round(pxW * 0.04);
-    const s = Math.min((pxW - margin * 2) / f.width, (pxH - margin * 2) / f.height);
+    // 旋转后的外接宽高用于 contain 计算
+    const fitW = swapped ? f.height : f.width;
+    const fitH = swapped ? f.width : f.height;
+    const s = Math.min((pxW - margin * 2) / fitW, (pxH - margin * 2) / fitH);
     const dw = f.width * s;
     const dh = f.height * s;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(bmp, (pxW - dw) / 2, (pxH - dh) / 2, dw, dh);
+    ctx.save();
+    ctx.translate(pxW / 2, pxH / 2);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.drawImage(bmp, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
     bmp.close();
     const jpg = await canvasToBytes(canvas, "image/jpeg", 0.92);
     const img = await doc.embedJpg(jpg);

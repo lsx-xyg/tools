@@ -7,8 +7,10 @@ import {
   IconFileStack,
   IconImage,
   IconLoader,
+  IconRotateCw,
   IconTrash,
 } from "@/components/icons";
+import { FileDropZone } from "@/components/drop-zone";
 import { downloadBytes, imagesToPdf } from "@/lib/pdf-utils";
 
 interface ImgRow {
@@ -17,6 +19,7 @@ interface ImgRow {
   preview: string;
   width: number;
   height: number;
+  rotation: 0 | 90 | 180 | 270;
 }
 
 const IMG_EXT = /\.(png|jpe?g|webp)$/i;
@@ -41,10 +44,11 @@ export function Img2PdfTab() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const idRef = useRef(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragIdRef = useRef<number | null>(null);
+  const [overId, setOverId] = useState<number | null>(null);
 
-  const addFiles = useCallback(async (list: FileList | File[]) => {
-    const arr = Array.from(list).filter((f) => IMG_EXT.test(f.name));
+  const addFiles = useCallback(async (list: File[]) => {
+    const arr = list.filter((f) => IMG_EXT.test(f.name));
     if (!arr.length) {
       setErr("请选择图片文件（JPG / PNG / WebP）");
       return;
@@ -53,7 +57,10 @@ export function Img2PdfTab() {
     for (const f of arr) {
       try {
         const { img, url } = await loadImage(f);
-        setRows((prev) => [...prev, { id: idRef.current++, file: f, preview: url, width: img.naturalWidth, height: img.naturalHeight }]);
+        setRows((prev) => [
+          ...prev,
+          { id: idRef.current++, file: f, preview: url, width: img.naturalWidth, height: img.naturalHeight, rotation: 0 },
+        ]);
       } catch (e) {
         setErr(e instanceof Error ? e.message : "图片读取失败");
       }
@@ -83,13 +90,36 @@ export function Img2PdfTab() {
     });
   };
 
+  const rotate = (id: number) => {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, rotation: (((r.rotation + 90) % 360) as 0 | 90 | 180 | 270) } : r)),
+    );
+  };
+
+  /* HTML5 拖拽排序：放下时把拖动项插到目标项位置 */
+  const onDropTo = (targetId: number) => {
+    const fromId = dragIdRef.current;
+    dragIdRef.current = null;
+    setOverId(null);
+    if (fromId === null || fromId === targetId) return;
+    setRows((prev) => {
+      const from = prev.findIndex((r) => r.id === fromId);
+      const to = prev.findIndex((r) => r.id === targetId);
+      if (from < 0 || to < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
   async function run() {
     if (!rows.length) return;
     setBusy(true);
     setErr("");
     try {
       const data = await imagesToPdf(
-        rows.map((r) => ({ blob: r.file, width: r.width, height: r.height })),
+        rows.map((r) => ({ blob: r.file, width: r.width, height: r.height, rotation: r.rotation })),
         { pageSize, orientation },
       );
       downloadBytes(data, "images.pdf");
@@ -102,39 +132,66 @@ export function Img2PdfTab() {
 
   return (
     <div className="single-panel tab-anim">
-      <div
-        className="vd-dropzone"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <IconImage width={22} height={22} />
-        <span>点击或拖拽图片到此处（可多选，JPG / PNG / WebP）</span>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
-          multiple
-          hidden
-          onChange={(e) => {
-            if (e.target.files?.length) void addFiles(e.target.files);
-            e.target.value = "";
-          }}
-        />
-      </div>
+      <FileDropZone
+        accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+        multiple
+        icon={<IconImage width={18} height={18} />}
+        label="拖入图片，或点击选择文件"
+        hint="可多选 · JPG / PNG / WebP"
+        onFiles={(files) => void addFiles(files)}
+        disabled={busy}
+      />
 
       {rows.length > 0 && (
         <div className="ib-grid" style={{ marginTop: 14 }}>
           {rows.map((r, i) => (
-            <div key={r.id} className="ib-card">
-              <img src={r.preview} alt={r.file.name} className="ib-thumb" />
+            <div
+              key={r.id}
+              className="ib-card"
+              draggable={!busy}
+              onDragStart={(e) => {
+                dragIdRef.current = r.id;
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragEnd={() => {
+                dragIdRef.current = null;
+                setOverId(null);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (overId !== r.id) setOverId(r.id);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                onDropTo(r.id);
+              }}
+              style={
+                overId === r.id
+                  ? { outline: "2px solid var(--accent)", outlineOffset: 2, cursor: "grabbing" }
+                  : { cursor: "grab" }
+              }
+            >
+              <img
+                src={r.preview}
+                alt={r.file.name}
+                className="ib-thumb"
+                style={{ transform: `rotate(${r.rotation}deg)`, transition: "transform 0.2s ease" }}
+              />
               <div className="ib-meta">
                 <span className="ib-name" title={r.file.name}>{i + 1}. {r.file.name}</span>
-                <span className="ib-sub">{r.width}×{r.height}</span>
+                <span className="ib-sub">
+                  {r.width}×{r.height}{r.rotation ? ` · ${r.rotation}°` : ""}
+                </span>
                 <div className="vc-token-row" style={{ gap: 4, marginTop: 6 }}>
                   <button type="button" className="vc-icon-btn" onClick={() => move(i, -1)} title="上移" disabled={busy || i === 0}>
                     <IconArrowUp width={14} height={14} />
                   </button>
                   <button type="button" className="vc-icon-btn" onClick={() => move(i, 1)} title="下移" disabled={busy || i === rows.length - 1}>
                     <IconArrowDown width={14} height={14} />
+                  </button>
+                  <button type="button" className="vc-icon-btn" onClick={() => rotate(r.id)} title="旋转 90°" disabled={busy}>
+                    <IconRotateCw width={14} height={14} />
                   </button>
                 </div>
               </div>
