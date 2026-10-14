@@ -50,6 +50,8 @@ import {
   Laptop,
   Link,
   LoaderCircle,
+  Lock,
+  LockOpen,
   Menu,
   Monitor,
   Moon,
@@ -192,3 +194,5 @@ export const IconGlobe = wrap(Globe);
 export const IconChevron = wrap(ChevronRight);
 export const IconRotateCw = wrap(RotateCw);
 export const IconRotate = wrap(RotateCcw);
+export const IconLock = wrap(Lock);
+export const IconLockOpen = wrap(LockOpen);

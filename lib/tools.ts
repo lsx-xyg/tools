@@ -24,7 +24,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup" | "excel-functions" | "pdf-auto-rotate";
+export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup" | "excel-functions";
 
 export interface Tool {
   id: ToolId;
@@ -70,8 +70,7 @@ export interface Tool {
     | "ocr"
     | "ip-lookup"
     | "dns-lookup"
-    | "excel-functions"
-    | "pdf-auto-rotate";
+    | "excel-functions";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -345,14 +344,14 @@ export const tools: Tool[] = [
   {
     id: "pdf",
     index: "T-20",
-    name: "PDF 处理",
-    tagline: "合并 / 拆分 / 提取页面",
+    name: "PDF 工具箱",
+    tagline: "合并 / 拆分 / 旋转 / 压缩 / 转图片 / 图片转 PDF / 删页 / 页码 / 水印 / 加密",
     description:
-      "把多个 PDF 按顺序合并成一个；或按页码范围提取指定页、每 N 页拆分打包下载。全部在浏览器本地处理，文件不上传。",
+      "一站式 PDF 处理：合并、按范围提取与每 N 页拆分、逐页旋转（含智能方向检测与全屏大预览）、压缩瘦身、PDF 转 JPG/PNG、图片合并转 PDF、删页与重排、添加页码、文字水印、密码加密与解密。全部在浏览器本地处理，文件不上传。",
     path: "/tools/pdf",
     icon: "pdf",
     lamp: "ok",
-    tags: ["PDF", "合并", "拆分", "提取页面"],
+    tags: ["PDF", "合并", "拆分", "旋转", "压缩", "转图片", "水印", "加密"],
   },
   {
     id: "http-parse",
@@ -478,13 +477,13 @@ export const tools: Tool[] = [
     id: "ocr",
     index: "T-34",
     name: "OCR 文字识别",
-    tagline: "图片文字识别（中 / 英）· 本地运行",
+    tagline: "图片 / PDF / Word 文字识别 · 本地运行",
     description:
-      "基于 tesseract.js 在浏览器本地识别图片中的文字，支持简体中文、English 与中英混合，可一键复制结果。图片不上传服务器，识别引擎与语言数据自托管。",
+      "基于 PaddleOCR 引擎（PixPin 同源）在浏览器本地识别文字，中文更准确。支持图片、PDF 与 Word(docx)，Word 直接提取文档文字，内嵌扫描图单独识别，可一键复制结果。文件不上传服务器，引擎与模型自托管。",
     path: "/tools/ocr",
     icon: "ocr",
     lamp: "ok",
-    tags: ["OCR", "文字识别", "tesseract", "中文", "English", "本地"],
+    tags: ["OCR", "文字识别", "PaddleOCR", "中文", "PDF", "Word", "本地"],
   },
   {
     id: "ip-lookup",
@@ -521,18 +520,6 @@ export const tools: Tool[] = [
     icon: "excel-functions",
     lamp: "ok",
     tags: ["Excel", "函数", "速查", "SUM", "VLOOKUP", "教程"],
-  },
-  {
-    id: "pdf-auto-rotate",
-    index: "T-38",
-    name: "PDF 自动旋转",
-    tagline: "批量识别方向并旋转正 · 快速 / OCR 深度双模式",
-    description:
-      "上传多个 PDF 或 ZIP 压缩包，自动识别每页方向并旋转正。快速模式读取 /Rotate 属性修正误设旋转；深度模式通过 OCR 识别文字实际方向（0°/90°/180°/270°），适合扫描件。全部本地处理，文件不上传。",
-    path: "/tools/pdf-auto-rotate",
-    icon: "pdf-auto-rotate",
-    lamp: "ok",
-    tags: ["PDF", "旋转", "自动", "OCR", "扫描件", "批量"],
   },
 ];
 

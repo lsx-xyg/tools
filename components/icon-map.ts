@@ -41,5 +41,4 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   "ip-lookup": IconGlobe,
   "dns-lookup": IconGlobe,
   "excel-functions": IconTable,
-  "pdf-auto-rotate": IconRotate,
 };
