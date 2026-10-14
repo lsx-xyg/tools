@@ -9,7 +9,7 @@ related_targets: []
 
 ## Scope & Visitor Mode
 
-全站壳（导航 + 首页 + 工具页框架），Operate 模式为主，首页带轻量发现（Persuade）元素。当前 37 个工具页（T-01 文本/文件互传 ～ T-37 Excel 函数快查），注册于 `lib/tools.ts`。第二批（T-29~T-36）延续「精密仪器台」视觉：音频/媒体/抽帧复用 ffmpeg.wasm hook（lib/use-ffmpeg.ts），图片批量/录制/OCR 为浏览器本地能力，IP/DNS 为外部接口查询页；录制支持录制中实时预览与移动端 getDisplayMedia 兼容提示，DNS 查询支持多源自动容错与 Cloudflare CNAME 压平 / 代理 IP 识别。T-37 Excel 函数快查：列表→详情两级结构，函数库在 `lib/excel-functions.ts`，详情页交互模拟器在 `components/excel-demo.tsx`（输入参数实时出结果，VLOOKUP/INDEX 等带模拟表高亮）；列表搜索在 `components/excel-search.tsx`（客户端）。T-20 PDF 工具箱：一站式 PDF 处理：合并、按范围提取与每 N 页拆分、逐页旋转（含智能方向检测与全屏大预览）、压缩瘦身、PDF 转 JPG/PNG、图片合并转 PDF、删页与重排、添加页码、文字水印、密码加密与解密。全部在浏览器本地处理，文件不上传。原 T-38 PDF 自动旋转不再作为独立工具页：其能力已并入 PDF 工具箱·旋转 Tab（智能方向检测、逐页独立旋转、全屏大预览、批量下载）；旧路由 /tools/pdf-auto-rotate 保留并重定向到 /tools/pdf?tab=rotate。
+全站壳（导航 + 首页 + 工具页框架），Operate 模式为主，首页带轻量发现（Persuade）元素。当前 37 个工具页（T-01 文本/文件互传 ～ T-37 Excel 函数快查），注册于 `lib/tools.ts`。第二批（T-29~T-36）延续「精密仪器台」视觉：音频/媒体/抽帧复用 ffmpeg.wasm hook（lib/use-ffmpeg.ts），图片批量/录制/OCR 为浏览器本地能力，IP/DNS 为外部接口查询页；录制支持录制中实时预览与移动端 getDisplayMedia 兼容提示，DNS 查询支持多源自动容错与 Cloudflare CNAME 压平 / 代理 IP 识别。T-37 Excel 函数快查：列表→详情两级结构，函数库在 `lib/excel-functions.ts`，详情页交互模拟器在 `components/excel-demo.tsx`（输入参数实时出结果，VLOOKUP/INDEX 等带模拟表高亮）；列表搜索在 `components/excel-search.tsx`（客户端）。全站样式接入主题 CSS 变量（明暗完整适配），详情页排版与触控焦点优化。T-20 PDF 工具箱：一站式 PDF 处理：合并、按范围提取与每 N 页拆分、逐页旋转（含智能方向检测与全屏大预览）、压缩瘦身、PDF 转 JPG/PNG、图片合并转 PDF（严格按所选纸张 A4 出页，缩略图拖拽排序 + 逐图 90° 旋转）、删页与重排、添加页码、文字水印、密码加密与解密。全部在浏览器本地处理，文件不上传。全站上传/拖入入口统一复用 `components/drop-zone.tsx`（FileDropZone，「拖入文件，或点击选择文件」横排样式，真实拖放 + 键盘可达）。原 T-38 PDF 自动旋转不再作为独立工具页：其能力已并入 PDF 工具箱·旋转 Tab（智能方向检测、逐页独立旋转、全屏大预览、批量下载）；旧路由 /tools/pdf-auto-rotate 保留并重定向到 /tools/pdf?tab=rotate。首页仪表阵列支持常用排序：点击次数自动前置 +「常用管理」置顶/清空计数（localStorage，`components/home-console.tsx`）。
 
 ## Audience
 
@@ -35,7 +35,7 @@ related_targets: []
 
 **STORY**：访客把站点当作一台可靠的精密仪器：每台工具都有状态指示灯（就绪 / 即将上线），任何操作都有即时的「亮灯」反馈；互传像在两台终端之间对表。
 
-**FIRST VIEWPORT**：品牌行 + 主题切换；仪表阵列（工具卡片带状态灯与编号读数），互传工具作为第一台仪表置前；下方一行「在线 P2P 直传 · 到期自动清除 · 免登录 · 免费」。
+**FIRST VIEWPORT**：品牌行 + 主题切换；仪表阵列（工具卡片带状态灯与编号读数；按点击次数自动排序 + 常用管理置顶），互传工具作为第一台仪表置前；下方一行「在线 P2P 直传 · 到期自动清除 · 免登录 · 免费」。
 
 **FORM**：自研方向 #7（精密仪器台），种子 c5f6884b；code-led 构建（中文工具 UI 无法由图像模型忠实渲染，本会话以契约承载野心，不落盘 buildPath）。
 
