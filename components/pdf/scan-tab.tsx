@@ -5,7 +5,7 @@ import { IconFileStack, IconImage, IconLoader } from "@/components/icons";
 import { FileDropZone } from "@/components/drop-zone";
 import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 import { completeTask, createTask, failTask, hasRunningTask, updateTask } from "@/lib/task-center";
-import { downloadBytes, getPdfjs, scanToPdf, type ScanMode } from "@/lib/pdf-utils";
+import { downloadBytes, getPdfjs, scanToPdf, type ScanMode, type ScanSeal } from "@/lib/pdf-utils";
 
 const TOOL_NAME = "PDF 扫描合成";
 
@@ -41,6 +41,8 @@ export function ScanPdfTab() {
   const [pageSize, setPageSize] = useState<"a4" | "auto">("a4");
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
   const [mode, setMode] = useState<ScanMode>("gray");
+  const [sealOn, setSealOn] = useState(false);
+  const [sealText, setSealText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const idRef = useRef(0);
@@ -121,6 +123,7 @@ export function ScanPdfTab() {
           pageSize,
           orientation,
           mode,
+          seal: mode === "paper" && sealOn && sealText.trim() ? ({ text: sealText.trim() } satisfies ScanSeal) : null,
           onProgress: (p) => updateTask(taskId, { progress: p }),
         },
       );
@@ -184,6 +187,18 @@ export function ScanPdfTab() {
               ))}
             </select>
           </div>
+          {mode === "paper" && (
+            <div className="vd-field">
+              <label className="vc-label">红色印章</label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="text" className="input" placeholder="如：青岛工学院检测专用章" value={sealText} onChange={(e) => setSealText(e.target.value)} disabled={busy || !sealOn} />
+                <label style={{ fontSize: 13, display: "flex", gap: 6, alignItems: "center", whiteSpace: "nowrap" }} title="盖在每页右下角，半透明微斜，如真实盖章">
+                  <input type="checkbox" checked={sealOn} onChange={(e) => setSealOn(e.target.checked)} disabled={busy} />
+                  盖章
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

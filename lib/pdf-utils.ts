@@ -772,7 +772,12 @@ export async function decryptPdf(
 
 /* ===================== 扫描件合成（多来源文档 → 扫描件页 → 合并 PDF） ===================== */
 
-export type ScanMode = "color" | "gray" | "bw";
+export type ScanMode = "color" | "gray" | "bw" | "paper";
+
+export interface ScanSeal {
+  /** 印章文字（机构名/专用章名），盖在页面右下角 */
+  text: string;
+}
 
 export interface ScanSource {
   kind: "pdf" | "image" | "doc";
@@ -787,6 +792,8 @@ export interface ScanPdfOptions {
   pageSize: "a4" | "auto";
   orientation: "portrait" | "landscape";
   mode: ScanMode;
+  /** 纸面字迹模式下可选的红色印章（缺省不盖） */
+  seal?: ScanSeal | null;
   onProgress?: (ratio: number) => void;
 }
 
@@ -811,9 +818,106 @@ function loadImageBlob(file: File | Blob): Promise<HTMLImageElement> {
   });
 }
 
-/** 色彩模式：原色不动；灰度 grayscale；黑白 = 灰度 + 强对比（近似二值，速度优于逐像素阈值） */
-function applyScanMode(src: HTMLCanvasElement, mode: ScanMode): HTMLCanvasElement {
+/** 纸张质感：米黄纸色 + 墨色字迹 + 轻噪点纸纹 + 可选红色印章（维普报告式真实扫描观感） */
+function applyPaperScan(src: HTMLCanvasElement, seal?: ScanSeal | null): HTMLCanvasElement {
+  const w = src.width;
+  const h = src.height;
+  const paper = document.createElement("canvas");
+  paper.width = w;
+  paper.height = h;
+  const ctx = paper.getContext("2d")!;
+  // 米黄纸底
+  ctx.fillStyle = "#f5f0e2";
+  ctx.fillRect(0, 0, w, h);
+  // 内容：灰度 + 轻微加深（墨色），multiply 叠到纸上——白处透纸色、墨处显字迹
+  const ink = document.createElement("canvas");
+  ink.width = w;
+  ink.height = h;
+  const ictx = ink.getContext("2d")!;
+  ictx.filter = "grayscale(1) contrast(1.28) brightness(1.03)";
+  ictx.drawImage(src, 0, 0);
+  ctx.globalCompositeOperation = "multiply";
+  ctx.drawImage(ink, 0, 0);
+  ctx.globalCompositeOperation = "source-over";
+  // 轻噪点纸纹（步进 2 像素：颗粒自然，遍历量减半）
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 8) {
+    const n = (Math.random() - 0.5) * 14;
+    d[i] += n;
+    d[i + 1] += n;
+    d[i + 2] += n;
+  }
+  ctx.putImageData(img, 0, 0);
+  // 可选红色印章（右下角、微斜、半透明）
+  if (seal?.text) drawSeal(ctx, seal.text, w, h);
+  return paper;
+}
+
+/** 红色圆章：外圆 + 内圆 + 五角星；文字 ≤10 字居中两行，否则绕环形排列 */
+function drawSeal(ctx: CanvasRenderingContext2D, text: string, w: number, h: number) {
+  const r = Math.min(w, h) * 0.085;
+  const cx = w - r - Math.max(24, w * 0.045);
+  const cy = h - r - Math.max(24, h * 0.045);
+  const chars = text.split("");
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.2);
+  ctx.globalAlpha = 0.82;
+  ctx.strokeStyle = "#b02a20";
+  ctx.fillStyle = "#b02a20";
+  ctx.lineWidth = Math.max(2, r * 0.055);
+  // 外圆 + 内圆
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.7, 0, Math.PI * 2);
+  ctx.stroke();
+  // 五角星
+  const sr = r * 0.22;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i += 1) {
+    const a = -Math.PI / 2 + (i * 4 * Math.PI) / 5;
+    const px = Math.cos(a) * sr;
+    const py = Math.sin(a) * sr;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  if (chars.length <= 10) {
+    const fs = r * 0.34;
+    ctx.font = `600 ${fs}px system-ui,'PingFang SC','Microsoft YaHei',sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const half = Math.ceil(chars.length / 2);
+    ctx.fillText(chars.slice(0, half).join(""), 0, -fs * 0.52);
+    if (chars.length > 1) ctx.fillText(chars.slice(half).join(""), 0, fs * 0.52);
+  } else {
+    const fs = r * 0.16;
+    const mid = r * 0.85;
+    const step = (2 * Math.PI) / chars.length;
+    const start = -Math.PI / 2;
+    ctx.font = `600 ${fs}px system-ui,'PingFang SC','Microsoft YaHei',sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    chars.forEach((ch, i) => {
+      const a = start + i * step + Math.PI / 2;
+      ctx.save();
+      ctx.translate(Math.cos(a) * mid, Math.sin(a) * mid);
+      ctx.rotate(a + Math.PI / 2);
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+  }
+  ctx.restore();
+}
+
+/** 色彩模式：原色不动；灰度 grayscale；黑白 = 灰度 + 强对比（近似二值）；纸面字迹走 applyPaperScan */
+function applyScanMode(src: HTMLCanvasElement, mode: ScanMode, seal?: ScanSeal | null): HTMLCanvasElement {
   if (mode === "color") return src;
+  if (mode === "paper") return applyPaperScan(src, seal);
   const c = document.createElement("canvas");
   c.width = src.width;
   c.height = src.height;
@@ -839,7 +943,7 @@ function rotateCanvas(src: HTMLCanvasElement, rotation: number): HTMLCanvasEleme
 }
 
 /** Word(docx) → 按页面高度切割的扫描件页 canvas 数组（mammoth → HTML → html2canvas） */
-async function docxToScanPages(file: File | Blob, pageW: number, pageH: number, mode: ScanMode): Promise<HTMLCanvasElement[]> {
+async function docxToScanPages(file: File | Blob, pageW: number, pageH: number, mode: ScanMode, seal?: ScanSeal | null): Promise<HTMLCanvasElement[]> {
   const mammoth = await import("mammoth");
   const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
   const host = document.createElement("div");
@@ -870,7 +974,7 @@ async function docxToScanPages(file: File | Blob, pageW: number, pageH: number, 
       const sy = i * pageH;
       const sh = Math.min(pageH, full.height - sy);
       ctx.drawImage(full, 0, sy, pageW, sh, 0, 0, pageW, sh);
-      pages.push(applyScanMode(c, mode));
+      pages.push(applyScanMode(c, mode, seal));
     }
     return pages;
   } finally {
@@ -879,7 +983,7 @@ async function docxToScanPages(file: File | Blob, pageW: number, pageH: number, 
 }
 
 /** PDF → 扫描件页 canvas 数组（pdfjs 逐页渲染白底，应用色彩模式） */
-async function pdfToScanPages(bytes: ArrayBuffer, scale: number, mode: ScanMode): Promise<HTMLCanvasElement[]> {
+async function pdfToScanPages(bytes: ArrayBuffer, scale: number, mode: ScanMode, seal?: ScanSeal | null): Promise<HTMLCanvasElement[]> {
   const pdfjs = await getPdfjs();
   const src = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
   try {
@@ -894,7 +998,7 @@ async function pdfToScanPages(bytes: ArrayBuffer, scale: number, mode: ScanMode)
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, c.width, c.height);
       await page.render({ canvasContext: ctx, viewport: vp }).promise;
-      pages.push(applyScanMode(c, mode));
+      pages.push(applyScanMode(c, mode, seal));
     }
     return pages;
   } finally {
@@ -928,9 +1032,9 @@ export async function scanToPdf(
     try {
       let canvases: HTMLCanvasElement[];
       if (s.kind === "pdf") {
-        canvases = await pdfToScanPages(s.bytes ?? (await s.file.arrayBuffer()), 2, opts.mode);
+        canvases = await pdfToScanPages(s.bytes ?? (await s.file.arrayBuffer()), 2, opts.mode, opts.seal);
       } else if (s.kind === "doc") {
-        canvases = await docxToScanPages(s.file, pageW, pageH, opts.mode);
+        canvases = await docxToScanPages(s.file, pageW, pageH, opts.mode, opts.seal);
       } else {
         const img = await loadImageBlob(s.file);
         const c = document.createElement("canvas");
@@ -938,7 +1042,7 @@ export async function scanToPdf(
         c.height = img.naturalHeight;
         const ctx = c.getContext("2d")!;
         ctx.drawImage(img, 0, 0);
-        canvases = [applyScanMode(c, opts.mode)];
+        canvases = [applyScanMode(c, opts.mode, opts.seal)];
       }
       const n = Math.max(1, canvases.length);
       for (let p = 0; p < canvases.length; p += 1) {
