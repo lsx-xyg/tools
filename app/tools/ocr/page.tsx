@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolHead } from "@/components/tool-head";
+import { FileDropZone } from "@/components/drop-zone";
 import { IconScan, IconTrash, IconLoader, IconUpload, IconCopy, IconFile, IconFileStack } from "@/components/icons";
 
 type FileKind = "image" | "pdf" | "docx";
@@ -60,7 +61,6 @@ function assemble(itemsArr: { items?: { text: string }[] }[], pageLabel: (i: num
 
 export default function OcrPage() {
   const [item, setItem] = useState<FileItem | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
   const [text, setText] = useState("");
@@ -229,38 +229,32 @@ export default function OcrPage() {
         </div>
         <div className="panel-body">
           {!item ? (
-            <div
-              className={`vd-dropzone ${dragging ? "vd-dropzone-active" : ""}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
+            <FileDropZone
+              accept={accept}
+              icon={<IconUpload width={18} height={18} />}
+              label="拖入图片 / PDF / Word，或点击选择文件"
+              hint="支持图片 / PDF / Word(docx) · 单文件识别"
+              onFiles={(files) => {
+                const f = files.find(
+                  (x) => IMG_EXT.test(x.name) || PDF_EXT.test(x.name) || DOCX_EXT.test(x.name),
+                );
+                if (f) setFile(f);
               }}
-              onDragLeave={() => setDragging(false)}
+            />
+          ) : (
+            <div
+              className="ocr-preview"
+              onDragOver={(e) => {
+                if (Array.from(e.dataTransfer?.types ?? []).includes("Files")) e.preventDefault();
+              }}
               onDrop={(e) => {
                 e.preventDefault();
-                setDragging(false);
                 const f = Array.from(e.dataTransfer.files).find(
                   (x) => IMG_EXT.test(x.name) || PDF_EXT.test(x.name) || DOCX_EXT.test(x.name),
                 );
                 if (f) setFile(f);
               }}
-              onClick={() => fileInputRef.current?.click()}
             >
-              <IconUpload width={22} height={22} />
-              <span>点击或拖拽图片 / PDF / Word 到此处</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={accept}
-                hidden
-                onChange={(e) => {
-                  if (e.target.files?.[0]) setFile(e.target.files[0]);
-                  e.target.value = "";
-                }}
-              />
-            </div>
-          ) : (
-            <div className="ocr-preview">
               {item.kind === "image" && item.preview && (
                 <img src={item.preview} alt={item.file.name} className="ocr-img" />
               )}

@@ -6111,3 +6111,63 @@ mark.re-match {
     max-height: 60vh;
   }
 }
+
+/* ---------- 全局拖放防护遮罩（DropGuard） ---------- */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  pointer-events: none; /* 纯视觉层：drop 事件穿透到下层，由 window 级监听统一路由 */
+  animation: overlay-in 0.18s var(--ease-out);
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.drop-overlay-inner {
+  width: min(560px, calc(100vw - 48px));
+  padding: 44px 32px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--r-lg);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.drop-overlay-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.drop-overlay-main {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.drop-overlay-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

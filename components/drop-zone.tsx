@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { IconPlus } from "@/components/icons";
+import { useDropGuard } from "@/lib/drop-guard";
 
 export interface FileDropZoneProps {
   /** 主文案，如「拖入 PDF，或点击选择文件」 */
@@ -37,36 +38,57 @@ export function FileDropZone({
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const depthRef = useRef(0);
+  const { register, unregister } = useDropGuard();
+
+  /* 注册为全局拖放接收器：文件拖到页面任意位置（非本组件上）时，遮罩路由会交给 onFiles */
+  useEffect(() => {
+    register({ id, label, accept, multiple, disabled, onFiles });
+    return () => unregister(id);
+  }, [register, unregister, id, label, accept, multiple, disabled, onFiles]);
 
   const openPicker = useCallback(() => {
     if (!disabled) inputRef.current?.click();
   }, [disabled]);
 
+  /* 只对「拖入文件」响应：纯文本 / 链接拖拽不高亮、不拦截（保持浏览器默认） */
+  const hasFiles = useCallback((e: React.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes("Files"), []);
+
   const onDragEnter = useCallback(
     (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
       e.preventDefault();
       e.stopPropagation();
       if (disabled) return;
       depthRef.current += 1;
       setDrag(true);
     },
-    [disabled],
+    [hasFiles, disabled],
   );
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
+  const onDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    },
+    [hasFiles],
+  );
 
-  const onDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    depthRef.current = Math.max(0, depthRef.current - 1);
-    if (depthRef.current === 0) setDrag(false);
-  }, []);
+  const onDragLeave = useCallback(
+    (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      depthRef.current = Math.max(0, depthRef.current - 1);
+      if (depthRef.current === 0) setDrag(false);
+    },
+    [hasFiles],
+  );
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
+      if (!hasFiles(e)) return;
       e.preventDefault();
       e.stopPropagation();
       depthRef.current = 0;
@@ -75,7 +97,7 @@ export function FileDropZone({
       const files = Array.from(e.dataTransfer?.files ?? []);
       if (files.length) onFiles(multiple ? files : files.slice(0, 1));
     },
-    [disabled, multiple, onFiles],
+    [hasFiles, disabled, multiple, onFiles],
   );
 
   const onKeyDown = useCallback(

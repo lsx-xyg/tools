@@ -3,6 +3,7 @@ import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TaskCenter } from "@/lib/task-center";
+import { DropGuardProvider } from "@/lib/drop-guard";
 
 export const metadata: Metadata = {
   title: { default: "工具箱 TOOLBOX · 在线小工具", template: "%s · 工具箱" },
@@ -29,8 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           跳到主要内容
         </a>
         <ThemeProvider>
-          <AppShell>{children}</AppShell>
-          <TaskCenter />
+          <DropGuardProvider>
+            <AppShell>{children}</AppShell>
+            <TaskCenter />
+          </DropGuardProvider>
         </ThemeProvider>
       </body>
     </html>
