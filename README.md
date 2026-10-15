@@ -6,6 +6,8 @@
 
 **一个部署在 Cloudflare Workers 上的在线工具箱，26 个即开即用的小工具，无需注册登录。**
 
+> 💼 **全局任务中心**：视频格式转换、PDF 压缩等耗时任务提交后进入后台运行，右下角悬浮按钮随时查看进度、日志与完成下载；切换工具、继续做别的事不影响任务执行。
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-f38020?logo=cloudflare)](https://workers.cloudflare.com)
@@ -73,7 +75,7 @@
 | 🐙 GitHub Release 清理 | 批量删除旧 Release · 保留最新 N 个 · 可选删 Tag |
 | 📹 屏幕 / 摄像头录制 | MP4（Chrome 126+，不支持自动回退 WebM）/ WebM · 录制中实时预览 · 移动端兼容提示 |
 | 🔤 OCR 文字识别 | 图片 / PDF / Word 文字识别，PaddleOCR 引擎本地识别 |
-| 🎬 视频格式转换 | MP4 / WebM / MOV / MKV / GIF · ffmpeg 本地转换（MP4/MOV/MKV 互转无损） |
+| 🎬 视频格式转换 | MP4 / WebM / MOV / MKV / GIF · ffmpeg 本地转换（MP4/MOV/MKV 互转无损）· 后台任务 + 全局进度 |
 | 📊 Excel 函数快查 | 63 个常用函数 · 语法 / 参数 / 示例 · 交互模拟器 · 明暗主题适配 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台。
