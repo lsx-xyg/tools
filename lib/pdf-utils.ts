@@ -123,14 +123,21 @@ export async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
 export type CompressLevel = "auto" | "low" | "medium" | "high";
 
 /**
- * 三档栅格化参数：scale = 相对 1:1(72dpi) 视口的渲染缩放；quality = JPEG 质量。
- * 清晰度下限已提高：low 视觉基本无损，medium 轻度降质，high 明显压缩但内容仍清晰可读。
+ * 三档栅格化参数：scale = pdf.js 渲染倍率（1.0 ≈ 72dpi），quality = JPEG 质量。
+ * 参考 smallpdf 思路：默认不降分辨率，只重编码图片流；显式有损档也从足够高的
+ * 分辨率起步，避免"糊"。原配置 low 仅 0.9 倍率（<72dpi），对 300dpi 扫描件会
+ * 砍到 1/4 分辨率导致看不清——现提到 1.5 倍率（≈108dpi）起步，肉眼接近无损。
  */
 const RASTER_PARAMS: Record<Exclude<CompressLevel, "auto">, { scale: number; quality: number }> = {
-  low: { scale: 0.9, quality: 0.88 },
-  medium: { scale: 0.75, quality: 0.78 },
-  high: { scale: 0.65, quality: 0.68 },
+  low: { scale: 1.5, quality: 0.85 },
+  medium: { scale: 1.2, quality: 0.75 },
+  high: { scale: 1.0, quality: 0.6 },
 };
+
+/** auto 档：无损重写收益达到该比例(15%)直接用无损；否则尝试高保真重编码（视觉无损级） */
+const AUTO_LOSSLESS_GAIN = 0.15;
+/** auto 档高保真重编码参数：2.0 倍率（≈144dpi）+ 0.85 质量，肉眼接近无损，体积显著下降 */
+const AUTO_REENCODE = { scale: 2.0, quality: 0.85 } as const;
 
 /** 路径 A：无损重写（useObjectStreams 剔除冗余对象）。对文本型 PDF 安全、体积通常略降 */
 async function losslessRewrite(bytes: ArrayBuffer): Promise<Uint8Array> {
@@ -175,10 +182,11 @@ async function rasterizeRebuild(
 }
 
 /**
- * 分级真实压缩：
- * - low / medium / high：栅格化重建（每页转 JPEG 再打包），力度逐级增大，清晰度下限已提高；
- * - auto（建议）：仅做无损重写，绝不栅格化——文字保持可选中、不会变糊。若收益不足，
- *   说明该 PDF 已高度优化或含大量压缩图片，可手动选低 / 中 / 高拿真实压缩。
+ * 分级真实压缩（对齐 smallpdf 思路：默认不降分辨率、只重编码图片流）：
+ * - auto（建议）：先无损重写；若收益 < 15%（说明图片型 / 已优化 PDF），再尝试
+ *   高保真重编码（2.0 倍率渲染 + 0.85 JPEG，≈144dpi 肉眼接近无损），两者取更小者。
+ *   文本型 PDF 走无损不膨胀，图片型 PDF 拿真实压缩且不糊。
+ * - low / medium / high：显式栅格化重建，从 1.5 / 1.2 / 1.0 倍率起步，清晰度有保障。
  * 加密/损坏 PDF 在 pdf-lib.load 阶段抛错，由调用方经 pdfError 转可读提示。
  */
 export async function compressPdf(
@@ -194,9 +202,20 @@ export async function compressPdf(
     return { data, before, after: data.length };
   }
 
-  // auto：只走无损重写，保证清晰度与文字可选中（不自动栅格化）
+  // auto：无损优先，收益不足时高保真重编码取更小者（不糊、不膨胀）
   const rewrite = await losslessRewrite(bytes);
-  return { data: rewrite, before, after: rewrite.length };
+  const gain = 1 - rewrite.length / before;
+  if (gain >= AUTO_LOSSLESS_GAIN) {
+    return { data: rewrite, before, after: rewrite.length };
+  }
+  try {
+    const rebuilt = await rasterizeRebuild(bytes, AUTO_REENCODE.scale, AUTO_REENCODE.quality);
+    const data = rebuilt.length < rewrite.length ? rebuilt : rewrite;
+    return { data, before, after: data.length };
+  } catch {
+    // 栅格化（渲染/编码）失败时退回无损重写，保证至少有产物
+    return { data: rewrite, before, after: rewrite.length };
+  }
 }
 
 /* ===================== PDF 转图片 ===================== */
