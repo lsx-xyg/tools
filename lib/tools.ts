@@ -12,8 +12,6 @@ type BaseToolId =
   | "diff"
   | "regex"
   | "text"
-  | "url"
-  | "jwt"
   | "file-hash"
   | "device-info"
   | "case"
@@ -42,8 +40,6 @@ export interface Tool {
     | "diff"
     | "regex"
     | "text"
-    | "url"
-    | "jwt"
     | "file-hash"
     | "device-info"
     | "case"
@@ -102,8 +98,6 @@ export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   "http-parse": "network",
   "http-status": "quick",
   "ws-test": "network",
-  url: "dev",
-  jwt: "dev",
   hash: "dev",
   "file-hash": "dev",
   ts: "dev",
@@ -260,30 +254,6 @@ export const tools: Tool[] = [
     icon: "text",
     lamp: "ok",
     tags: ["大小写", "排序", "去重", "管线"],
-  },
-  {
-    id: "url",
-    index: "T-13",
-    name: "URL 编码 / 解码",
-    tagline: "encodeURIComponent 安全转换",
-    description:
-      "文本与 URL 编码互相转换，UTF-8 安全（中文、emoji 不乱码），支持编码 / 解码双向切换。",
-    path: "/tools/url",
-    icon: "url",
-    lamp: "ok",
-    tags: ["编码", "解码", "UTF-8 安全"],
-  },
-  {
-    id: "jwt",
-    index: "T-14",
-    name: "JWT 解析 / 生成",
-    tagline: "解码 / 签名验证 / 生成",
-    description:
-      "粘贴 JWT 自动解码 Header 与 Payload，支持 HS / RS / ES / PS 系列签名验证与重新生成，密钥支持 String / Hex / Base64 / PEM / JWK。全部本地完成，不上传。",
-    path: "/tools/jwt",
-    icon: "jwt",
-    lamp: "ok",
-    tags: ["JWT", "Header", "Payload", "过期时间"],
   },
   {
     id: "file-hash",

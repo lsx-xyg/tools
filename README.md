@@ -4,7 +4,7 @@
 
 # 工具箱 TOOLBOX
 
-**一个部署在 Cloudflare Workers 上的在线工具箱，28 个即开即用的小工具，无需注册登录。**
+**一个部署在 Cloudflare Workers 上的在线工具箱，26 个即开即用的小工具，无需注册登录。**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
@@ -59,8 +59,6 @@
 | 📝 文本 Diff 对比 | 两栏对比，差异高亮 |
 | 🔍 正则测试器 | 匹配预览与捕获组 |
 | 🧰 文本处理合集 | 大小写 / 排序 / 去重等 |
-| 🔗 URL 编码 / 解码 | encodeURIComponent 安全转换 |
-| 🎫 JWT 解析 / 生成 | 解码 / 签名验证 / 生成 |
 | 📂 文件哈希校验 | 本地文件的 MD5 / SHA 摘要 |
 | 💻 设备信息 | 屏幕 / 系统 / 浏览器 / 设备架构 |
 | 🔠 Case converter | 大小写与命名风格转换 |
