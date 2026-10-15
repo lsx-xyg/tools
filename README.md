@@ -74,7 +74,7 @@
 | ☁️ Vercel 部署清理 | 批量删除旧部署 · 保留最新 N 个 |
 | 🐙 GitHub Release 清理 | 批量删除旧 Release · 保留最新 N 个 · 可选删 Tag |
 | 📹 屏幕 / 摄像头录制 | MP4（Chrome 126+，不支持自动回退 WebM）/ WebM · 录制中实时预览 · 移动端兼容提示 |
-| 🔤 OCR 文字识别 | 图片 / PDF / Word 文字识别，PaddleOCR 引擎本地识别 |
+| 🔤 OCR 文字识别 | 图片 / PDF / Word 文字识别，PaddleOCR 引擎本地识别（opencv.js / onnx wasm 独立自托管按需加载，大包不进 chunk，弱网不超时） |
 | 🎬 视频格式转换 | MP4 / WebM / MOV / MKV / GIF · ffmpeg 本地转换（MP4/MOV/MKV 互转无损）· 后台任务 + 全局进度 |
 | 📊 Excel 函数快查 | 63 个常用函数 · 语法 / 参数 / 示例 · 交互模拟器 · 明暗主题适配 |
 
