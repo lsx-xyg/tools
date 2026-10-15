@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   IconFileStack,
   IconLoader,
@@ -8,14 +8,24 @@ import {
   IconLockOpen,
   IconPlus,
 } from "@/components/icons";
-import { decryptPdf, downloadBytes, encryptPdf, pdfError } from "@/lib/pdf-utils";
+import {
+  decryptPdf,
+  downloadBytes,
+  encryptPdf,
+  pdfError,
+  rotatePdfBytes,
+} from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
+import {
+  PdfFileList,
+  type PdfFileItem,
+} from "@/components/pdf/pdf-file-list";
 
 type Sub = "encrypt" | "decrypt";
 
 export function SecurityTab() {
   const [sub, setSub] = useState<Sub>("encrypt");
-  const [file, setFile] = useState<{ name: string; bytes: ArrayBuffer } | null>(null);
+  const [items, setItems] = useState<PdfFileItem[]>([]);
   const [userPw, setUserPw] = useState("");
   const [ownerPw, setOwnerPw] = useState("");
   const [printing, setPrinting] = useState(true);
@@ -23,6 +33,9 @@ export function SecurityTab() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [note, setNote] = useState("");
+  const idRef = useRef(0);
+
+  const file = items[0] ?? null;
 
   const addFile = async (files: File[]) => {
     const f = files.find((x) => x.type === "application/pdf" || /\.pdf$/i.test(x.name));
@@ -34,7 +47,16 @@ export function SecurityTab() {
     setNote("");
     try {
       const bytes = await f.arrayBuffer();
-      setFile({ name: f.name, bytes });
+      setItems([
+        {
+          id: String(idRef.current++),
+          kind: "pdf",
+          name: f.name,
+          file: f,
+          bytes,
+          rotation: 0,
+        },
+      ]);
     } catch {
       setErr("无法读取文件");
     }
@@ -50,7 +72,8 @@ export function SecurityTab() {
     setErr("");
     setNote("");
     try {
-      const out = await encryptPdf(file.bytes, {
+      const bytes = await rotatePdfBytes(file.bytes!, file.rotation);
+      const out = await encryptPdf(bytes, {
         userPassword: userPw,
         ownerPassword: ownerPw || undefined,
         printing,
@@ -75,7 +98,8 @@ export function SecurityTab() {
     setErr("");
     setNote("");
     try {
-      const res = await decryptPdf(file.bytes, userPw);
+      const bytes = await rotatePdfBytes(file.bytes!, file.rotation);
+      const res = await decryptPdf(bytes, userPw);
       if (!res.wasEncrypted) {
         setNote("该 PDF 未加密，可直接打开。");
       } else {
@@ -106,10 +130,16 @@ export function SecurityTab() {
         <FileDropZone
           accept="application/pdf,.pdf"
           icon={<IconPlus width={18} height={18} />}
-          label={file ? `已选择：${file.name}` : "拖入 PDF，或点击选择文件"}
+          label="拖入 PDF，或点击选择文件"
           onFiles={(files) => void addFile(files)}
         />
       </div>
+
+      {items.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <PdfFileList items={items} onChange={setItems} disabled={busy} />
+        </div>
+      )}
 
       {file && (
         <div className="vd-grid" style={{ marginTop: 14 }}>

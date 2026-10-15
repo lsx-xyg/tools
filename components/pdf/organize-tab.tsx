@@ -11,6 +11,7 @@ import {
 } from "@/components/icons";
 import { downloadBytes, getPdfjs, organizePdf, pdfError, pdfPages } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
+import { PdfViewerModal } from "@/components/pdf/pdf-file-list";
 
 export function OrganizeTab() {
   const [file, setFile] = useState<{ name: string; bytes: ArrayBuffer; pages: number } | null>(null);
@@ -18,6 +19,7 @@ export function OrganizeTab() {
   const [deleted, setDeleted] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [viewer, setViewer] = useState<{ pageIndex: number } | null>(null);
   const thumbsRef = useRef<Map<number, HTMLCanvasElement>>(new Map());
   const docRef = useRef<import("pdfjs-dist").PDFDocumentProxy | null>(null);
 
@@ -34,6 +36,7 @@ export function OrganizeTab() {
       setFile({ name: f.name, bytes, pages });
       setOrder(Array.from({ length: pages }, (_, i) => i));
       setDeleted(new Set());
+      setViewer(null);
     } catch (e) {
       setErr(pdfError(e));
     }
@@ -128,20 +131,26 @@ export function OrganizeTab() {
           <p className="count-hint" style={{ marginTop: 12 }}>
             原 {file.pages} 页 · 保留 {keptCount} 页 · 标记删除 {deleted.size} 页
           </p>
-          <div className="ib-grid" style={{ marginTop: 12 }}>
+          <div className="pfl-page-grid">
             {order.map((origIdx, pos) => {
               const isDel = deleted.has(origIdx);
               return (
-                <div key={origIdx} className="ib-card" style={isDel ? { opacity: 0.4 } : undefined}>
-                  <canvas
-                    ref={(el) => {
-                      if (el) thumbsRef.current.set(origIdx, el);
-                    }}
-                    className="ib-thumb"
-                  />
-                  <div className="ib-meta">
-                    <span className="ib-sub">第 {origIdx + 1} 页</span>
-                    <div className="vc-token-row" style={{ gap: 4, marginTop: 6 }}>
+                <div key={origIdx} className={`pfl-page-card${isDel ? " pfl-del-mark" : ""}`}>
+                  <div
+                    className="pfl-page-thumb"
+                    title="点击放大预览"
+                    onClick={() => setViewer({ pageIndex: origIdx })}
+                  >
+                    <canvas
+                      ref={(el) => {
+                        if (el) thumbsRef.current.set(origIdx, el);
+                      }}
+                      className="pfl-page-canvas"
+                    />
+                  </div>
+                  <div className="pfl-page-meta">
+                    <span className="pfl-page-name">第 {origIdx + 1} 页</span>
+                    <div className="pfl-page-actions">
                       <button type="button" className="vc-icon-btn" onClick={() => move(pos, -1)} title="上移" disabled={busy || pos === 0}>
                         <IconArrowUp width={14} height={14} />
                       </button>
@@ -150,7 +159,7 @@ export function OrganizeTab() {
                       </button>
                       <button
                         type="button"
-                        className="vc-icon-btn"
+                        className="vc-icon-btn pfl-del"
                         onClick={() => toggleDelete(origIdx)}
                         title={isDel ? "取消删除" : "标记删除"}
                         disabled={busy}
@@ -181,6 +190,20 @@ export function OrganizeTab() {
       )}
 
       {err && <p className="count-hint warn" style={{ marginTop: 10 }}>{err}</p>}
+
+      {file && (
+        <PdfViewerModal
+          open={!!viewer}
+          onClose={() => setViewer(null)}
+          title={file.name}
+          kind="pdf"
+          bytes={file.bytes}
+          pageCount={file.pages}
+          pageIndex={viewer?.pageIndex ?? 0}
+          onPageChange={(i) => setViewer({ pageIndex: i })}
+          rotation={0}
+        />
+      )}
     </div>
   );
 }
