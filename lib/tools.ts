@@ -4,8 +4,6 @@
 type BaseToolId =
   | "transfer"
   | "qr"
-  | "base64"
-  | "json"
   | "cron"
   | "convert"
   | "ts"
@@ -24,7 +22,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "image" | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "video" | "audio" | "media-info" | "video-frames" | "image-batch" | "recorder" | "ocr" | "ip-lookup" | "dns-lookup" | "excel-functions";
+export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "excel-functions";
 
 export interface Tool {
   id: ToolId;
@@ -36,8 +34,6 @@ export interface Tool {
   icon:
     | "transfer"
     | "qr"
-    | "base64"
-    | "json"
     | "cron"
     | "convert"
     | "ts"
@@ -54,22 +50,14 @@ export interface Tool {
     | "mime"
     | "http-status"
     | "pdf"
-    | "image"
     | "badge"
     | "markdown"
     | "http-parse"
     | "ws-test"
     | "vercel-clean"
     | "github-release-clean"
-    | "video"
-    | "audio"
-    | "media-info"
-    | "video-frames"
-    | "image-batch"
     | "recorder"
     | "ocr"
-    | "ip-lookup"
-    | "dns-lookup"
     | "excel-functions";
   lamp: "ok" | "amber";
   tags: string[];
@@ -104,20 +92,10 @@ export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   text: "doc",
   case: "doc",
   diff: "doc",
-  image: "media",
-  "image-batch": "media",
-  video: "media",
-  "video-frames": "media",
-  audio: "media",
-  "media-info": "media",
   recorder: "media",
   "http-parse": "network",
   "http-status": "network",
   "ws-test": "network",
-  "ip-lookup": "network",
-  "dns-lookup": "network",
-  base64: "dev",
-  json: "dev",
   url: "dev",
   jwt: "dev",
   hash: "dev",
@@ -181,30 +159,6 @@ export const tools: Tool[] = [
     icon: "qr",
     lamp: "ok",
     tags: ["文本 / 链接", "本地生成", "下载 PNG"],
-  },
-  {
-    id: "base64",
-    index: "T-03",
-    name: "Base64 编码",
-    tagline: "编码 / 解码，中文安全",
-    description:
-      "文本与 Base64 互相转换，UTF-8 安全（中文、emoji 不乱码）。支持编码 / 解码双向切换，一键复制结果。",
-    path: "/tools/base64",
-    icon: "base64",
-    lamp: "ok",
-    tags: ["编码", "解码", "UTF-8 安全"],
-  },
-  {
-    id: "json",
-    index: "T-04",
-    name: "JSON 格式化",
-    tagline: "格式化 / 校验 / 压缩",
-    description:
-      "粘贴 JSON 一键格式化、校验语法、压缩成单行。报错定位到具体行，方便调试接口返回与配置文件。",
-    path: "/tools/json",
-    icon: "json",
-    lamp: "ok",
-    tags: ["格式化", "校验", "压缩"],
   },
   {
     id: "cron",
@@ -387,18 +341,6 @@ export const tools: Tool[] = [
     tags: ["HTTP", "状态码", "404", "速查"],
   },
   {
-    id: "image",
-    index: "T-21",
-    name: "图片处理",
-    tagline: "压缩 / 缩放 / 裁剪 / 转换",
-    description:
-      "上传图片，本地完成压缩（JPEG / WebP 质量可调）、缩放（等比 / 指定尺寸）、裁剪（自由比例 / 预设比例）与格式转换，一键下载。全部本地浏览器处理，不上传服务器。",
-    path: "/tools/image",
-    icon: "image",
-    lamp: "ok",
-    tags: ["压缩", "缩放", "裁剪", "格式转换"],
-  },
-  {
     id: "badge",
     index: "T-22",
     name: "徽章生成",
@@ -483,66 +425,6 @@ export const tools: Tool[] = [
     tags: ["GitHub", "Release", "清理", "批量删除", "DevOps"],
   },
   {
-    id: "video",
-    index: "T-28",
-    name: "视频处理",
-    tagline: "裁剪 / 转 GIF / 提取音频 / 转换 / 拼接 / 压缩",
-    description:
-      "基于 ffmpeg.wasm 的浏览器端视频处理：裁剪时间段、转 GIF、提取音频、格式转换、多片段拼接、按画质压缩。全部在本地完成，视频不上传服务器，关掉页面即彻底清除。",
-    path: "/tools/video",
-    icon: "video",
-    lamp: "ok",
-    tags: ["视频", "ffmpeg", "裁剪", "转GIF", "提取音频", "格式转换", "拼接", "压缩"],
-  },
-  {
-    id: "audio",
-    index: "T-29",
-    name: "音频处理",
-    tagline: "格式转换 / 拼接 / 裁剪 / 变速变调",
-    description:
-      "基于 ffmpeg.wasm 的浏览器端音频处理：mp3 / wav / m4a / ogg / flac / opus 格式互转、多段拼接、时间段裁剪、速度与音调调节。全部在本地完成，音频不上传服务器。",
-    path: "/tools/audio",
-    icon: "audio",
-    lamp: "ok",
-    tags: ["音频", "ffmpeg", "格式转换", "拼接", "裁剪", "变速变调"],
-  },
-  {
-    id: "media-info",
-    index: "T-30",
-    name: "媒体信息",
-    tagline: "查看音视频编码 / 码率 / 分辨率 / 时长",
-    description:
-      "本地解析视频与音频文件的容器、编码、码率、分辨率、采样率、时长等元数据，支持一次上传多个文件，查看原始 ffmpeg 输出。文件不上传服务器。",
-    path: "/tools/media-info",
-    icon: "media-info",
-    lamp: "ok",
-    tags: ["媒体", "视频", "音频", "元数据", "ffprobe", "本地解析"],
-  },
-  {
-    id: "video-frames",
-    index: "T-31",
-    name: "视频抽帧 / 倍速",
-    tagline: "抽帧导出图片 · GIF 转视频 · 倍速转换",
-    description:
-      "按时间点或间隔从视频中抽取帧导出 PNG；将 GIF 转换为 mp4 / webm / mov 视频；按倍率加速或减速视频（0.25x ~ 8x，音频同步变速）。全部在本地完成，不上传服务器。",
-    path: "/tools/video-frames",
-    icon: "video-frames",
-    lamp: "ok",
-    tags: ["视频", "抽帧", "GIF", "倍速", "ffmpeg", "本地处理"],
-  },
-  {
-    id: "image-batch",
-    index: "T-32",
-    name: "图片批量处理",
-    tagline: "批量压缩 · 批量加水印（文字 / 图片）",
-    description:
-      "多张图片批量压缩（可调质量与缩放比例）、批量添加文字或图片水印（九宫格位置、大小、透明度可调），一键打包成 ZIP 下载。全部在浏览器本地用 Canvas 完成，图片不上传。",
-    path: "/tools/image-batch",
-    icon: "image-batch",
-    lamp: "ok",
-    tags: ["图片", "批量", "压缩", "水印", "ZIP", "本地处理"],
-  },
-  {
     id: "recorder",
     index: "T-33",
     name: "屏幕 / 摄像头录制",
@@ -565,30 +447,6 @@ export const tools: Tool[] = [
     icon: "ocr",
     lamp: "ok",
     tags: ["OCR", "文字识别", "PaddleOCR", "中文", "PDF", "Word", "本地"],
-  },
-  {
-    id: "ip-lookup",
-    index: "T-35",
-    name: "IP 归属地查询",
-    tagline: "查询 IP 归属地 / 运营商 / 时区",
-    description:
-      "查询任意 IPv4 / IPv6 的归属地、国家、城市、运营商、ASN 与时区信息；留空可查询本机出口 IP。数据来自 ipwho.is 免费接口。",
-    path: "/tools/ip-lookup",
-    icon: "ip-lookup",
-    lamp: "ok",
-    tags: ["IP", "归属地", "查询", "运营商", "IPv6"],
-  },
-  {
-    id: "dns-lookup",
-    index: "T-36",
-    name: "DNS 解析查询",
-    tagline: "DoH 查询 A / AAAA / CNAME / MX / TXT 等",
-    description:
-      "通过 Cloudflare DNS-over-HTTPS 查询域名的各类解析记录，包括 A、AAAA、CNAME、MX、NS、TXT、SOA、SRV、PTR、CAA。绕过本地 DNS 缓存，观察公网解析结果。",
-    path: "/tools/dns-lookup",
-    icon: "dns-lookup",
-    lamp: "ok",
-    tags: ["DNS", "DoH", "解析", "域名", "Cloudflare"],
   },
   {
     id: "excel-functions",
