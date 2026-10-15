@@ -1,27 +1,17 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { TruncatedText } from "@/components/tooltip";
 import {
-  IconArrowDown,
-  IconArrowUp,
   IconFileStack,
   IconLoader,
   IconPlus,
-  IconTrash,
 } from "@/components/icons";
-import { downloadBytes, mergePdfs, pdfError, pdfPages } from "@/lib/pdf-utils";
+import { downloadBytes, mergePdfs, pdfError, pdfPages, rotatePdfBytes } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
-
-interface PdfItem {
-  id: number;
-  name: string;
-  bytes: ArrayBuffer;
-  pages: number;
-}
+import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 
 export function MergeTab() {
-  const [items, setItems] = useState<PdfItem[]>([]);
+  const [items, setItems] = useState<PdfFileItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const idRef = useRef(0);
@@ -33,30 +23,18 @@ export function MergeTab() {
       return;
     }
     setErr("");
-    const next: PdfItem[] = [];
+    const next: PdfFileItem[] = [];
     for (const f of list) {
       try {
         const bytes = await f.arrayBuffer();
         const pages = await pdfPages(bytes);
-        next.push({ id: idRef.current++, name: f.name, bytes, pages });
+        next.push({ id: String(idRef.current++), kind: "pdf", name: f.name, file: f, bytes, pages, rotation: 0 });
       } catch (e) {
         setErr(pdfError(e));
       }
     }
     if (next.length) setItems((prev) => [...prev, ...next]);
   }, []);
-
-  const move = (i: number, dir: -1 | 1) => {
-    setItems((prev) => {
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
-      const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
-    });
-  };
-
-  const remove = (id: number) => setItems((prev) => prev.filter((x) => x.id !== id));
 
   async function doMerge() {
     if (items.length < 2) {
@@ -66,7 +44,11 @@ export function MergeTab() {
     setBusy(true);
     setErr("");
     try {
-      const out = await mergePdfs(items.map((x) => x.bytes));
+      const rotated: ArrayBuffer[] = [];
+      for (const it of items) {
+        rotated.push(await rotatePdfBytes(it.bytes!, it.rotation));
+      }
+      const out = await mergePdfs(rotated);
       downloadBytes(out, "merged.pdf");
     } catch (e) {
       setErr(pdfError(e));
@@ -86,34 +68,13 @@ export function MergeTab() {
       />
 
       {items.length > 0 && (
-        <div className="pdf-list">
-          {items.map((it, i) => (
-            <div className="pdf-item" key={it.id}>
-              <span className="pdf-order mono">{i + 1}</span>
-              <span className="pdf-info">
-                <TruncatedText text={it.name} className="pdf-name" />
-                <span className="count-hint">{it.pages} 页</span>
-              </span>
-              <span className="pdf-actions">
-                <button className="btn-icon" onClick={() => move(i, -1)} type="button" aria-label="上移" disabled={i === 0}>
-                  <IconArrowUp width={15} height={15} />
-                </button>
-                <button className="btn-icon" onClick={() => move(i, 1)} type="button" aria-label="下移" disabled={i === items.length - 1}>
-                  <IconArrowDown width={15} height={15} />
-                </button>
-                <button className="btn-icon danger" onClick={() => remove(it.id)} type="button" aria-label="移除">
-                  <IconTrash width={15} height={15} />
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
+        <PdfFileList items={items} onChange={setItems} disabled={busy} />
       )}
 
       {err && <p className="count-hint warn" style={{ marginTop: 10 }}>{err}</p>}
 
       <div className="tool-row" style={{ marginTop: 14 }}>
-        <span className="count-hint">{items.length} 个文件 · {items.reduce((a, b) => a + b.pages, 0)} 页</span>
+        <span className="count-hint">{items.length} 个文件 · {items.reduce((a, b) => a + (b.pages ?? 0), 0)} 页</span>
         <span className="spacer" />
         <button className="btn btn-primary" onClick={() => void doMerge()} type="button" disabled={busy || items.length < 2}>
           {busy ? <IconLoader width={15} height={15} className="spin" /> : <IconFileStack width={15} height={15} />}

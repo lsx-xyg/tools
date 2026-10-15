@@ -2,30 +2,22 @@
 
 import { useRef, useState } from "react";
 import JSZip from "jszip";
-import { TruncatedText } from "@/components/tooltip";
 import {
   IconFileStack,
   IconLoader,
   IconPlus,
-  IconTrash,
 } from "@/components/icons";
-import { compressPdf, downloadBytes, pdfError } from "@/lib/pdf-utils";
+import { compressPdf, downloadBytes, pdfError, rotatePdfBytes } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
+import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 
-interface Row {
-  id: number;
-  name: string;
-  bytes: ArrayBuffer;
-  before: number;
-  after?: number;
-  done: boolean;
-}
+type CompressRow = PdfFileItem & { before: number; after?: number; done: boolean };
 
 const fmt = (b: number) =>
   b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1024 / 1024).toFixed(2)} MB`;
 
 export function CompressTab() {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<CompressRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const idRef = useRef(0);
@@ -40,14 +32,24 @@ export function CompressTab() {
     for (const f of list) {
       try {
         const bytes = await f.arrayBuffer();
-        setRows((prev) => [...prev, { id: idRef.current++, name: f.name, bytes, before: bytes.byteLength, done: false }]);
+        setRows((prev) => [
+          ...prev,
+          {
+            id: String(idRef.current++),
+            kind: "pdf",
+            name: f.name,
+            file: f,
+            bytes,
+            rotation: 0,
+            before: bytes.byteLength,
+            done: false,
+          },
+        ]);
       } catch {
         setErr(`无法读取 ${f.name}`);
       }
     }
   };
-
-  const remove = (id: number) => setRows((prev) => prev.filter((r) => r.id !== id));
 
   async function run() {
     if (!rows.length) return;
@@ -58,7 +60,8 @@ export function CompressTab() {
       let one: { name: string; data: Uint8Array } | null = null;
       for (const r of rows) {
         try {
-          const { data, after } = await compressPdf(r.bytes);
+          const rotated = await rotatePdfBytes(r.bytes!, r.rotation);
+          const { data, after } = await compressPdf(rotated);
           setRows((prev) => prev.map((p) => (p.id === r.id ? { ...p, after, done: true } : p)));
           const outName = r.name.replace(/\.pdf$/i, "_compressed.pdf");
           zip.file(outName, data);
@@ -81,6 +84,15 @@ export function CompressTab() {
   const totalBefore = rows.reduce((a, r) => a + r.before, 0);
   const totalAfter = rows.reduce((a, r) => a + (r.after ?? r.before), 0);
 
+  const displayRows: PdfFileItem[] = rows.map((r) => ({
+    ...r,
+    extra: `${fmt(r.before)} → ${r.done ? fmt(r.after ?? r.before) : "…"}${
+      r.done && r.after !== undefined && r.after < r.before
+        ? ` · 瘦了 ${((1 - r.after / r.before) * 100).toFixed(0)}%`
+        : ""
+    }`,
+  }));
+
   return (
     <div className="single-panel tab-anim">
       <FileDropZone
@@ -96,26 +108,11 @@ export function CompressTab() {
       </p>
 
       {rows.length > 0 && (
-        <div className="pdf-list">
-          {rows.map((r) => (
-            <div className="pdf-item" key={r.id}>
-              <span className="pdf-info">
-                <TruncatedText text={r.name} className="pdf-name" />
-                <span className="count-hint">
-                  {fmt(r.before)} → {r.done ? fmt(r.after ?? r.before) : "…"}
-                  {r.done && r.after !== undefined && (
-                    <span style={{ marginLeft: 6 }}>{r.after < r.before ? `瘦了 ${((1 - r.after / r.before) * 100).toFixed(0)}%` : "未变小"}</span>
-                  )}
-                </span>
-              </span>
-              <span className="pdf-actions">
-                <button className="btn-icon danger" onClick={() => remove(r.id)} type="button" aria-label="移除" disabled={busy}>
-                  <IconTrash width={15} height={15} />
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
+        <PdfFileList
+          items={displayRows}
+          onChange={(next) => setRows(next as CompressRow[])}
+          disabled={busy}
+        />
       )}
 
       {err && <p className="count-hint warn" style={{ marginTop: 10 }}>{err}</p>}

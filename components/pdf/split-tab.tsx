@@ -9,16 +9,11 @@ import {
   parseRanges,
   pdfError,
   pdfPages,
+  rotatePdfBytes,
   splitByN,
 } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
-
-interface SplitFile {
-  id: number;
-  name: string;
-  bytes: ArrayBuffer;
-  pages: number;
-}
+import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 
 function downloadName(name: string, suffix: string): string {
   const base = name.replace(/\.pdf$/i, "");
@@ -26,12 +21,14 @@ function downloadName(name: string, suffix: string): string {
 }
 
 export function SplitTab() {
-  const [file, setFile] = useState<SplitFile | null>(null);
+  const [items, setItems] = useState<PdfFileItem[]>([]);
   const [err, setErr] = useState("");
   const [range, setRange] = useState("");
   const [every, setEvery] = useState("");
   const [busy, setBusy] = useState("");
   const idRef = useRef(0);
+
+  const file = items[0];
 
   const addFile = useCallback(async (files: File[]) => {
     const f = files.find((x) => x.type === "application/pdf" || /\.pdf$/i.test(x.name));
@@ -43,7 +40,7 @@ export function SplitTab() {
     try {
       const bytes = await f.arrayBuffer();
       const pages = await pdfPages(bytes);
-      setFile({ id: idRef.current++, name: f.name, bytes, pages });
+      setItems([{ id: String(idRef.current++), kind: "pdf", name: f.name, file: f, bytes, pages, rotation: 0 }]);
       setRange("");
     } catch (e) {
       setErr(pdfError(e));
@@ -55,12 +52,13 @@ export function SplitTab() {
     setBusy("extract");
     setErr("");
     try {
-      const indices = parseRanges(range, file.pages);
+      const indices = parseRanges(range, file.pages ?? 1);
       if (indices.length === 0) {
         setErr("页码范围无效，例如 1-3,5,7-9");
         return;
       }
-      const out = await extractPages(file.bytes, indices);
+      const bytes = await rotatePdfBytes(file.bytes!, file.rotation);
+      const out = await extractPages(bytes, indices);
       downloadBytes(out, downloadName(file.name, `-p${indices.map((i) => i + 1).join("_")}`));
     } catch (e) {
       setErr(pdfError(e));
@@ -79,7 +77,8 @@ export function SplitTab() {
     setBusy("split");
     setErr("");
     try {
-      const chunks = await splitByN(file.bytes, n);
+      const bytes = await rotatePdfBytes(file.bytes!, file.rotation);
+      const chunks = await splitByN(bytes, n);
       const zip = new JSZip();
       for (const c of chunks) zip.file(`${downloadName(file.name, "")}-${c.name}.pdf`, c.data);
       const blob = await zip.generateAsync({ type: "blob" });
@@ -97,14 +96,18 @@ export function SplitTab() {
       <FileDropZone
         accept="application/pdf,.pdf"
         icon={<IconPlus width={18} height={18} />}
-        label={file ? `已选择：${file.name}` : "拖入 PDF，或点击选择文件"}
+        label="拖入 PDF，或点击选择文件"
         onFiles={(files) => void addFile(files)}
       />
 
+      {items.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <PdfFileList items={items} onChange={setItems} disabled={!!busy} />
+        </div>
+      )}
+
       {file && (
         <>
-          <p className="count-hint" style={{ marginTop: 12 }}>共 {file.pages} 页 · 当前文档 {file.name}</p>
-
           <div className="panel" style={{ marginTop: 12 }}>
             <div className="panel-head">
               <span className="label">提取指定页面</span>
@@ -116,7 +119,7 @@ export function SplitTab() {
                 style={{ flex: 1 }}
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
-                placeholder={`1-${Math.min(3, file.pages)}`}
+                placeholder={`1-${Math.min(3, file.pages ?? 1)}`}
                 spellCheck={false}
               />
               <button
