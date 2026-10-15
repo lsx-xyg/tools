@@ -769,3 +769,190 @@ export async function decryptPdf(
   out += `startxref\n${xrefPos}\n%%EOF\n`;
   return { bytes: Uint8Array.from(toBytes(out)), wasEncrypted: true };
 }
+
+/* ===================== 扫描件合成（多来源文档 → 扫描件页 → 合并 PDF） ===================== */
+
+export type ScanMode = "color" | "gray" | "bw";
+
+export interface ScanSource {
+  kind: "pdf" | "image" | "doc";
+  name: string;
+  file: File | Blob;
+  bytes?: ArrayBuffer;
+  /** 顺时针旋转 0/90/180/270 */
+  rotation: 0 | 90 | 180 | 270;
+}
+
+export interface ScanPdfOptions {
+  pageSize: "a4" | "auto";
+  orientation: "portrait" | "landscape";
+  mode: ScanMode;
+  onProgress?: (ratio: number) => void;
+}
+
+function scanErr(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  return typeof e === "string" ? e : "处理失败";
+}
+
+function loadImageBlob(file: File | Blob): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("无法读取图片"));
+    };
+    img.src = url;
+  });
+}
+
+/** 色彩模式：原色不动；灰度 grayscale；黑白 = 灰度 + 强对比（近似二值，速度优于逐像素阈值） */
+function applyScanMode(src: HTMLCanvasElement, mode: ScanMode): HTMLCanvasElement {
+  if (mode === "color") return src;
+  const c = document.createElement("canvas");
+  c.width = src.width;
+  c.height = src.height;
+  const ctx = c.getContext("2d")!;
+  ctx.filter = mode === "gray" ? "grayscale(1)" : "grayscale(1) contrast(1.5) brightness(1.05)";
+  ctx.drawImage(src, 0, 0);
+  return c;
+}
+
+/** 顺时针旋转画布（90/180/270），返回新画布（0 原样返回） */
+function rotateCanvas(src: HTMLCanvasElement, rotation: number): HTMLCanvasElement {
+  const r = (((rotation % 360) + 360) % 360) as 0 | 90 | 180 | 270;
+  if (r === 0) return src;
+  const swap = r === 90 || r === 270;
+  const c = document.createElement("canvas");
+  c.width = swap ? src.height : src.width;
+  c.height = swap ? src.width : src.height;
+  const ctx = c.getContext("2d")!;
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate((r * Math.PI) / 180);
+  ctx.drawImage(src, -src.width / 2, -src.height / 2);
+  return c;
+}
+
+/** Word(docx) → 按页面高度切割的扫描件页 canvas 数组（mammoth → HTML → html2canvas） */
+async function docxToScanPages(file: File | Blob, pageW: number, pageH: number, mode: ScanMode): Promise<HTMLCanvasElement[]> {
+  const mammoth = await import("mammoth");
+  const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  const host = document.createElement("div");
+  host.style.cssText =
+    "position:fixed;left:-20000px;top:0;width:" + pageW + "px;background:#fff;z-index:-1;pointer-events:none;";
+  host.innerHTML =
+    `<div style="padding:32px 40px;font-family:system-ui,'PingFang SC','Microsoft YaHei',sans-serif;` +
+    `font-size:15px;line-height:1.7;color:#111;word-break:break-word;">${html}</div>`;
+  document.body.appendChild(host);
+  try {
+    const html2canvas = (await import("html2canvas")).default;
+    const full = await html2canvas(host.firstElementChild as HTMLElement, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false,
+      windowWidth: pageW,
+    });
+    const total = Math.max(1, Math.ceil(full.height / pageH));
+    const pages: HTMLCanvasElement[] = [];
+    for (let i = 0; i < total; i += 1) {
+      const c = document.createElement("canvas");
+      c.width = pageW;
+      c.height = pageH;
+      const ctx = c.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageW, pageH);
+      const sy = i * pageH;
+      const sh = Math.min(pageH, full.height - sy);
+      ctx.drawImage(full, 0, sy, pageW, sh, 0, 0, pageW, sh);
+      pages.push(applyScanMode(c, mode));
+    }
+    return pages;
+  } finally {
+    host.remove();
+  }
+}
+
+/** PDF → 扫描件页 canvas 数组（pdfjs 逐页渲染白底，应用色彩模式） */
+async function pdfToScanPages(bytes: ArrayBuffer, scale: number, mode: ScanMode): Promise<HTMLCanvasElement[]> {
+  const pdfjs = await getPdfjs();
+  const src = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
+  try {
+    const pages: HTMLCanvasElement[] = [];
+    for (let i = 1; i <= src.numPages; i += 1) {
+      const page = await src.getPage(i);
+      const vp = page.getViewport({ scale, rotation: 0 });
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.floor(vp.width));
+      c.height = Math.max(1, Math.floor(vp.height));
+      const ctx = c.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      pages.push(applyScanMode(c, mode));
+    }
+    return pages;
+  } finally {
+    await src.destroy();
+  }
+}
+
+/**
+ * 多来源文档（图片 / PDF / Word）→ 全部栅格化为扫描件页 → 按顺序合并为一个 PDF。
+ * 每份文档逐页：渲染 → 色彩模式 → 旋转 → JPEG（RENDER≈2，A4 档 144dpi）→ imagesToPdf 打包。
+ * 进度 onProgress(0-1)：按文档粒度 + 页内细分。
+ */
+export async function scanToPdf(
+  sources: ScanSource[],
+  opts: ScanPdfOptions,
+): Promise<Uint8Array> {
+  const { onProgress } = opts;
+  const A4_PT = { w: 595, h: 842 };
+  const portrait = opts.orientation === "portrait";
+  // 渲染像素：A4 pt × RENDER 2 ≈ 144dpi
+  const pageW = portrait ? A4_PT.w * 2 : A4_PT.h * 2;
+  const pageH = portrait ? A4_PT.h * 2 : A4_PT.w * 2;
+  const total = sources.length;
+  const imgs: ImgSource[] = [];
+
+  const bump = (base: number, sub: number) => onProgress?.(base + sub / total);
+
+  for (let i = 0; i < total; i += 1) {
+    const s = sources[i];
+    const base = i / total;
+    try {
+      let canvases: HTMLCanvasElement[];
+      if (s.kind === "pdf") {
+        canvases = await pdfToScanPages(s.bytes ?? (await s.file.arrayBuffer()), 2, opts.mode);
+      } else if (s.kind === "doc") {
+        canvases = await docxToScanPages(s.file, pageW, pageH, opts.mode);
+      } else {
+        const img = await loadImageBlob(s.file);
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const ctx = c.getContext("2d")!;
+        ctx.drawImage(img, 0, 0);
+        canvases = [applyScanMode(c, opts.mode)];
+      }
+      const n = Math.max(1, canvases.length);
+      for (let p = 0; p < canvases.length; p += 1) {
+        const c = rotateCanvas(canvases[p], s.rotation);
+        const jpg = await canvasToBytes(c, "image/jpeg", 0.9);
+        imgs.push({ blob: new Blob([jpg.buffer as ArrayBuffer], { type: "image/jpeg" }), width: c.width, height: c.height, rotation: 0 });
+        bump(base, ((p + 1) / n) * 0.8);
+      }
+      bump(base, 0.95);
+    } catch (e) {
+      throw new Error(`「${s.name}」${scanErr(e)}`);
+    }
+    bump(base, 1);
+  }
+  onProgress?.(1);
+  return imagesToPdf(imgs, { pageSize: opts.pageSize, orientation: opts.orientation });
+}

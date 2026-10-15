@@ -26,7 +26,7 @@ import {
 } from "@/components/icons";
 import { getPdfjs } from "@/lib/pdf-utils";
 
-export type PdfFileKind = "pdf" | "image";
+export type PdfFileKind = "pdf" | "image" | "doc";
 
 export interface PdfFileItem {
   /** 稳定 id（字符串），Tab 侧生成即可 */
@@ -303,6 +303,11 @@ export function PdfViewerModal({
           <div className="vc-viewer-canvas-wrap" ref={wrapRef}>
             {kind === "pdf" ? (
               <canvas ref={canvasRef} className="vc-viewer-canvas" />
+            ) : kind === "doc" ? (
+              <div className="pfl-thumb-ph doc" style={{ minHeight: 160 }}>
+                <IconFile width={40} height={40} />
+                <span className="pfl-sub">Word 文档 · 合成时转为扫描件页</span>
+              </div>
             ) : (
               imageUrl &&
               (() => {
@@ -438,6 +443,14 @@ function Thumb({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renderKey, getDoc]);
+
+  if (item.kind === "doc") {
+    return (
+      <div className="pfl-thumb-ph doc">
+        <IconFile width={26} height={26} />
+      </div>
+    );
+  }
 
   if (item.kind === "image") {
     if (!url) {
@@ -628,7 +641,7 @@ export function PdfFileList({ items, onChange, disabled = false, className }: Pd
                 {it.name}
               </span>
               <span className="pfl-sub">
-                {it.pages ? `${it.pages} 页` : it.kind === "pdf" ? "PDF" : "图片"}
+                {it.pages ? `${it.pages} 页` : it.kind === "pdf" ? "PDF" : it.kind === "doc" ? "Word 文档" : "图片"}
                 {it.extra ? ` · ${it.extra}` : null}
               </span>
               <div className="pfl-actions">

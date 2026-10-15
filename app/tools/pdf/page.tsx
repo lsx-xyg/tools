@@ -13,6 +13,7 @@ import { OrganizeTab } from "@/components/pdf/organize-tab";
 import { PageNumTab } from "@/components/pdf/page-num-tab";
 import { WatermarkTab } from "@/components/pdf/watermark-tab";
 import { SecurityTab } from "@/components/pdf/security-tab";
+import { ScanPdfTab } from "@/components/pdf/scan-tab";
 
 const TABS = [
   { id: "merge", label: "合并" },
@@ -21,6 +22,7 @@ const TABS = [
   { id: "compress", label: "压缩" },
   { id: "toimage", label: "转图片" },
   { id: "img2pdf", label: "图片转PDF" },
+  { id: "scan", label: "扫描件合成" },
   { id: "organize", label: "删页组织" },
   { id: "pagenum", label: "页码" },
   { id: "watermark", label: "水印" },
@@ -36,6 +38,7 @@ const COMPONENTS: Record<TabId, () => React.ReactElement> = {
   compress: CompressTab,
   toimage: ToImageTab,
   img2pdf: Img2PdfTab,
+  scan: ScanPdfTab,
   organize: OrganizeTab,
   pagenum: PageNumTab,
   watermark: WatermarkTab,
