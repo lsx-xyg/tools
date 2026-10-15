@@ -13,6 +13,11 @@ export interface FFmpegInstance {
   exit: () => void;
 }
 
+export interface RunOpts {
+  onProgress?: (ratio: number) => void;
+  onLog?: (msg: string) => void;
+}
+
 declare global {
   interface Window {
     FFmpeg?: {
@@ -78,19 +83,33 @@ export function useFFmpeg() {
     }
   }, [appendLog]);
 
-  /* 执行一次任务：先 ensureEngine，跑完 run 后销毁实例 */
+  /* 执行一次任务：先 ensureEngine，跑完 run 后销毁实例；opts 可把进度/日志同步到外部（如全局任务中心） */
   const runTask = useCallback(
-    async (task: (ff: FFmpegInstance) => Promise<void>) => {
+    async (task: (ff: FFmpegInstance) => Promise<void>, opts?: RunOpts) => {
       setBusy(true);
       setProgress(0);
       setLog("");
       try {
         const ff = await ensureEngine();
+        if (opts) {
+          ff.setProgress(({ ratio }) => {
+            if (typeof ratio === "number" && ratio >= 0 && ratio <= 1) {
+              setProgress(ratio);
+              opts.onProgress?.(ratio);
+            }
+          });
+          ff.setLogger(({ message }) => {
+            if (message) {
+              appendLog(message);
+              opts.onLog?.(message);
+            }
+          });
+        }
         await task(ff);
       } catch (e) {
-        appendLog(
-          `处理失败：${e instanceof Error ? e.message : e && typeof e === "object" && "message" in e ? String((e as { message?: unknown }).message) : JSON.stringify(e)}`
-        );
+        const msg = e instanceof Error ? e.message : e && typeof e === "object" && "message" in e ? String((e as { message?: unknown }).message) : JSON.stringify(e);
+        appendLog(`处理失败：${msg}`);
+        opts?.onLog?.(`处理失败：${msg}`);
         throw e;
       } finally {
         setBusy(false);

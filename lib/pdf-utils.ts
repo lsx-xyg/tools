@@ -154,12 +154,15 @@ async function rasterizeRebuild(
   bytes: ArrayBuffer,
   scale: number,
   quality: number,
+  onProgress?: (ratio: number) => void,
 ): Promise<Uint8Array> {
   const pdfjs = await getPdfjs();
   const src = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
   const out = await PDFDocument.create();
   try {
+    const total = src.numPages;
     for (let i = 1; i <= src.numPages; i += 1) {
+      onProgress?.((i - 0.5) / total);
       const page = await src.getPage(i);
       const base = page.getViewport({ scale: 1, rotation: 0 });
       const viewport = page.getViewport({ scale, rotation: 0 });
@@ -191,29 +194,35 @@ async function rasterizeRebuild(
  */
 export async function compressPdf(
   bytes: ArrayBuffer,
-  opts: { level?: CompressLevel } = {},
+  opts: { level?: CompressLevel; onProgress?: (ratio: number) => void } = {},
 ): Promise<{ data: Uint8Array; before: number; after: number }> {
   const before = bytes.byteLength;
   const level = opts.level ?? "auto";
+  const onProgress = opts.onProgress;
 
   if (level === "low" || level === "medium" || level === "high") {
     const p = RASTER_PARAMS[level];
-    const data = await rasterizeRebuild(bytes, p.scale, p.quality);
+    const data = await rasterizeRebuild(bytes, p.scale, p.quality, onProgress);
+    onProgress?.(1);
     return { data, before, after: data.length };
   }
 
   // auto：无损优先，收益不足时高保真重编码取更小者（不糊、不膨胀）
+  onProgress?.(0.1);
   const rewrite = await losslessRewrite(bytes);
   const gain = 1 - rewrite.length / before;
   if (gain >= AUTO_LOSSLESS_GAIN) {
+    onProgress?.(1);
     return { data: rewrite, before, after: rewrite.length };
   }
   try {
-    const rebuilt = await rasterizeRebuild(bytes, AUTO_REENCODE.scale, AUTO_REENCODE.quality);
+    const rebuilt = await rasterizeRebuild(bytes, AUTO_REENCODE.scale, AUTO_REENCODE.quality, onProgress);
     const data = rebuilt.length < rewrite.length ? rebuilt : rewrite;
+    onProgress?.(1);
     return { data, before, after: data.length };
   } catch {
     // 栅格化（渲染/编码）失败时退回无损重写，保证至少有产物
+    onProgress?.(1);
     return { data: rewrite, before, after: rewrite.length };
   }
 }

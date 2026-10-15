@@ -10,6 +10,9 @@ import {
 import { compressPdf, downloadBytes, pdfError, rotatePdfBytes, type CompressLevel } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
 import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
+import { completeTask, createTask, failTask, hasRunningTask, updateTask } from "@/lib/task-center";
+
+const TOOL_NAME = "PDF 压缩";
 
 type CompressRow = PdfFileItem & { before: number; after?: number; done: boolean };
 
@@ -61,15 +64,25 @@ export function CompressTab() {
 
   async function run() {
     if (!rows.length) return;
+    if (hasRunningTask(TOOL_NAME)) {
+      setErr("已有压缩任务进行中，完成后再提交新的（进度见右下角任务中心）。");
+      return;
+    }
     setBusy(true);
     setErr("");
+    const taskId = createTask(TOOL_NAME, `${rows.length} 个文件压缩（${level}）`);
     try {
       const zip = new JSZip();
       let one: { name: string; data: Uint8Array } | null = null;
-      for (const r of rows) {
+      const total = rows.length;
+      for (let idx = 0; idx < rows.length; idx += 1) {
+        const r = rows[idx];
         try {
           const rotated = await rotatePdfBytes(r.bytes!, r.rotation);
-          const { data, after } = await compressPdf(rotated, { level });
+          const { data, after } = await compressPdf(rotated, {
+            level,
+            onProgress: (p) => updateTask(taskId, { progress: (idx + p) / total }),
+          });
           setRows((prev) => prev.map((p) => (p.id === r.id ? { ...p, after, done: true } : p)));
           const outName = r.name.replace(/\.pdf$/i, "_compressed.pdf");
           zip.file(outName, data);
@@ -78,12 +91,22 @@ export function CompressTab() {
           setErr(pdfError(e));
         }
       }
+      let url: string;
+      let name: string;
       if (rows.length === 1 && one) {
         downloadBytes(one.data, one.name);
+        url = URL.createObjectURL(new Blob([one.data.buffer as ArrayBuffer], { type: "application/pdf" }));
+        name = one.name;
       } else {
         const blob = await zip.generateAsync({ type: "blob" });
         downloadBytes(blob, "pdf_compressed.zip");
+        url = URL.createObjectURL(blob);
+        name = "pdf_compressed.zip";
       }
+      updateTask(taskId, { progress: 1 });
+      completeTask(taskId, url, name);
+    } catch (e) {
+      failTask(taskId, pdfError(e));
     } finally {
       setBusy(false);
     }
@@ -152,9 +175,9 @@ export function CompressTab() {
           {rows.length} 个文件 · {fmt(totalBefore)} → {fmt(totalAfter)}
         </span>
         <span className="spacer" />
-        <button className="btn btn-primary" onClick={() => void run()} type="button" disabled={busy || !rows.length}>
+        <button className="btn btn-primary" onClick={() => void run()} type="button" disabled={busy || hasRunningTask(TOOL_NAME) || !rows.length}>
           {busy ? <IconLoader width={15} height={15} className="spin" /> : <IconFileStack width={15} height={15} />}
-          {busy ? "压缩中…" : "压缩并下载"}
+          {busy ? "压缩中…（可切走，见右下角任务中心）" : "压缩并下载"}
         </button>
       </div>
     </div>

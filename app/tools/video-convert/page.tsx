@@ -4,7 +4,10 @@ import { useState } from "react";
 import { ToolHead } from "@/components/tool-head";
 import { FileDropZone } from "@/components/drop-zone";
 import { dataToBlob, useFFmpeg } from "@/lib/use-ffmpeg";
+import { completeTask, createTask, failTask, hasRunningTask, updateTask, useTasks } from "@/lib/task-center";
 import { IconDownload, IconLoader, IconRefresh } from "@/components/icons";
+
+const TOOL_NAME = "视频格式转换";
 
 type Fmt = "mp4" | "webm" | "mov" | "mkv" | "gif";
 
@@ -34,44 +37,62 @@ export default function VideoConvertPage() {
   const [err, setErr] = useState("");
 
   const { runTask, wname, busy, progress, log } = useFFmpeg();
+  const tasks = useTasks();
+  const running = hasRunningTask(TOOL_NAME);
 
   async function convert() {
     if (!file) return;
+    if (running) {
+      setErr("已有转换任务进行中，完成后再提交新的（进度见右下角任务中心）。");
+      return;
+    }
     setErr("");
     setOutUrl("");
+    const taskId = createTask(TOOL_NAME, `${file.name} → ${fmt.toUpperCase()}`);
+    updateTask(taskId, { log: "任务已加入后台，可切换工具继续使用。" });
     try {
-      await runTask(async (ff) => {
-        const inName = wname((file.name.split(".").pop() || "mp4").toLowerCase());
-        const outName = `out_${Date.now()}.${fmt}`;
-        await ff.FS("writeFile", inName, await window.FFmpeg!.fetchFile(file));
+      await runTask(
+        async (ff) => {
+          const inName = wname((file.name.split(".").pop() || "mp4").toLowerCase());
+          const outName = `out_${Date.now()}.${fmt}`;
+          await ff.FS("writeFile", inName, await window.FFmpeg!.fetchFile(file));
 
-        /* 同容器体系（mp4/mov/mkv 互转）优先无损 copy；webm/gif 或 copy 失败时转码 */
-        if (fmt !== "gif") {
-          try {
-            await ff.run("-i", inName, "-c", "copy", "-movflags", "+faststart", outName);
-          } catch {
-            await ff.run(
-              "-i", inName,
-              "-c:v", "h264", "-preset", "veryfast", "-crf", "23",
-              "-c:a", "aac",
-              "-movflags", "+faststart",
-              outName
-            );
+          /* 同容器体系（mp4/mov/mkv 互转）优先无损 copy；webm/gif 或 copy 失败时转码 */
+          if (fmt !== "gif") {
+            try {
+              await ff.run("-i", inName, "-c", "copy", "-movflags", "+faststart", outName);
+            } catch {
+              await ff.run(
+                "-i", inName,
+                "-c:v", "h264", "-preset", "veryfast", "-crf", "23",
+                "-c:a", "aac",
+                "-movflags", "+faststart",
+                outName
+              );
+            }
+          } else {
+            await ff.run("-i", inName, "-vf", "fps=10,scale=480:-2:flags=lanczos", "-f", "gif", outName);
           }
-        } else {
-          await ff.run("-i", inName, "-vf", "fps=10,scale=480:-2:flags=lanczos", "-f", "gif", outName);
-        }
 
-        const data = ff.FS("readFile", outName);
-        const blob = dataToBlob(data, MIME[fmt]);
-        const base = file.name.replace(/\.[^.]+$/, "");
-        setOutName(`${base}.${fmt}`);
-        setOutUrl(URL.createObjectURL(blob));
-        await ff.FS("unlink", inName);
-        await ff.FS("unlink", outName);
-      });
+          const data = ff.FS("readFile", outName);
+          const blob = dataToBlob(data, MIME[fmt]);
+          const base = file.name.replace(/\.[^.]+$/, "");
+          const url = URL.createObjectURL(blob);
+          setOutName(`${base}.${fmt}`);
+          setOutUrl(url);
+          completeTask(taskId, url, `${base}.${fmt}`);
+          await ff.FS("unlink", inName);
+          await ff.FS("unlink", outName);
+        },
+        {
+          onProgress: (p) => updateTask(taskId, { progress: p }),
+          onLog: (m) => updateTask(taskId, { log: m }),
+        },
+      );
     } catch {
-      setErr("转换失败：请确认文件格式受支持（常见视频格式均可）。可在下方日志查看具体原因。");
+      const msg = "转换失败：请确认文件格式受支持（常见视频格式均可）。可在任务中心日志查看具体原因。";
+      failTask(taskId, msg);
+      setErr(msg);
     }
   }
 
@@ -136,9 +157,9 @@ export default function VideoConvertPage() {
           {err && <div className="vc-log-error" style={{ marginTop: 12 }}>{err}</div>}
 
           <div className="vc-actions" style={{ marginTop: 14 }}>
-            <button type="button" className="btn btn-primary" onClick={convert} disabled={!file || busy}>
+            <button type="button" className="btn btn-primary" onClick={convert} disabled={!file || busy || running}>
               {busy ? <IconLoader width={14} height={14} /> : <IconDownload width={14} height={14} />}
-              {busy ? "转换中…" : `转换为 ${fmt.toUpperCase()}`}
+              {busy ? "转换中…" : running ? "任务进行中…" : `转换为 ${fmt.toUpperCase()}`}
             </button>
             {outUrl && (
               <a className="btn" href={outUrl} download={outName}>
@@ -147,6 +168,11 @@ export default function VideoConvertPage() {
               </a>
             )}
           </div>
+          {(busy || running) && (
+            <p className="count-hint" style={{ marginTop: 10 }}>
+              {running ? "已有转换任务在后台运行，可切换其他工具继续使用；进度与下载见右下角「任务中心」。" : "任务已在后台运行，可切换其他工具继续使用；进度与下载见右下角「任务中心」。"}
+            </p>
+          )}
         </div>
       </div>
 
@@ -166,7 +192,7 @@ export default function VideoConvertPage() {
       )}
 
       <div className="vc-note">
-        <strong>说明：</strong>转换全程在浏览器本地完成，视频不会上传任何服务器。首次转换需要下载 ffmpeg 处理引擎（约 24MB，之后走浏览器缓存）；MP4 / MOV / MKV 之间互转优先无损封装（不重新编码、速度快、画质不变），WebM / GIF 需要重新编码，耗时与视频时长成正比。
+        <strong>说明：</strong>转换全程在浏览器本地完成，视频不会上传任何服务器。首次转换需要下载 ffmpeg 处理引擎（约 24MB，之后走浏览器缓存）；MP4 / MOV / MKV 之间互转优先无损封装（不重新编码、速度快、画质不变），WebM / GIF 需要重新编码，耗时与视频时长成正比。任务提交后可在后台运行，切换工具不影响转换，进度与完成下载统一在右下角「任务中心」查看。
       </div>
     </div>
   );

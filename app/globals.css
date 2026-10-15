@@ -5905,3 +5905,209 @@ mark.re-match {
   background: var(--accent);
   transition: width 0.2s ease;
 }
+
+/* ---------- 全局任务中心（悬浮按钮 + 面板） ---------- */
+.task-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow-2);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease-out), background 0.18s var(--ease-out);
+}
+
+.task-fab:hover {
+  transform: translateY(-2px);
+  background: var(--bg-subtle);
+}
+
+.task-fab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.task-fab-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-fab-text {
+  font-size: 13px;
+}
+
+.task-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 72px;
+  z-index: 91;
+  width: min(420px, calc(100vw - 40px));
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+
+.task-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.task-panel-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  position: relative;
+  padding: 10px 32px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+}
+
+.task-item.error {
+  border-color: color-mix(in srgb, var(--err) 45%, var(--line));
+}
+
+.task-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.task-tool {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.task-status {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.task-item.done .task-status {
+  color: var(--ok);
+}
+
+.task-item.error .task-status {
+  color: var(--err);
+}
+
+.task-error {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--err);
+  line-height: 1.5;
+}
+
+.task-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.task-remove:hover {
+  background: var(--bg-subtle);
+  color: var(--ink);
+}
+
+.task-log {
+  margin-top: 8px;
+}
+
+.task-log summary {
+  font-size: 12px;
+  color: var(--ink-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.task-log pre {
+  margin-top: 6px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg-inset);
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+@media (max-width: 640px) {
+  .task-fab {
+    right: 14px;
+    bottom: 14px;
+    padding: 9px 12px;
+  }
+
+  .task-panel {
+    right: 14px;
+    bottom: 62px;
+    width: calc(100vw - 28px);
+    max-height: 60vh;
+  }
+}
