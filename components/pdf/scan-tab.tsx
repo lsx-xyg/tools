@@ -17,6 +17,7 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
 const MODES: { value: ScanMode; label: string; hint: string }[] = [
   { value: "color", label: "原色", hint: "保持彩色，适合证件、票据" },
   { value: "gray", label: "灰度", hint: "黑白灰，最接近扫描件观感" },
+  { value: "paper", label: "纸面字迹", hint: "米黄纸 + 墨色字迹 + 纸纹颗粒 + 可选红章，还原真实纸质扫描件" },
   { value: "bw", label: "黑白", hint: "增强对比近似二值，省墨清晰" },
 ];
 
