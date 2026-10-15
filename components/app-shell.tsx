@@ -1,68 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { tools, GITHUB_REPO } from "@/lib/tools";
+import { GITHUB_REPO } from "@/lib/tools";
 import { Brand } from "./brand";
 import { useTheme } from "./theme-provider";
 import { SearchPalette } from "./search-palette";
-import { IconChevronsLeft, IconChevronsRight, IconGithub, IconHome, IconLaptop, IconMenu, IconMoon, IconPlus, IconSearch, IconSun, IconX } from "./icons";
-import { ICONS } from "./icon-map";
+import { DesktopNav, MobileDrawerNav } from "./nav/grouped-nav";
+import { IconChevronsLeft, IconChevronsRight, IconGithub, IconLaptop, IconMenu, IconMoon, IconSearch, IconSun, IconX } from "./icons";
 import { Button } from "@/components/ui/button";
-
-function NavContent({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
-  return (
-    <>
-      <div className="nav-groups">
-        <div>
-          <div className="nav-group-label label">工具</div>
-          <div className="nav-items">
-            <Link
-              href="/"
-              className={`nav-item ${pathname === "/" ? "active" : ""}`}
-              onClick={onNavigate}
-              title="仪表台"
-            >
-              <IconHome className="nav-icon" />
-              <span className="nav-text">仪表台</span>
-            </Link>
-            {[...tools].sort((a, b) => a.index.localeCompare(b.index)).map((t) => (
-              <Link
-                key={t.id}
-                href={t.path}
-                className={`nav-item ${pathname.startsWith(t.path) ? "active" : ""}`}
-                onClick={onNavigate}
-                title={t.name}
-              >
-                {ICONS[t.icon]?.({ width: 18, height: 18 })}
-                <span className="nav-text">{t.name}</span>
-                <span className={`lamp ${t.lamp}`} aria-hidden="true" />
-              </Link>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="nav-group-label label">更多</div>
-          <div className="nav-items">
-            <span className="nav-item soon" aria-disabled="true" title="更多工具筹备中">
-              <IconPlus className="nav-icon" />
-              <span className="nav-text">更多工具筹备中</span>
-              <span className="lamp amber" aria-hidden="true" />
-            </span>
-          </div>
-          <p className="nav-soon-note">
-            有想用的工具？
-            <a href={`${GITHUB_REPO}/issues`} target="_blank" rel="noreferrer">
-              来 GitHub 提想法
-            </a>
-          </p>
-        </div>
-      </div>
-    </>
-  );
-}
 
 const THEME_META: Record<string, { label: string; next: string; icon: React.ReactNode }> = {
   system: { label: "跟随系统", next: "浅色", icon: <IconLaptop /> },
@@ -126,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <NavContent />
+        <DesktopNav />
 
         <div className="sidebar-foot">
           <div className="row">
@@ -204,7 +150,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <IconX />
           </button>
         </div>
-        <NavContent onNavigate={() => setOpen(false)} />
+        <MobileDrawerNav onNavigate={() => setOpen(false)} />
         <div className="sidebar-foot">
           <div className="row">
             <span>主题</span>

@@ -74,6 +74,87 @@ export interface Tool {
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
+  /** 侧边栏分组分类；缺省/未知一律归入兜底组 misc（实用工具） */
+  category?: CategoryId;
+}
+
+/** 侧边栏分组：doc 文档处理 / media 图片视频 / network 网络与调试 / dev 开发与编码 / misc 实用工具（兜底） */
+export type CategoryId = "doc" | "media" | "network" | "dev" | "misc";
+
+export interface NavCategory {
+  id: CategoryId;
+  name: string;
+  /** 组图标 key，取自 icon-map 的 ICONS */
+  icon: string;
+}
+
+export const NAV_CATEGORIES: NavCategory[] = [
+  { id: "doc", name: "文档处理", icon: "markdown" },
+  { id: "media", name: "图片视频", icon: "image" },
+  { id: "network", name: "网络与调试", icon: "ws-test" },
+  { id: "dev", name: "开发与编码", icon: "json" },
+  { id: "misc", name: "实用工具", icon: "transfer" },
+];
+
+/** 全量工具分类映射：新增工具未填 category 时默认落到 misc 兜底组 */
+export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
+  pdf: "doc",
+  markdown: "doc",
+  convert: "doc",
+  text: "doc",
+  case: "doc",
+  diff: "doc",
+  image: "media",
+  "image-batch": "media",
+  video: "media",
+  "video-frames": "media",
+  audio: "media",
+  "media-info": "media",
+  recorder: "media",
+  "http-parse": "network",
+  "http-status": "network",
+  "ws-test": "network",
+  "ip-lookup": "network",
+  "dns-lookup": "network",
+  base64: "dev",
+  json: "dev",
+  url: "dev",
+  jwt: "dev",
+  hash: "dev",
+  "file-hash": "dev",
+  ts: "dev",
+  cron: "dev",
+  uuid: "dev",
+  regex: "dev",
+  mime: "dev",
+  "excel-functions": "dev",
+  transfer: "misc",
+  qr: "misc",
+  "vercel-clean": "misc",
+  "github-release-clean": "misc",
+  ocr: "misc",
+  badge: "misc",
+  "device-info": "misc",
+};
+
+/** 工具所属分类：显式 category 优先，其次映射表，未知兜底 misc */
+export function toolCategory(t: Tool): CategoryId {
+  return t.category ?? TOOL_CATEGORY[t.id] ?? "misc";
+}
+
+/** 按 NAV_CATEGORIES 顺序分组的工具列表（组内按 index 排序） */
+export interface ToolGroup {
+  category: NavCategory;
+  tools: Tool[];
+}
+
+export function groupedTools(): ToolGroup[] {
+  return NAV_CATEGORIES.map((category) => ({
+    category,
+    tools: tools
+      .filter((t) => toolCategory(t) === category.id)
+      .sort((a, b) => a.index.localeCompare(b.index)),
+  }));
 }
 
 export const tools: Tool[] = [
