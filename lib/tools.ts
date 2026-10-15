@@ -22,7 +22,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "excel-functions";
+export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "video-convert" | "excel-functions";
 
 export interface Tool {
   id: ToolId;
@@ -58,6 +58,7 @@ export interface Tool {
     | "github-release-clean"
     | "recorder"
     | "ocr"
+    | "video"
     | "excel-functions";
   lamp: "ok" | "amber";
   tags: string[];
@@ -84,7 +85,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   { id: "quick", name: "速查参考", icon: "http-status" },
   { id: "cicd", name: "CI/CD 与发布", icon: "vercel-clean" },
   { id: "network", name: "网络与调试", icon: "ws-test" },
-  { id: "media", name: "媒体录制", icon: "recorder" },
+  { id: "media", name: "媒体工具", icon: "recorder" },
 ];
 
 /** 全量工具分类映射：新增工具未填 category 时默认落到 dev 兜底组 */
@@ -97,6 +98,7 @@ export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   case: "text",
   diff: "text",
   recorder: "media",
+  "video-convert": "media",
   "http-parse": "network",
   "http-status": "quick",
   "ws-test": "network",
@@ -431,13 +433,25 @@ export const tools: Tool[] = [
     id: "recorder",
     index: "T-33",
     name: "屏幕 / 摄像头录制",
-    tagline: "录屏带系统声音 · 摄像头录制 · 本地保存",
+    tagline: "录屏带系统声音 · 摄像头录制 · MP4 / WebM",
     description:
-      "浏览器内直接录制屏幕（可选系统声音与麦克风）或摄像头画面，实时计时，录制完成可预览并下载 WebM 文件。录制内容全程本地，不上传任何服务器。",
+      "浏览器内直接录制屏幕（可选系统声音与麦克风）或摄像头画面，实时计时与预览，输出 MP4（Chrome 126+，不支持时自动回退 WebM），录制完成可预览并下载。录制内容全程本地，不上传任何服务器。",
     path: "/tools/recorder",
     icon: "recorder",
     lamp: "ok",
-    tags: ["录制", "屏幕", "摄像头", "MediaRecorder", "本地"],
+    tags: ["录制", "屏幕", "摄像头", "MediaRecorder", "MP4", "WebM", "本地"],
+  },
+  {
+    id: "video-convert",
+    index: "T-39",
+    name: "视频格式转换",
+    tagline: "MP4 / WebM / MOV / MKV / GIF",
+    description:
+      "把视频在浏览器本地转换成 MP4、WebM、MOV、MKV 或 GIF。MP4 / MOV / MKV 之间互转优先无损封装（不重新编码、画质不变），WebM / GIF 重新编码。基于 ffmpeg.wasm，文件不上传服务器。",
+    path: "/tools/video-convert",
+    icon: "video",
+    lamp: "ok",
+    tags: ["视频", "格式转换", "MP4", "WebM", "MOV", "MKV", "GIF", "ffmpeg", "本地"],
   },
   {
     id: "ocr",

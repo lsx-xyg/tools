@@ -22,6 +22,8 @@ export default function RecorderPage() {
   const [tab, setTab] = useState<TabId>("screen");
   const [state, setState] = useState<"idle" | "recording" | "done">("idle");
   const [err, setErr] = useState("");
+  const [fmt, setFmt] = useState<"mp4" | "webm">("mp4");
+  const [mp4Note, setMp4Note] = useState("");
   const [elapsed, setElapsed] = useState(0);
   const [recs, setRecs] = useState<Rec[]>([]);
   const [starting, setStarting] = useState(false);
@@ -57,6 +59,27 @@ export default function RecorderPage() {
       v.muted = false;
     }
   }, [state]);
+
+  /* 按所选格式挑选 MediaRecorder 支持的最优 mimeType；MP4 需 Chrome 126+，不支持时返回空串由调用方回退 */
+  function pickMime(fmt: "mp4" | "webm"): string {
+    if (fmt === "mp4") {
+      const candidates = [
+        "video/mp4;codecs=avc1.42E01E,opus",
+        "video/mp4;codecs=avc1.42E01E",
+        "video/mp4;codecs=avc1",
+        "video/mp4",
+      ];
+      for (const m of candidates) {
+        if (MediaRecorder.isTypeSupported(m)) return m;
+      }
+      return "";
+    }
+    return MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "";
+  }
 
   function stopStream() {
     if (timerRef.current) {
@@ -94,11 +117,16 @@ export default function RecorderPage() {
       const stream = tab === "screen" ? await (navigator.mediaDevices as MediaDevices & { getDisplayMedia(c: MediaStreamConstraints): Promise<MediaStream> }).getDisplayMedia(constraints) : await navigator.mediaDevices.getUserMedia(constraints);
 
       streamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-        ? "video/webm;codecs=vp9,opus"
-        : MediaRecorder.isTypeSupported("video/webm")
-          ? "video/webm"
-          : "";
+      /* MP4 需要 Chrome 126+；不支持时自动回退 WebM */
+      let mime = pickMime(fmt);
+      const activeFmt = mime ? fmt : "webm";
+      if (fmt === "mp4" && !mime) {
+        mime = pickMime("webm");
+        setFmt("webm");
+        setMp4Note("当前浏览器不支持直接录制 MP4（需 Chrome 126+），已自动回退为 WebM 录制。");
+      } else {
+        setMp4Note("");
+      }
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       chunksRef.current = [];
       rec.ondataavailable = (e) => {
@@ -109,7 +137,7 @@ export default function RecorderPage() {
         const durSec = (Date.now() - startTimeRef.current) / 1000;
         const mm = String(Math.floor(durSec / 60)).padStart(2, "0");
         const ss = String(Math.floor(durSec % 60)).padStart(2, "0");
-        const name = `recording_${Date.now()}.webm`;
+        const name = `recording_${Date.now()}.${activeFmt}`;
         setRecs((prev) => [...prev, { url: URL.createObjectURL(blob), name, size: blob.size, duration: `${mm}:${ss}` }]);
         stopStream();
         setState("idle");
@@ -216,19 +244,46 @@ export default function RecorderPage() {
             ) : (
               <ul>
                 <li>点击「开始录制」后，浏览器会请求摄像头与麦克风权限。</li>
-                <li>录制输出为 WebM 格式，可直接下载或二次处理。</li>
+                <li>录制输出为所选格式（MP4 / WebM），可直接下载或二次处理。</li>
               </ul>
             )}
           </div>
+
+          {mp4Note && <div className="vc-log-error">{mp4Note}</div>}
 
           {err && <div className="vc-log-error">{err}</div>}
 
           <div className="vc-actions">
             {state !== "recording" ? (
-              <button type="button" className="btn btn-primary" onClick={start} disabled={starting}>
-                {starting ? <IconLoader width={14} height={14} /> : null}
-                {starting ? "请求中…" : "开始录制"}
-              </button>
+              <>
+                <div className="rc-fmt-row" role="radiogroup" aria-label="输出格式">
+                  <span className="subtle" style={{ marginRight: 8 }}>
+                    输出格式
+                  </span>
+                  {(["mp4", "webm"] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      role="radio"
+                      aria-checked={fmt === f}
+                      className={`hp-tab ${fmt === f ? "hp-tab-on" : ""}`}
+                      data-active={fmt === f}
+                      onClick={() => {
+                        setFmt(f);
+                        setMp4Note("");
+                      }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                    >
+                      {f === "mp4" ? "MP4" : "WebM"}
+                      {f === "mp4" && <span className="subtle" style={{ fontSize: 12 }}>推荐</span>}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="btn btn-primary" onClick={start} disabled={starting}>
+                  {starting ? <IconLoader width={14} height={14} /> : null}
+                  {starting ? "请求中…" : "开始录制"}
+                </button>
+              </>
             ) : (
               <button type="button" className="btn btn-danger" onClick={stop}>
                 停止录制
