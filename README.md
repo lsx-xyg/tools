@@ -4,7 +4,7 @@
 
 # 工具箱 TOOLBOX
 
-**一个部署在 Cloudflare Workers 上的在线工具箱，37 个即开即用的小工具，无需注册登录。**
+**一个部署在 Cloudflare Workers 上的在线工具箱，27 个即开即用的小工具，无需注册登录。**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
@@ -51,8 +51,6 @@
 | :--- | :--- |
 | 📁 文本 / 文件互传 | WebRTC P2P 直传（不落服务器）· 离线暂存（时长 / 次数可自定义）· 提取码 / 扫码 |
 | 🔲 二维码生成 / 解析 | 生成二维码或解析二维码图片 |
-| 🔤 Base64 编码 | 编码 / 解码，中文安全 |
-| 📋 JSON 格式化 | 格式化 / 校验 / 压缩 |
 | ⏰ Cron 表达式 | 解析下次执行时间，可视化生成 |
 | 🔄 格式互转 | YAML / XML / CSV / INI / TOML / Properties ↔ JSON |
 | 🕐 时间戳转换 | Unix 时间 ↔ 日期时间 |
@@ -69,22 +67,14 @@
 | 📑 MIME types | MIME ↔ 扩展名互查 |
 | 🌐 HTTP 状态码 | 状态码速查 · 数字 / 英文 / 中文 |
 | 📄 PDF 工具箱 | 合并 / 拆分 / 旋转 / 分级压缩（建议·低·中·高）/ 转图片 / 图片转 PDF（严格 A4 · 拖拽排序 · 逐图旋转）/ 删页 / 页码 / 水印 / 加密 · 文件列表统一预览 / 放大 / 旋转 / 排序（缩略图与放大预览真实反映旋转方向） |
-| 🖼️ 图片处理 | 格式转换 / 压缩 / 缩放 / 裁剪 |
 | 🏷️ 徽章生成 | shields.io 风格徽章 |
 | ✍️ Markdown 编辑器 | 实时预览 / 转 HTML / PDF |
 | 📨 请求头解析 | UA / Cookie / URL / Query / Header / Set-Cookie |
 | 🔌 WebSocket / SSE 测试 | 连接测试 · 收发消息 · 实时日志 |
 | ☁️ Vercel 部署清理 | 批量删除旧部署 · 保留最新 N 个 |
 | 🐙 GitHub Release 清理 | 批量删除旧 Release · 保留最新 N 个 · 可选删 Tag |
-| 🎬 视频处理 | 裁剪 / 转 GIF / 提取音频 / 格式转换 / 拼接 / 压缩 |
-| 🎵 音频处理 | 格式转换 / 拼接 / 裁剪 / 变速变调 |
-| 📊 媒体信息 | 容器 / 编码 / 时长 / 码率 / 流信息 |
-| 🎞️ 视频抽帧 / 倍速 | 按时间点抽帧 · GIF 转视频 · 倍速播放 |
-| 🖼️ 图片批量处理 | 批量压缩 / 加水印 / 图片转 PDF（一页一张） |
 | 📹 屏幕 / 摄像头录制 | 录制中实时预览 · 停止自动回放 · 移动端兼容提示 |
 | 🔤 OCR 文字识别 | 图片 / PDF / Word 文字识别，PaddleOCR 引擎本地识别 |
-| 🌐 IP 归属地查询 | 归属地 / 运营商 / 时区 / ASN |
-| 🌍 DNS 解析查询 | DoH 多源自动容错 · CNAME 压平提示 · 代理 IP 识别 |
 | 📊 Excel 函数快查 | 63 个常用函数 · 语法 / 参数 / 示例 · 交互模拟器 · 明暗主题适配 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台。
@@ -232,18 +222,10 @@ tools/
 │   ├── tools/                  # 各工具页面（每个工具一个目录）
 │   │   ├── transfer/           # T-01 文本/文件互传
 │   │   ├── qr/                 # T-02 二维码
-│   │   ├── json/               # T-04 JSON 格式化
 │   │   ├── vercel-clean/       # T-26 Vercel 部署清理
 │   │   ├── github-release-clean/ # T-27 GitHub Release 清理
-│   │   ├── video/                # T-28 视频处理
-│   │   ├── audio/                # T-29 音频处理
-│   │   ├── media-info/           # T-30 媒体信息
-│   │   ├── video-frames/         # T-31 视频抽帧 / 倍速
-│   │   ├── image-batch/          # T-32 图片批量处理
 │   │   ├── recorder/             # T-33 屏幕 / 摄像头录制
 │   │   ├── ocr/                  # T-34 OCR 文字识别
-│   │   ├── ip-lookup/            # T-35 IP 归属地查询
-│   │   ├── dns-lookup/           # T-36 DNS 解析查询
 │   │   ├── excel-functions/      # T-37 Excel 函数快查（含 [slug] 详情页）
 │   │   ├── pdf/                  # T-20 PDF 工具箱（合并/拆分/旋转/压缩/转图/水印/加密…）
 │   │   └── pdf-auto-rotate/      # T-38 已并入 T-20 旋转 Tab；旧路由重定向到 /tools/pdf?tab=rotate
