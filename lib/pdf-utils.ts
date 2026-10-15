@@ -124,16 +124,13 @@ export type CompressLevel = "auto" | "low" | "medium" | "high";
 
 /**
  * 三档栅格化参数：scale = 相对 1:1(72dpi) 视口的渲染缩放；quality = JPEG 质量。
- * low 保清晰，medium 平衡，high 极致瘦身。
+ * 清晰度下限已提高：low 视觉基本无损，medium 轻度降质，high 明显压缩但内容仍清晰可读。
  */
 const RASTER_PARAMS: Record<Exclude<CompressLevel, "auto">, { scale: number; quality: number }> = {
-  low: { scale: 0.7, quality: 0.75 },
-  medium: { scale: 0.5, quality: 0.55 },
-  high: { scale: 0.35, quality: 0.4 },
+  low: { scale: 0.9, quality: 0.88 },
+  medium: { scale: 0.75, quality: 0.78 },
+  high: { scale: 0.65, quality: 0.68 },
 };
-
-/** auto 档决策阈值：无损重写收益达到该比例(10%)就直接用无损，否则再尝试栅格化重建 */
-const AUTO_LOSSLESS_GAIN = 0.1;
 
 /** 路径 A：无损重写（useObjectStreams 剔除冗余对象）。对文本型 PDF 安全、体积通常略降 */
 async function losslessRewrite(bytes: ArrayBuffer): Promise<Uint8Array> {
@@ -179,9 +176,9 @@ async function rasterizeRebuild(
 
 /**
  * 分级真实压缩：
- * - low / medium / high：直接栅格化重建（每页转 JPEG 再打包），力度逐级增大；
- * - auto（建议）：先无损重写，若收益 < 10%（说明是图片型/已优化 PDF），再跑 medium 栅格化重建，
- *   两者取体积更小者——文本型 PDF 因无损优先不会膨胀，图片型 PDF 仍能拿到真实压缩。
+ * - low / medium / high：栅格化重建（每页转 JPEG 再打包），力度逐级增大，清晰度下限已提高；
+ * - auto（建议）：仅做无损重写，绝不栅格化——文字保持可选中、不会变糊。若收益不足，
+ *   说明该 PDF 已高度优化或含大量压缩图片，可手动选低 / 中 / 高拿真实压缩。
  * 加密/损坏 PDF 在 pdf-lib.load 阶段抛错，由调用方经 pdfError 转可读提示。
  */
 export async function compressPdf(
@@ -197,21 +194,9 @@ export async function compressPdf(
     return { data, before, after: data.length };
   }
 
-  // auto
+  // auto：只走无损重写，保证清晰度与文字可选中（不自动栅格化）
   const rewrite = await losslessRewrite(bytes);
-  const gain = 1 - rewrite.length / before;
-  if (gain >= AUTO_LOSSLESS_GAIN) {
-    return { data: rewrite, before, after: rewrite.length };
-  }
-  let rebuilt: Uint8Array;
-  try {
-    rebuilt = await rasterizeRebuild(bytes, RASTER_PARAMS.medium.scale, RASTER_PARAMS.medium.quality);
-  } catch {
-    // 栅格化（渲染/编码）失败时退回无损重写，保证至少有产物
-    return { data: rewrite, before, after: rewrite.length };
-  }
-  const data = rebuilt.length < rewrite.length ? rebuilt : rewrite;
-  return { data, before, after: data.length };
+  return { data: rewrite, before, after: rewrite.length };
 }
 
 /* ===================== PDF 转图片 ===================== */
