@@ -14,7 +14,7 @@
  * 同时导出 PdfViewerModal，供页面级工具（rotate / organize 等）复用同一放大预览模态。
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   IconArrowDown,
   IconArrowUp,
@@ -102,6 +102,27 @@ export function PdfViewerModal({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const taskRef = useRef<import("pdfjs-dist").RenderTask | null>(null);
   const prevOpenRef = useRef(false);
+  /* 图片预览：记录自然尺寸与可视区域，使旋转后外接盒随方向适配（避免旋转后溢出/被裁） */
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [imgNat, setImgNat] = useState<{ w: number; h: number } | null>(null);
+  const [view, setView] = useState<{ w: number; h: number } | null>(null);
+
+  /* 切换图片源时重置自然尺寸 */
+  useEffect(() => {
+    setImgNat(null);
+  }, [imageUrl]);
+
+  /* 测量可视区域尺寸 */
+  useEffect(() => {
+    if (!open || kind !== "image") return;
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => setView({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, kind, imageUrl]);
 
   /* 打开时重置缩放（翻页/旋转不重置） */
   useEffect(() => {
@@ -279,21 +300,46 @@ export function PdfViewerModal({
               ‹
             </button>
           )}
-          <div className="vc-viewer-canvas-wrap">
+          <div className="vc-viewer-canvas-wrap" ref={wrapRef}>
             {kind === "pdf" ? (
               <canvas ref={canvasRef} className="vc-viewer-canvas" />
             ) : (
-              imageUrl && (
-                <img
-                  src={imageUrl}
-                  alt={title}
-                  className="vc-viewer-canvas"
-                  style={{
-                    transform: `rotate(${imageRotation ?? 0}deg) scale(${zoom})`,
-                    transition: "transform .15s ease",
-                  }}
-                />
-              )
+              imageUrl &&
+              (() => {
+                const rot = imageRotation ?? 0;
+                const swapped = rot === 90 || rot === 270;
+                let wrapStyle: CSSProperties | undefined;
+                const imgStyle: CSSProperties = { transition: "transform .15s ease" };
+                if (imgNat && view) {
+                  // wrapper = 旋转后外接盒（含缩放），img = 旋转前盒子，transform 仅做旋转
+                  const dispW = swapped ? imgNat.h : imgNat.w;
+                  const dispH = swapped ? imgNat.w : imgNat.h;
+                  const base = Math.min(view.w / dispW, view.h / dispH);
+                  const W = dispW * base * zoom;
+                  const H = dispH * base * zoom;
+                  wrapStyle = { width: W, height: H };
+                  Object.assign(imgStyle, {
+                    width: swapped ? H : W,
+                    height: swapped ? W : H,
+                    transform: `translate(-50%, -50%) rotate(${rot}deg)`,
+                    maxWidth: "none",
+                    maxHeight: "none",
+                  });
+                }
+                return (
+                  <div className="vc-viewer-img-wrap" style={wrapStyle}>
+                    <img
+                      src={imageUrl}
+                      alt={title}
+                      className="vc-viewer-canvas"
+                      onLoad={(e) =>
+                        setImgNat({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
+                      }
+                      style={imgStyle}
+                    />
+                  </div>
+                );
+              })()
             )}
             {loading && (
               <div className="vc-viewer-loading">
@@ -334,6 +380,28 @@ function Thumb({
   const [error, setError] = useState(false);
   const renderKey = `${item.id}|${item.kind}|${item.rotation}`;
 
+  /* 图片缩略图：记录自然像素尺寸与可用容器尺寸，使旋转后布局盒随方向适配
+     （transform 不改变布局盒，需我们手动按旋转后的外接盒给出尺寸，避免留白/溢出） */
+  const rotWrapRef = useRef<HTMLDivElement>(null);
+  const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
+  const [budget, setBudget] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (item.kind !== "image") return;
+    const area = rotWrapRef.current?.parentElement;
+    if (!area) return;
+    const measure = () => {
+      const r = area.getBoundingClientRect();
+      // .pfl-thumb-area padding 10px * 2；高度封顶 170px 与 CSS 保持一致
+      setBudget({ w: Math.max(48, r.width - 20), h: 170 });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(area);
+    return () => ro.disconnect();
+    // url 就绪后缩略图 wrapper 才挂载，需据此重新测量
+  }, [item.kind, url]);
+
   useEffect(() => {
     if (item.kind !== "pdf") return;
     let cancelled = false;
@@ -372,16 +440,50 @@ function Thumb({
   }, [renderKey, getDoc]);
 
   if (item.kind === "image") {
-    return url ? (
-      <img
-        src={url}
-        alt={item.name}
-        className="pfl-thumb-img"
-        style={{ transform: `rotate(${item.rotation}deg)`, transition: "transform .2s ease" }}
-      />
-    ) : (
-      <div className="pfl-thumb-ph">
-        <IconFile width={20} height={20} />
+    if (!url) {
+      return (
+        <div className="pfl-thumb-ph">
+          <IconFile width={20} height={20} />
+        </div>
+      );
+    }
+    /* 旋转 90/270 时视觉外接盒的宽高互换；据此同时给出 wrapper(=旋转后外接盒) 与
+       img(=旋转前盒子) 的尺寸，再对 img 做 transform 旋转，二者恰好吻合，不留空白/不溢出 */
+    const swapped = item.rotation === 90 || item.rotation === 270;
+    let wrapStyle: CSSProperties | undefined;
+    let fitted = false;
+    const imgStyle: CSSProperties = {};
+    if (nat && budget) {
+      const dispW = swapped ? nat.h : nat.w;
+      const dispH = swapped ? nat.w : nat.h;
+      const s = Math.min(budget.w / dispW, budget.h / dispH);
+      const W = Math.max(4, Math.round(dispW * s));
+      const H = Math.max(4, Math.round(dispH * s));
+      wrapStyle = { width: W, height: H };
+      fitted = true;
+      Object.assign(imgStyle, {
+        width: swapped ? H : W,
+        height: swapped ? W : H,
+        maxWidth: "none",
+        maxHeight: "none",
+        transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
+      });
+    } else {
+      imgStyle.transform = `rotate(${item.rotation}deg)`;
+    }
+    return (
+      <div
+        ref={rotWrapRef}
+        className={`pfl-thumb-rot${fitted ? " is-fit" : ""}`}
+        style={wrapStyle}
+      >
+        <img
+          src={url}
+          alt={item.name}
+          className="pfl-thumb-img"
+          onLoad={(e) => setNat({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+          style={imgStyle}
+        />
       </div>
     );
   }
@@ -407,7 +509,9 @@ function Thumb({
 
 export function PdfFileList({ items, onChange, disabled = false, className }: PdfFileListProps) {
   const docsRef = useRef<Map<string, import("pdfjs-dist").PDFDocumentProxy>>(new Map());
-  const urlsRef = useRef<Map<string, string>>(new Map());
+  /* objectURL 用 state 存储：创建后立即触发重渲染，缩略图无需等下一次旋转才出现 */
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const urlsLatest = useRef<Record<string, string>>({});
   const dragIdRef = useRef<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ item: PdfFileItem; pageIndex: number } | null>(null);
@@ -423,26 +527,37 @@ export function PdfFileList({ items, onChange, disabled = false, className }: Pd
     return doc;
   }, []);
 
-  /* 图片 objectURL 生命周期：随 items 增删，卸载全部回收 */
+  /* 图片 objectURL 生命周期：随 items 增删，卸载全部回收。
+     创建/回收放在 effect 主体（不放进 setState updater，避免 StrictMode 双调用 updater 产生副作用/泄漏）。
+     ref 在 effect 内同步更新，StrictMode 双跑 effect 时第二次会看到 id 已存在，不会重复创建。 */
   useEffect(() => {
     const alive = new Set(items.map((i) => i.id));
-    for (const [id, u] of urlsRef.current) {
-      if (!alive.has(id)) {
+    const prev = urlsLatest.current;
+    let changed = false;
+    const next: Record<string, string> = {};
+    for (const [id, u] of Object.entries(prev)) {
+      if (alive.has(id)) next[id] = u;
+      else {
         URL.revokeObjectURL(u);
-        urlsRef.current.delete(id);
+        changed = true;
       }
     }
     for (const it of items) {
-      if (it.kind === "image" && !urlsRef.current.has(it.id)) {
-        urlsRef.current.set(it.id, URL.createObjectURL(it.file));
+      if (it.kind === "image" && !(it.id in next)) {
+        next[it.id] = URL.createObjectURL(it.file);
+        changed = true;
       }
+    }
+    if (changed) {
+      urlsLatest.current = next;
+      setUrls(next);
     }
   }, [items]);
 
+  /* 卸载时回收全部 objectURL（清理时读 ref 当前值，而非挂载时的空闭包） */
   useEffect(() => {
-    const urls = urlsRef.current;
     return () => {
-      for (const u of urls.values()) URL.revokeObjectURL(u);
+      for (const u of Object.values(urlsLatest.current)) URL.revokeObjectURL(u);
     };
   }, []);
 
@@ -505,7 +620,7 @@ export function PdfFileList({ items, onChange, disabled = false, className }: Pd
               onClick={() => setViewer({ item: it, pageIndex: 0 })}
               title="点击放大预览"
             >
-              <Thumb item={it} url={urlsRef.current.get(it.id) ?? null} getDoc={getDoc} />
+              <Thumb item={it} url={urls[it.id] ?? null} getDoc={getDoc} />
               {it.rotation !== 0 && <span className="pfl-rot-badge">{it.rotation}°</span>}
             </div>
             <div className="pfl-meta">
@@ -572,7 +687,7 @@ export function PdfFileList({ items, onChange, disabled = false, className }: Pd
           bytes={viewer.item.kind === "pdf" ? viewer.item.bytes : undefined}
           blob={viewer.item.kind === "pdf" ? (viewer.item.bytes ? undefined : viewer.item.file) : undefined}
           imageUrl={
-            viewer.item.kind === "image" ? (urlsRef.current.get(viewer.item.id) ?? undefined) : undefined
+            viewer.item.kind === "image" ? (urls[viewer.item.id] ?? undefined) : undefined
           }
           imageRotation={viewer.item.kind === "image" ? viewer.item.rotation : undefined}
           pageCount={viewer.item.pages ?? 1}
