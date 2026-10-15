@@ -62,12 +62,12 @@ export interface Tool {
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
-  /** 侧边栏分组分类；缺省/未知一律归入兜底组 misc（实用工具） */
+  /** 侧边栏分组分类；缺省/未知一律归入兜底组 dev（开发与编码） */
   category?: CategoryId;
 }
 
-/** 侧边栏分组：doc 文档处理 / media 图片视频 / network 网络与调试 / dev 开发与编码 / misc 实用工具（兜底） */
-export type CategoryId = "doc" | "media" | "network" | "dev" | "misc";
+/** 侧边栏分组：share 传输与分享 / doc 文档处理 / text 文本处理 / dev 开发与编码 / quick 速查参考 / cicd CI/CD 与发布 / network 网络与调试 / media 媒体录制 */
+export type CategoryId = "share" | "doc" | "text" | "dev" | "quick" | "cicd" | "network" | "media";
 
 export interface NavCategory {
   id: CategoryId;
@@ -77,24 +77,28 @@ export interface NavCategory {
 }
 
 export const NAV_CATEGORIES: NavCategory[] = [
+  { id: "share", name: "传输与分享", icon: "transfer" },
   { id: "doc", name: "文档处理", icon: "markdown" },
-  { id: "media", name: "图片视频", icon: "image" },
-  { id: "network", name: "网络与调试", icon: "ws-test" },
+  { id: "text", name: "文本处理", icon: "text" },
   { id: "dev", name: "开发与编码", icon: "json" },
-  { id: "misc", name: "实用工具", icon: "transfer" },
+  { id: "quick", name: "速查参考", icon: "http-status" },
+  { id: "cicd", name: "CI/CD 与发布", icon: "vercel-clean" },
+  { id: "network", name: "网络与调试", icon: "ws-test" },
+  { id: "media", name: "媒体录制", icon: "recorder" },
 ];
 
-/** 全量工具分类映射：新增工具未填 category 时默认落到 misc 兜底组 */
+/** 全量工具分类映射：新增工具未填 category 时默认落到 dev 兜底组 */
 export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   pdf: "doc",
   markdown: "doc",
-  convert: "doc",
-  text: "doc",
-  case: "doc",
-  diff: "doc",
+  ocr: "doc",
+  convert: "dev",
+  text: "text",
+  case: "text",
+  diff: "text",
   recorder: "media",
   "http-parse": "network",
-  "http-status": "network",
+  "http-status": "quick",
   "ws-test": "network",
   url: "dev",
   jwt: "dev",
@@ -104,20 +108,19 @@ export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   cron: "dev",
   uuid: "dev",
   regex: "dev",
-  mime: "dev",
-  "excel-functions": "dev",
-  transfer: "misc",
-  qr: "misc",
-  "vercel-clean": "misc",
-  "github-release-clean": "misc",
-  ocr: "misc",
-  badge: "misc",
-  "device-info": "misc",
+  mime: "quick",
+  "excel-functions": "quick",
+  transfer: "share",
+  qr: "share",
+  "vercel-clean": "cicd",
+  "github-release-clean": "cicd",
+  badge: "dev",
+  "device-info": "quick",
 };
 
-/** 工具所属分类：显式 category 优先，其次映射表，未知兜底 misc */
+/** 工具所属分类：显式 category 优先，其次映射表，未知兜底 dev */
 export function toolCategory(t: Tool): CategoryId {
-  return t.category ?? TOOL_CATEGORY[t.id] ?? "misc";
+  return t.category ?? TOOL_CATEGORY[t.id] ?? "dev";
 }
 
 /** 按 NAV_CATEGORIES 顺序分组的工具列表（组内按 index 排序） */
