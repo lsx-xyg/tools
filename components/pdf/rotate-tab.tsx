@@ -16,6 +16,7 @@ import JSZip from "jszip";
 import { PDFDocument, degrees } from "pdf-lib";
 import { getPdfjs } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
+import { PdfViewerModal } from "@/components/pdf/pdf-file-list";
 
 /* ---------- 类型 ---------- */
 interface FileRow {
@@ -82,14 +83,7 @@ export function RotateTab() {
   const [logs, setLogs] = useState<LogLine[]>([]);
   /* 大预览模态：点击缩略图打开，viewer 为当前查看的文件与页码 */
   const [viewer, setViewer] = useState<{ name: string; pageIndex: number } | null>(null);
-  const [viewLoading, setViewLoading] = useState(false);
-  /* 大预览缩放：基准 2.2 = 100%，范围 0.8~6.0 */
-  const [viewZoom, setViewZoom] = useState(2.2);
   const logEndRef = useRef<HTMLDivElement>(null);
-  const viewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const viewWrapRef = useRef<HTMLDivElement>(null);
-  /* 记录上一次 viewer 是否为 null，用于检测"打开"动作（翻页不重置缩放） */
-  const prevViewerNullRef = useRef(true);
   /* ref 存储 pdf.js 文档和 canvas（key: 文件名#页码），避免 setState 重渲染 */
   const pdfDocsRef = useRef<Map<string, import("pdfjs-dist").PDFDocumentProxy>>(new Map());
   const canvasesRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
@@ -103,15 +97,6 @@ export function RotateTab() {
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [logs]);
-
-  /* Esc 关闭大预览 */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setViewer(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   /* ---------- 通用渲染：任意 canvas 渲染一页（缩略图与大预览共用） ---------- */
   const renderPageToCanvas = useCallback(
@@ -161,43 +146,6 @@ export function RotateTab() {
     },
     [],
   );
-
-  /* viewer 变化（打开/翻页/旋转）时渲染大预览，高分辨率保证文字清晰；缩放变化也重渲染 */
-  useEffect(() => {
-    if (!viewer) return;
-    const row = rows.find((r) => r.name === viewer.name);
-    const canvas = viewCanvasRef.current;
-    if (!row || !canvas || row.status === "error" || !row.blob) return;
-    setViewLoading(true);
-    renderPageToCanvas(canvas, row, viewer.pageIndex, row.rotations[viewer.pageIndex] ?? 0, viewZoom, "v")
-      .catch(() => {
-        /* 大预览渲染失败：保持静默，由 loading 遮罩消失即可 */
-      })
-      .finally(() => setViewLoading(false));
-  }, [viewer, rows, renderPageToCanvas, viewZoom]);
-
-  /* 打开大预览时重置缩放为 100%（翻页不重置） */
-  useEffect(() => {
-    if (viewer && prevViewerNullRef.current) {
-      setViewZoom(2.2);
-    }
-    prevViewerNullRef.current = !viewer;
-  }, [viewer]);
-
-  /* 大预览内拦截 Ctrl/Cmd + 滚轮：缩放 PDF 而非浏览器（挂在 document，覆盖模态任意位置） */
-  useEffect(() => {
-    if (!viewer) return;
-    const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      setViewZoom((z) => {
-        const delta = e.deltaY < 0 ? 0.2 : -0.2;
-        return Math.min(6, Math.max(0.8, +(z + delta).toFixed(1)));
-      });
-    };
-    document.addEventListener("wheel", onWheel, { passive: false });
-    return () => document.removeEventListener("wheel", onWheel);
-  }, [viewer]);
 
   /* ---------- 渲染缩略图单页 ---------- */
   const renderPage = useCallback(
@@ -726,145 +674,71 @@ export function RotateTab() {
         <strong>点击任一页缩略图可放大预览</strong>（支持翻页、旋转、下载当前文件）；确认后批量下载（逐页按各自角度输出）。
       </div>
 
-      {/* 大预览模态 */}
-      {viewer &&
-        (() => {
-          const row = rows.find((r) => r.name === viewer.name);
-          if (!row) return null;
-          const pi = viewer.pageIndex;
-          const rot = row.rotations[pi] ?? 0;
-          const hasPrev = pi > 0;
-          const hasNext = pi < row.pages - 1;
-          return (
-            <div
-              className="vc-viewer"
-              role="dialog"
-              aria-modal="true"
-              onClick={() => setViewer(null)}
-            >
-              <div
-                className="vc-viewer-card"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="vc-viewer-head">
-                  <div className="vc-viewer-title">
-                    <IconFile width={16} height={16} />
-                    <span className="vc-viewer-name" title={row.name}>
-                      {row.name}
-                    </span>
-                    <span className="vc-viewer-meta">
-                      {pi + 1} / {row.pages} 页
-                    </span>
-                    {rot !== 0 && <span className="vc-rotation-badge-static">{rot}°</span>}
-                  </div>
-                  <div className="vc-viewer-actions">
-                    <div className="vc-viewer-zoom">
-                      <button
-                        className="vc-ctrl-btn vc-ctrl-sm"
-                        onClick={() => setViewZoom((z) => Math.max(0.8, +(z - 0.2).toFixed(1)))}
-                        disabled={busy}
-                        title="缩小（Ctrl + 滚轮）"
-                      >
-                        −
-                      </button>
-                      <button
-                        className="vc-ctrl-btn vc-ctrl-sm vc-viewer-zoom-val"
-                        onClick={() => setViewZoom(2.2)}
-                        title="点击重置为 100%"
-                      >
-                        {Math.round((viewZoom / 2.2) * 100)}%
-                      </button>
-                      <button
-                        className="vc-ctrl-btn vc-ctrl-sm"
-                        onClick={() => setViewZoom((z) => Math.min(6, +(z + 0.2).toFixed(1)))}
-                        disabled={busy}
-                        title="放大（Ctrl + 滚轮）"
-                      >
-                        +
-                      </button>
-                    </div>
-                    <button
-                      className="vc-ctrl-btn vc-ctrl-sm"
-                      onClick={() => rotatePage(row.name, pi, -90)}
-                      disabled={busy}
-                      title="本页左旋 90°"
-                    >
-                      <IconRotate width={14} height={14} />
-                      左旋
-                    </button>
-                    <button
-                      className="vc-ctrl-btn vc-ctrl-sm"
-                      onClick={() => rotatePage(row.name, pi, 90)}
-                      disabled={busy}
-                      title="本页右旋 90°"
-                    >
-                      <IconRotateCw width={14} height={14} />
-                      右旋
-                    </button>
-                    <button
-                      className="vc-ctrl-btn vc-ctrl-sm"
-                      onClick={() => resetPage(row.name, pi)}
-                      disabled={busy || rot === 0}
-                      title="本页重置为 0°"
-                    >
-                      <IconRefresh width={14} height={14} />
-                      重置
-                    </button>
-                    <button
-                      className="vc-ctrl-btn vc-ctrl-sm"
-                      onClick={() => downloadOne(row.name)}
-                      disabled={busy}
-                      title="下载当前文件（按当前角度）"
-                    >
-                      <IconDownload width={14} height={14} />
-                      下载
-                    </button>
-                    <button
-                      className="vc-ctrl-btn vc-ctrl-sm vc-viewer-close"
-                      onClick={() => setViewer(null)}
-                      title="关闭（Esc）"
-                    >
-                      <IconX width={14} height={14} />
-                      关闭
-                    </button>
-                  </div>
-                </div>
-                <div className="vc-viewer-body">
-                  {hasPrev && (
-                    <button
-                      className="vc-viewer-nav"
-                      onClick={() =>
-                        setViewer({ name: row.name, pageIndex: pi - 1 })
-                      }
-                      title="上一页"
-                    >
-                      ‹
-                    </button>
-                  )}
-                  <div className="vc-viewer-canvas-wrap" ref={viewWrapRef}>
-                    <canvas ref={viewCanvasRef} className="vc-viewer-canvas" />
-                    {viewLoading && (
-                      <div className="vc-viewer-loading">
-                        <IconLoader width={28} height={28} className="spin" />
-                      </div>
-                    )}
-                  </div>
-                  {hasNext && (
-                    <button
-                      className="vc-viewer-nav"
-                      onClick={() =>
-                        setViewer({ name: row.name, pageIndex: pi + 1 })
-                      }
-                      title="下一页"
-                    >
-                      ›
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+      {/* 大预览模态（共享组件） */}
+      {(() => {
+        const row = viewer ? rows.find((r) => r.name === viewer.name) : undefined;
+        const pi = viewer?.pageIndex ?? 0;
+        return (
+          <PdfViewerModal
+            open={!!viewer && !!row && row.status !== "error"}
+            onClose={() => setViewer(null)}
+            title={row?.name ?? ""}
+            kind="pdf"
+            blob={row?.blob}
+            pageCount={row?.pages ?? 1}
+            pageIndex={pi}
+            onPageChange={(i) => viewer && setViewer({ name: viewer.name, pageIndex: i })}
+            rotation={row ? (row.rotations[pi] ?? 0) : 0}
+            disabled={busy}
+            actions={
+              row && viewer ? (
+                <>
+                  <button
+                    className="vc-ctrl-btn vc-ctrl-sm"
+                    onClick={() => rotatePage(row.name, pi, -90)}
+                    disabled={busy}
+                    title="本页左旋 90°"
+                    type="button"
+                  >
+                    <IconRotate width={14} height={14} />
+                    左旋
+                  </button>
+                  <button
+                    className="vc-ctrl-btn vc-ctrl-sm"
+                    onClick={() => rotatePage(row.name, pi, 90)}
+                    disabled={busy}
+                    title="本页右旋 90°"
+                    type="button"
+                  >
+                    <IconRotateCw width={14} height={14} />
+                    右旋
+                  </button>
+                  <button
+                    className="vc-ctrl-btn vc-ctrl-sm"
+                    onClick={() => resetPage(row.name, pi)}
+                    disabled={busy || (row.rotations[pi] ?? 0) === 0}
+                    title="本页重置为 0°"
+                    type="button"
+                  >
+                    <IconRefresh width={14} height={14} />
+                    重置
+                  </button>
+                  <button
+                    className="vc-ctrl-btn vc-ctrl-sm"
+                    onClick={() => void downloadOne(row.name)}
+                    disabled={busy}
+                    title="下载当前文件（按当前角度）"
+                    type="button"
+                  >
+                    <IconDownload width={14} height={14} />
+                    下载
+                  </button>
+                </>
+              ) : undefined
+            }
+          />
+        );
+      })()}
     </div>
   );
 }
