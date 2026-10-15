@@ -38,6 +38,7 @@ export const ICONS: Record<string, (p: { width?: number; height?: number }) => R
   "image-batch": IconImage,
   recorder: IconCamera,
   ocr: IconScan,
+  "web-nav": IconGlobe,
   "ip-lookup": IconGlobe,
   "dns-lookup": IconGlobe,
   "excel-functions": IconTable,

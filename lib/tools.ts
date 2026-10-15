@@ -20,7 +20,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "video-convert" | "excel-functions";
+export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "video-convert" | "excel-functions" | "web-nav";
 
 export interface Tool {
   id: ToolId;
@@ -55,7 +55,8 @@ export interface Tool {
     | "recorder"
     | "ocr"
     | "video"
-    | "excel-functions";
+    | "excel-functions"
+    | "web-nav";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -106,6 +107,7 @@ export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   regex: "dev",
   mime: "quick",
   "excel-functions": "quick",
+  "web-nav": "quick",
   transfer: "share",
   qr: "share",
   "vercel-clean": "cicd",
@@ -446,6 +448,18 @@ export const tools: Tool[] = [
     icon: "excel-functions",
     lamp: "ok",
     tags: ["Excel", "函数", "速查", "SUM", "VLOOKUP", "教程"],
+  },
+  {
+    id: "web-nav",
+    index: "T-40",
+    name: "好用网站导航",
+    tagline: "精选第三方在线工具 · 纯外链跳转",
+    description:
+      "精选一批好用、稳定的第三方在线工具（PDF 处理、文件传输、图片处理、格式转换、开发速查、AI 助手等），点击直达，本站只做推荐跳转、不做功能。自研工具保留不动，第三方作为补充。",
+    path: "/tools/web-nav",
+    icon: "web-nav",
+    lamp: "ok",
+    tags: ["导航", "推荐", "外链", "Smallpdf", "轻松传", "第三方"],
   },
 ];
 

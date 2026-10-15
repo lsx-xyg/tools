@@ -77,6 +77,7 @@
 | 🔤 OCR 文字识别 | 图片 / PDF / Word 文字识别，PaddleOCR 引擎本地识别（opencv.js / onnx wasm 独立自托管按需加载，大包不进 chunk，弱网不超时） |
 | 🎬 视频格式转换 | MP4 / WebM / MOV / MKV / GIF · ffmpeg 本地转换（MP4/MOV/MKV 互转无损）· 后台任务 + 全局进度 |
 | 📊 Excel 函数快查 | 63 个常用函数 · 语法 / 参数 / 示例 · 交互模拟器 · 明暗主题适配 |
+| 🧭 好用网站导航 | 精选第三方在线工具（Smallpdf、轻松传等），纯外链跳转推荐，不做功能 |
 
 > 新增工具 = 新建页面 + 在 `lib/tools.ts` 注册一项，自动出现在侧边栏、搜索与仪表台。
 
@@ -230,6 +231,7 @@ tools/
 │   │   ├── recorder/             # T-33 屏幕 / 摄像头录制
 │   │   ├── ocr/                  # T-34 OCR 文字识别
 │   │   ├── excel-functions/      # T-37 Excel 函数快查（含 [slug] 详情页）
+│   │   ├── web-nav/              # T-40 好用网站导航（纯外链推荐）
 │   │   ├── pdf/                  # T-20 PDF 工具箱（合并/拆分/旋转/压缩/转图/水印/加密…）
 │   │   └── pdf-auto-rotate/      # T-38 已并入 T-20 旋转 Tab；旧路由重定向到 /tools/pdf?tab=rotate
 │   ├── globals.css             # 全站样式 + 设计系统
