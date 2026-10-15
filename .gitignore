@@ -51,3 +51,6 @@ next-env.d.ts
 # local dev store
 .local-store/
 
+# local test artifacts (screenshots etc.)
+/artifacts/
+
