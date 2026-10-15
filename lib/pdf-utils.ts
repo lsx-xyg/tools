@@ -1,10 +1,21 @@
-import { PDFDocument, PageSizes } from "pdf-lib";
+import { PDFDocument, PageSizes, degrees } from "pdf-lib";
 import CryptoJS from "crypto-js";
 
 /** 读取 PDF 页数；加密/损坏时抛出可读错误 */
 export async function pdfPages(bytes: ArrayBuffer): Promise<number> {
   const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
   return doc.getPageCount();
+}
+
+/** 整文件旋转（顺时针 0/90/180/270 度）；0 度原样返回。用于文件列表旋转真实作用到业务输出 */
+export async function rotatePdfBytes(bytes: ArrayBuffer, rotation: number): Promise<ArrayBuffer> {
+  const rot = (((rotation % 360) + 360) % 360) as 0 | 90 | 180 | 270;
+  if (rot === 0) return bytes;
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  const pages = doc.getPages();
+  for (const p of pages) p.setRotation(degrees(rot));
+  const out = await doc.save();
+  return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer;
 }
 
 /** 合并多个 PDF（按传入顺序） */
@@ -121,10 +132,10 @@ export async function compressPdf(
 
 /* ===================== PDF 转图片 ===================== */
 
-/** 把 PDF 每页渲染成图片（PNG/JPEG），返回 { name, blob } 列表 */
+/** 把 PDF 每页渲染成图片（PNG/JPEG），返回 { name, blob } 列表；rotation 为整文件旋转角（0/90/180/270） */
 export async function pdfToImages(
   bytes: ArrayBuffer,
-  opts: { scale: number; format: "png" | "jpeg"; quality: number },
+  opts: { scale: number; format: "png" | "jpeg"; quality: number; rotation?: number },
 ): Promise<{ name: string; blob: Blob }[]> {
   const pdfjs = await getPdfjs();
   const doc = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
@@ -132,7 +143,7 @@ export async function pdfToImages(
   const ext = opts.format === "png" ? "png" : "jpg";
   for (let i = 1; i <= doc.numPages; i += 1) {
     const page = await doc.getPage(i);
-    const viewport = page.getViewport({ scale: opts.scale });
+    const viewport = page.getViewport({ scale: opts.scale, rotation: opts.rotation ?? 0 });
     const canvas = document.createElement("canvas");
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);

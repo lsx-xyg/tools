@@ -1,0 +1,587 @@
+"use client";
+
+/**
+ * 全站统一「上传文件列表」组件（PDF 工具箱专用）。
+ *
+ * 支持两种文件类型（kind）：
+ * - pdf  ：pdfjs-dist 渲染首页缩略图；点击放大模态支持 Ctrl/Cmd+滚轮 / 按钮缩放、多页翻页
+ * - image：<img> 缩略图，CSS 旋转；放大模态同样可缩放
+ *
+ * 统一能力：首屏缩略图预览 / 点击放大预览（模态缩放）/ 逐文件旋转（rotation 记录在 item 上，
+ * 由各 Tab 在业务输出时读取，如通过 lib/pdf-utils 的 rotatePdfBytes 应用到合并/压缩/加密等）/
+ * 拖拽排序 + 上移下移 / 移除。受控组件：items 由父级持有，任何内部变更通过 onChange 回传。
+ *
+ * 同时导出 PdfViewerModal，供页面级工具（rotate / organize 等）复用同一放大预览模态。
+ */
+
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconFile,
+  IconLoader,
+  IconRotateCw,
+  IconTrash,
+  IconX,
+} from "@/components/icons";
+import { getPdfjs } from "@/lib/pdf-utils";
+
+export type PdfFileKind = "pdf" | "image";
+
+export interface PdfFileItem {
+  /** 稳定 id（字符串），Tab 侧生成即可 */
+  id: string;
+  kind: PdfFileKind;
+  name: string;
+  file: File | Blob;
+  /** pdf 类型预读字节（可选；缺省时组件从 file 读取） */
+  bytes?: ArrayBuffer;
+  /** pdf 页数（可选，用于元信息与放大模态翻页） */
+  pages?: number;
+  /** 顺时针旋转角度 0/90/180/270 */
+  rotation: number;
+  /** 附加元信息（如压缩前后体积、图片尺寸），显示在名称下方 */
+  extra?: string;
+}
+
+export interface PdfFileListProps {
+  items: PdfFileItem[];
+  onChange: (next: PdfFileItem[]) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+const nextRot = (r: number) => ((((r + 90) % 360) + 360) % 360) as 0 | 90 | 180 | 270;
+
+const VIEW_BASE = 1.5;
+const VIEW_MIN = 0.5;
+const VIEW_MAX = 4;
+
+/* ===================== 放大预览模态（共享） ===================== */
+
+export interface PdfViewerModalProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  kind: PdfFileKind;
+  /** pdf 源：bytes 或 blob 二选一 */
+  bytes?: ArrayBuffer;
+  blob?: Blob;
+  /** image 源（objectURL） */
+  imageUrl?: string;
+  imageRotation?: number;
+  pageCount?: number;
+  pageIndex?: number;
+  onPageChange?: (i: number) => void;
+  /** pdf 当前页渲染旋转角（页面级工具逐页传入） */
+  rotation?: number;
+  /** 头部附加按钮（如逐页旋转/下载） */
+  actions?: ReactNode;
+  disabled?: boolean;
+}
+
+export function PdfViewerModal({
+  open,
+  onClose,
+  title,
+  kind,
+  bytes,
+  blob,
+  imageUrl,
+  imageRotation,
+  pageCount,
+  pageIndex,
+  onPageChange,
+  rotation,
+  actions,
+  disabled = false,
+}: PdfViewerModalProps) {
+  const [zoom, setZoom] = useState(VIEW_BASE);
+  const [loading, setLoading] = useState(false);
+  const [doc, setDoc] = useState<import("pdfjs-dist").PDFDocumentProxy | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const taskRef = useRef<import("pdfjs-dist").RenderTask | null>(null);
+  const prevOpenRef = useRef(false);
+
+  /* 打开时重置缩放（翻页/旋转不重置） */
+  useEffect(() => {
+    if (open && !prevOpenRef.current) setZoom(VIEW_BASE);
+    prevOpenRef.current = open;
+  }, [open]);
+
+  /* 加载 pdf 文档（同一 open 内缓存，关闭销毁） */
+  useEffect(() => {
+    if (!open || kind !== "pdf") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const src = blob ?? bytes;
+        if (!src) return;
+        const pdfjs = await getPdfjs();
+        const data = src instanceof Blob ? await src.arrayBuffer() : src.slice(0);
+        const d = await pdfjs.getDocument({ data }).promise;
+        if (!cancelled) {
+          setDoc((prev) => {
+            if (prev) void prev.destroy();
+            return d;
+          });
+        }
+      } catch {
+        /* 渲染失败保持静默 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, kind, bytes, blob]);
+
+  /* 关闭时销毁文档 */
+  useEffect(() => {
+    if (!open) {
+      setDoc((prev) => {
+        if (prev) void prev.destroy();
+        return null;
+      });
+      setLoading(false);
+    }
+  }, [open]);
+
+  /* 渲染当前页（缩放/翻页/旋转变化时重渲染） */
+  useEffect(() => {
+    if (!open || kind !== "pdf" || !doc) return;
+    let cancelled = false;
+    (async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      try {
+        taskRef.current?.cancel();
+        const page = await doc.getPage((pageIndex ?? 0) + 1);
+        const viewport = page.getViewport({ scale: zoom, rotation: rotation ?? 0 });
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        setLoading(true);
+        const task = page.render({ canvasContext: ctx, viewport });
+        taskRef.current = task;
+        await task.promise;
+        page.cleanup();
+        if (!cancelled) setLoading(false);
+      } catch (e) {
+        if (e instanceof Error && /cancel/i.test(e.message)) return;
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, kind, doc, pageIndex, rotation, zoom]);
+
+  /* Ctrl/Cmd + 滚轮缩放（挂 document，覆盖模态任意位置） */
+  useEffect(() => {
+    if (!open) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((z) => {
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        return Math.min(VIEW_MAX, Math.max(VIEW_MIN, +(z + delta).toFixed(1)));
+      });
+    };
+    document.addEventListener("wheel", onWheel, { passive: false });
+    return () => document.removeEventListener("wheel", onWheel);
+  }, [open]);
+
+  /* Esc 关闭 */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const pi = Math.max(0, pageIndex ?? 0);
+  const count = Math.max(1, pageCount ?? 1);
+  const hasPrev = pi > 0;
+  const hasNext = pi < count - 1;
+  const rot = kind === "pdf" ? (rotation ?? 0) : (imageRotation ?? 0);
+
+  return (
+    <div className="vc-viewer" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="vc-viewer-card" onClick={(e) => e.stopPropagation()}>
+        <div className="vc-viewer-head">
+          <div className="vc-viewer-title">
+            <IconFile width={16} height={16} />
+            <span className="vc-viewer-name" title={title}>
+              {title}
+            </span>
+            {kind === "pdf" && count > 1 && (
+              <span className="vc-viewer-meta">
+                {pi + 1} / {count} 页
+              </span>
+            )}
+            {rot !== 0 && <span className="vc-rotation-badge-static">{rot}°</span>}
+          </div>
+          <div className="vc-viewer-actions">
+            {actions}
+            <div className="vc-viewer-zoom">
+              <button
+                className="vc-ctrl-btn vc-ctrl-sm"
+                onClick={() => setZoom((z) => Math.max(VIEW_MIN, +(z - 0.2).toFixed(1)))}
+                disabled={disabled}
+                title="缩小（Ctrl + 滚轮）"
+                type="button"
+              >
+                −
+              </button>
+              <button
+                className="vc-ctrl-btn vc-ctrl-sm vc-viewer-zoom-val"
+                onClick={() => setZoom(VIEW_BASE)}
+                title="点击重置为 100%"
+                type="button"
+              >
+                {Math.round((zoom / VIEW_BASE) * 100)}%
+              </button>
+              <button
+                className="vc-ctrl-btn vc-ctrl-sm"
+                onClick={() => setZoom((z) => Math.min(VIEW_MAX, +(z + 0.2).toFixed(1)))}
+                disabled={disabled}
+                title="放大（Ctrl + 滚轮）"
+                type="button"
+              >
+                +
+              </button>
+            </div>
+            <button
+              className="vc-ctrl-btn vc-ctrl-sm vc-viewer-close"
+              onClick={onClose}
+              title="关闭（Esc）"
+              type="button"
+            >
+              <IconX width={14} height={14} />
+              关闭
+            </button>
+          </div>
+        </div>
+        <div className="vc-viewer-body">
+          {hasPrev && (
+            <button
+              className="vc-viewer-nav"
+              onClick={() => onPageChange?.(pi - 1)}
+              title="上一页"
+              type="button"
+            >
+              ‹
+            </button>
+          )}
+          <div className="vc-viewer-canvas-wrap">
+            {kind === "pdf" ? (
+              <canvas ref={canvasRef} className="vc-viewer-canvas" />
+            ) : (
+              imageUrl && (
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  className="vc-viewer-canvas"
+                  style={{
+                    transform: `rotate(${imageRotation ?? 0}deg) scale(${zoom})`,
+                    transition: "transform .15s ease",
+                  }}
+                />
+              )
+            )}
+            {loading && (
+              <div className="vc-viewer-loading">
+                <IconLoader width={28} height={28} className="spin" />
+              </div>
+            )}
+          </div>
+          {hasNext && (
+            <button
+              className="vc-viewer-nav"
+              onClick={() => onPageChange?.(pi + 1)}
+              title="下一页"
+              type="button"
+            >
+              ›
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== 缩略图 ===================== */
+
+function Thumb({
+  item,
+  url,
+  getDoc,
+}: {
+  item: PdfFileItem;
+  url: string | null;
+  getDoc: (it: PdfFileItem) => Promise<import("pdfjs-dist").PDFDocumentProxy>;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const taskRef = useRef<import("pdfjs-dist").RenderTask | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const renderKey = `${item.id}|${item.kind}|${item.rotation}`;
+
+  useEffect(() => {
+    if (item.kind !== "pdf") return;
+    let cancelled = false;
+    (async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      try {
+        taskRef.current?.cancel();
+        const doc = await getDoc(item);
+        const page = await doc.getPage(1);
+        const viewport = page.getViewport({ scale: 0.6, rotation: item.rotation });
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        setLoading(true);
+        setError(false);
+        const task = page.render({ canvasContext: ctx, viewport });
+        taskRef.current = task;
+        await task.promise;
+        page.cleanup();
+        if (!cancelled) setLoading(false);
+      } catch (e) {
+        if (e instanceof Error && /cancel/i.test(e.message)) return;
+        if (!cancelled) {
+          setLoading(false);
+          setError(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renderKey, getDoc]);
+
+  if (item.kind === "image") {
+    return url ? (
+      <img
+        src={url}
+        alt={item.name}
+        className="pfl-thumb-img"
+        style={{ transform: `rotate(${item.rotation}deg)`, transition: "transform .2s ease" }}
+      />
+    ) : (
+      <div className="pfl-thumb-ph">
+        <IconFile width={20} height={20} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <canvas ref={canvasRef} className="pfl-thumb-canvas" />
+      {loading && (
+        <div className="pfl-thumb-loading">
+          <IconLoader width={16} height={16} className="spin" />
+        </div>
+      )}
+      {error && (
+        <div className="pfl-thumb-ph">
+          <IconFile width={18} height={18} />
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ===================== 统一文件列表 ===================== */
+
+export function PdfFileList({ items, onChange, disabled = false, className }: PdfFileListProps) {
+  const docsRef = useRef<Map<string, import("pdfjs-dist").PDFDocumentProxy>>(new Map());
+  const urlsRef = useRef<Map<string, string>>(new Map());
+  const dragIdRef = useRef<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<{ item: PdfFileItem; pageIndex: number } | null>(null);
+
+  const getDoc = useCallback(async (it: PdfFileItem) => {
+    let doc = docsRef.current.get(it.id);
+    if (!doc) {
+      const pdfjs = await getPdfjs();
+      const bytes = it.bytes ?? (await it.file.arrayBuffer());
+      doc = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
+      docsRef.current.set(it.id, doc);
+    }
+    return doc;
+  }, []);
+
+  /* 图片 objectURL 生命周期：随 items 增删，卸载全部回收 */
+  useEffect(() => {
+    const alive = new Set(items.map((i) => i.id));
+    for (const [id, u] of urlsRef.current) {
+      if (!alive.has(id)) {
+        URL.revokeObjectURL(u);
+        urlsRef.current.delete(id);
+      }
+    }
+    for (const it of items) {
+      if (it.kind === "image" && !urlsRef.current.has(it.id)) {
+        urlsRef.current.set(it.id, URL.createObjectURL(it.file));
+      }
+    }
+  }, [items]);
+
+  useEffect(() => {
+    const urls = urlsRef.current;
+    return () => {
+      for (const u of urls.values()) URL.revokeObjectURL(u);
+    };
+  }, []);
+
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
+  const remove = (id: string) => onChange(items.filter((x) => x.id !== id));
+
+  const rotate = (id: string) =>
+    onChange(items.map((x) => (x.id === id ? { ...x, rotation: nextRot(x.rotation) } : x)));
+
+  const onDropTo = (targetId: string) => {
+    const fromId = dragIdRef.current;
+    dragIdRef.current = null;
+    setOverId(null);
+    if (fromId === null || fromId === targetId) return;
+    const from = items.findIndex((x) => x.id === fromId);
+    const to = items.findIndex((x) => x.id === targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
+
+  return (
+    <>
+      <div className={`pfl-grid${className ? ` ${className}` : ""}`}>
+        {items.map((it, i) => (
+          <div
+            key={it.id}
+            className={`pfl-card${overId === it.id ? " pfl-drag" : ""}`}
+            draggable={!disabled}
+            onDragStart={(e) => {
+              dragIdRef.current = it.id;
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            onDragEnd={() => {
+              dragIdRef.current = null;
+              setOverId(null);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              if (overId !== it.id) setOverId(it.id);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              onDropTo(it.id);
+            }}
+            style={{ cursor: disabled ? "default" : "grab" }}
+          >
+            <div
+              className="pfl-thumb-area"
+              onClick={() => setViewer({ item: it, pageIndex: 0 })}
+              title="点击放大预览"
+            >
+              <Thumb item={it} url={urlsRef.current.get(it.id) ?? null} getDoc={getDoc} />
+              {it.rotation !== 0 && <span className="pfl-rot-badge">{it.rotation}°</span>}
+            </div>
+            <div className="pfl-meta">
+              <span className="pfl-name" title={it.name}>
+                {it.name}
+              </span>
+              <span className="pfl-sub">
+                {it.pages ? `${it.pages} 页` : it.kind === "pdf" ? "PDF" : "图片"}
+                {it.extra ? ` · ${it.extra}` : null}
+              </span>
+              <div className="pfl-actions">
+                <button
+                  type="button"
+                  className="btn-icon"
+                  title="上移"
+                  aria-label="上移"
+                  onClick={() => move(i, -1)}
+                  disabled={disabled || i === 0}
+                >
+                  <IconArrowUp width={14} height={14} />
+                </button>
+                <button
+                  type="button"
+                  className="btn-icon"
+                  title="下移"
+                  aria-label="下移"
+                  onClick={() => move(i, 1)}
+                  disabled={disabled || i === items.length - 1}
+                >
+                  <IconArrowDown width={14} height={14} />
+                </button>
+                <button
+                  type="button"
+                  className="btn-icon"
+                  title="旋转 90°"
+                  aria-label="旋转 90°"
+                  onClick={() => rotate(it.id)}
+                  disabled={disabled}
+                >
+                  <IconRotateCw width={14} height={14} />
+                </button>
+                <button
+                  type="button"
+                  className="btn-icon danger pfl-del"
+                  title="移除"
+                  aria-label="移除"
+                  onClick={() => remove(it.id)}
+                  disabled={disabled}
+                >
+                  <IconTrash width={14} height={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {viewer && (
+        <PdfViewerModal
+          open
+          onClose={() => setViewer(null)}
+          title={viewer.item.name}
+          kind={viewer.item.kind}
+          bytes={viewer.item.kind === "pdf" ? viewer.item.bytes : undefined}
+          blob={viewer.item.kind === "pdf" ? (viewer.item.bytes ? undefined : viewer.item.file) : undefined}
+          imageUrl={
+            viewer.item.kind === "image" ? (urlsRef.current.get(viewer.item.id) ?? undefined) : undefined
+          }
+          imageRotation={viewer.item.kind === "image" ? viewer.item.rotation : undefined}
+          pageCount={viewer.item.pages ?? 1}
+          pageIndex={viewer.pageIndex}
+          onPageChange={(i) => setViewer((v) => (v ? { item: v.item, pageIndex: i } : v))}
+          rotation={viewer.item.kind === "pdf" ? viewer.item.rotation : undefined}
+          disabled={disabled}
+        />
+      )}
+    </>
+  );
+}
