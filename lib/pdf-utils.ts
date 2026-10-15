@@ -120,13 +120,97 @@ export async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
 
 /* ===================== 压缩 ===================== */
 
-/** 在浏览器内重建 PDF 结构（useObjectStreams），剔除冗余对象；返回新字节与前后大小 */
+export type CompressLevel = "auto" | "low" | "medium" | "high";
+
+/**
+ * 三档栅格化参数：scale = 相对 1:1(72dpi) 视口的渲染缩放；quality = JPEG 质量。
+ * low 保清晰，medium 平衡，high 极致瘦身。
+ */
+const RASTER_PARAMS: Record<Exclude<CompressLevel, "auto">, { scale: number; quality: number }> = {
+  low: { scale: 0.7, quality: 0.75 },
+  medium: { scale: 0.5, quality: 0.55 },
+  high: { scale: 0.35, quality: 0.4 },
+};
+
+/** auto 档决策阈值：无损重写收益达到该比例(10%)就直接用无损，否则再尝试栅格化重建 */
+const AUTO_LOSSLESS_GAIN = 0.1;
+
+/** 路径 A：无损重写（useObjectStreams 剔除冗余对象）。对文本型 PDF 安全、体积通常略降 */
+async function losslessRewrite(bytes: ArrayBuffer): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
+  return doc.save({ useObjectStreams: true });
+}
+
+/**
+ * 路径 B：栅格化重建。逐页 pdf.js 渲染为 JPEG，再用 pdf-lib 整页铺满重打包（白底）。
+ * 注意：入口已先 rotatePdfBytes 旋转，故这里 rotation 恒传 0；页面尺寸取 1:1 视口宽高(pt)。
+ * 栅格化后文字不可选中，仅适合扫描件/图片类 PDF。
+ */
+async function rasterizeRebuild(
+  bytes: ArrayBuffer,
+  scale: number,
+  quality: number,
+): Promise<Uint8Array> {
+  const pdfjs = await getPdfjs();
+  const src = await pdfjs.getDocument({ data: bytes.slice(0) }).promise;
+  const out = await PDFDocument.create();
+  try {
+    for (let i = 1; i <= src.numPages; i += 1) {
+      const page = await src.getPage(i);
+      const base = page.getViewport({ scale: 1, rotation: 0 });
+      const viewport = page.getViewport({ scale, rotation: 0 });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.floor(viewport.width));
+      canvas.height = Math.max(1, Math.floor(viewport.height));
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const jpg = await canvasToBytes(canvas, "image/jpeg", quality);
+      const img = await out.embedJpg(jpg);
+      const p = out.addPage([base.width, base.height]);
+      p.drawImage(img, { x: 0, y: 0, width: base.width, height: base.height });
+    }
+  } finally {
+    await src.destroy();
+  }
+  return out.save({ useObjectStreams: true });
+}
+
+/**
+ * 分级真实压缩：
+ * - low / medium / high：直接栅格化重建（每页转 JPEG 再打包），力度逐级增大；
+ * - auto（建议）：先无损重写，若收益 < 10%（说明是图片型/已优化 PDF），再跑 medium 栅格化重建，
+ *   两者取体积更小者——文本型 PDF 因无损优先不会膨胀，图片型 PDF 仍能拿到真实压缩。
+ * 加密/损坏 PDF 在 pdf-lib.load 阶段抛错，由调用方经 pdfError 转可读提示。
+ */
 export async function compressPdf(
   bytes: ArrayBuffer,
+  opts: { level?: CompressLevel } = {},
 ): Promise<{ data: Uint8Array; before: number; after: number }> {
   const before = bytes.byteLength;
-  const doc = await PDFDocument.load(bytes, { ignoreEncryption: false });
-  const data = await doc.save({ useObjectStreams: true });
+  const level = opts.level ?? "auto";
+
+  if (level === "low" || level === "medium" || level === "high") {
+    const p = RASTER_PARAMS[level];
+    const data = await rasterizeRebuild(bytes, p.scale, p.quality);
+    return { data, before, after: data.length };
+  }
+
+  // auto
+  const rewrite = await losslessRewrite(bytes);
+  const gain = 1 - rewrite.length / before;
+  if (gain >= AUTO_LOSSLESS_GAIN) {
+    return { data: rewrite, before, after: rewrite.length };
+  }
+  let rebuilt: Uint8Array;
+  try {
+    rebuilt = await rasterizeRebuild(bytes, RASTER_PARAMS.medium.scale, RASTER_PARAMS.medium.quality);
+  } catch {
+    // 栅格化（渲染/编码）失败时退回无损重写，保证至少有产物
+    return { data: rewrite, before, after: rewrite.length };
+  }
+  const data = rebuilt.length < rewrite.length ? rebuilt : rewrite;
   return { data, before, after: data.length };
 }
 

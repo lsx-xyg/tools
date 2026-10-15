@@ -7,7 +7,7 @@ import {
   IconLoader,
   IconPlus,
 } from "@/components/icons";
-import { compressPdf, downloadBytes, pdfError, rotatePdfBytes } from "@/lib/pdf-utils";
+import { compressPdf, downloadBytes, pdfError, rotatePdfBytes, type CompressLevel } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
 import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 
@@ -16,8 +16,16 @@ type CompressRow = PdfFileItem & { before: number; after?: number; done: boolean
 const fmt = (b: number) =>
   b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1024 / 1024).toFixed(2)} MB`;
 
+const LEVELS: { value: CompressLevel; label: string }[] = [
+  { value: "auto", label: "建议" },
+  { value: "low", label: "低" },
+  { value: "medium", label: "中" },
+  { value: "high", label: "高" },
+];
+
 export function CompressTab() {
   const [rows, setRows] = useState<CompressRow[]>([]);
+  const [level, setLevel] = useState<CompressLevel>("auto");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const idRef = useRef(0);
@@ -61,7 +69,7 @@ export function CompressTab() {
       for (const r of rows) {
         try {
           const rotated = await rotatePdfBytes(r.bytes!, r.rotation);
-          const { data, after } = await compressPdf(rotated);
+          const { data, after } = await compressPdf(rotated, { level });
           setRows((prev) => prev.map((p) => (p.id === r.id ? { ...p, after, done: true } : p)));
           const outName = r.name.replace(/\.pdf$/i, "_compressed.pdf");
           zip.file(outName, data);
@@ -103,8 +111,27 @@ export function CompressTab() {
         onFiles={(files) => void addFiles(files)}
       />
 
+      <div className="vc-toolbar" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span className="count-hint">压缩级别</span>
+        <div className="vd-segmented" role="group" aria-label="压缩级别">
+          {LEVELS.map((l) => (
+            <button
+              key={l.value}
+              type="button"
+              className="vd-seg-btn"
+              data-active={level === l.value}
+              disabled={busy}
+              onClick={() => setLevel(l.value)}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <p className="count-hint" style={{ marginTop: 10 }}>
-        在浏览器内重建 PDF 结构、剔除冗余对象；对文本型 PDF 效果较好，扫描图片型效果有限。不做图片重采样，不改变画质。
+        建议：先无损重写，收益不足时自动栅格化重建；低 / 中 / 高：直接栅格化重建（把每页转成 JPEG
+        图片再重新打包）。扫描件 / 图片类 PDF 效果最佳，文本型 PDF 建议用「建议」档——栅格化会让文字变成图片、不可选中，反而可能变大。
       </p>
 
       {rows.length > 0 && (
