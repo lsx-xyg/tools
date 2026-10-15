@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import JSZip from "jszip";
 import {
   IconFileStack,
@@ -9,14 +9,18 @@ import {
 } from "@/components/icons";
 import { downloadBytes, pdfError, pdfPages, pdfToImages } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
+import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 
 export function ToImageTab() {
-  const [file, setFile] = useState<{ name: string; bytes: ArrayBuffer; pages: number } | null>(null);
+  const [items, setItems] = useState<PdfFileItem[]>([]);
+  const idRef = useRef(1);
   const [scale, setScale] = useState(2);
   const [format, setFormat] = useState<"png" | "jpeg">("jpeg");
   const [quality, setQuality] = useState(0.9);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  const file = items[0];
 
   const addFile = async (files: File[]) => {
     const f = files.find((x) => x.type === "application/pdf" || /\.pdf$/i.test(x.name));
@@ -28,7 +32,7 @@ export function ToImageTab() {
     try {
       const bytes = await f.arrayBuffer();
       const pages = await pdfPages(bytes);
-      setFile({ name: f.name, bytes, pages });
+      setItems([{ id: String(idRef.current++), kind: "pdf", name: f.name, file: f, bytes, pages, rotation: 0 }]);
     } catch (e) {
       setErr(pdfError(e));
     }
@@ -39,7 +43,7 @@ export function ToImageTab() {
     setBusy(true);
     setErr("");
     try {
-      const results = await pdfToImages(file.bytes, { scale, format, quality });
+      const results = await pdfToImages(file.bytes!, { scale, format, quality, rotation: file.rotation });
       if (results.length === 1) {
         downloadBytes(results[0].blob, results[0].name);
       } else {
@@ -60,9 +64,15 @@ export function ToImageTab() {
       <FileDropZone
         accept="application/pdf,.pdf"
         icon={<IconPlus width={18} height={18} />}
-        label={file ? `已选择：${file.name}（${file.pages} 页）` : "拖入 PDF，或点击选择文件"}
+        label="拖入 PDF，或点击选择文件"
         onFiles={(files) => void addFile(files)}
       />
+
+      {file && (
+        <div style={{ marginTop: 14 }}>
+          <PdfFileList items={items} onChange={setItems} disabled={busy} />
+        </div>
+      )}
 
       {file && (
         <div className="vd-grid" style={{ marginTop: 14 }}>

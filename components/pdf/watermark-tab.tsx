@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   IconFileStack,
   IconLoader,
   IconPlus,
 } from "@/components/icons";
-import { addWatermark, downloadBytes, pdfError, pdfPages } from "@/lib/pdf-utils";
+import { addWatermark, downloadBytes, pdfError, pdfPages, rotatePdfBytes } from "@/lib/pdf-utils";
 import { FileDropZone } from "@/components/drop-zone";
+import { PdfFileList, type PdfFileItem } from "@/components/pdf/pdf-file-list";
 
 const COLORS: { label: string; value: string }[] = [
   { label: "黑", value: "#000000" },
@@ -17,7 +18,8 @@ const COLORS: { label: string; value: string }[] = [
 ];
 
 export function WatermarkTab() {
-  const [file, setFile] = useState<{ name: string; bytes: ArrayBuffer; pages: number } | null>(null);
+  const [items, setItems] = useState<PdfFileItem[]>([]);
+  const idRef = useRef(1);
   const [text, setText] = useState("");
   const [fontSize, setFontSize] = useState(28);
   const [opacity, setOpacity] = useState(20);
@@ -26,6 +28,8 @@ export function WatermarkTab() {
   const [tiled, setTiled] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  const file = items[0];
 
   const addFile = async (files: File[]) => {
     const f = files.find((x) => x.type === "application/pdf" || /\.pdf$/i.test(x.name));
@@ -37,7 +41,7 @@ export function WatermarkTab() {
     try {
       const bytes = await f.arrayBuffer();
       const pages = await pdfPages(bytes);
-      setFile({ name: f.name, bytes, pages });
+      setItems([{ id: String(idRef.current++), kind: "pdf", name: f.name, file: f, bytes, pages, rotation: 0 }]);
     } catch (e) {
       setErr(pdfError(e));
     }
@@ -52,7 +56,8 @@ export function WatermarkTab() {
     setBusy(true);
     setErr("");
     try {
-      const out = await addWatermark(file.bytes, {
+      const bytes = await rotatePdfBytes(file.bytes!, file.rotation);
+      const out = await addWatermark(bytes, {
         text: text.trim(),
         fontSize,
         opacity: opacity / 100,
@@ -73,9 +78,15 @@ export function WatermarkTab() {
       <FileDropZone
         accept="application/pdf,.pdf"
         icon={<IconPlus width={18} height={18} />}
-        label={file ? `已选择：${file.name}（${file.pages} 页）` : "拖入 PDF，或点击选择文件"}
+        label="拖入 PDF，或点击选择文件"
         onFiles={(files) => void addFile(files)}
       />
+
+      {file && (
+        <div style={{ marginTop: 14 }}>
+          <PdfFileList items={items} onChange={setItems} disabled={busy} />
+        </div>
+      )}
 
       {file && (
         <div className="vd-grid" style={{ marginTop: 14 }}>
