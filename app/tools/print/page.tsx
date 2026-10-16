@@ -58,7 +58,8 @@ export default function PrintPage() {
   const [items, setItems] = useState<FileItem[]>([]);
   const [paperId, setPaperId] = useState("a4");
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
-  const [dpi, setDpi] = useState(200);
+  const [dpi, setDpi] = useState(600);
+  const [customDpi, setCustomDpi] = useState(480);
   const [marginMm, setMarginMm] = useState(12);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -94,7 +95,8 @@ export default function PrintPage() {
     }
     setBusy(true);
     try {
-      const opts: PrintOptions = { paperId, orientation, dpi, marginMm };
+      const actualDpi = dpi === 0 ? customDpi : dpi;
+      const opts: PrintOptions = { paperId, orientation, dpi: actualDpi, marginMm };
       const htmls: string[] = [];
       for (const it of targets) {
         try {
@@ -148,10 +150,18 @@ export default function PrintPage() {
               <label className="print-field">
                 <span>清晰度</span>
                 <select value={dpi} onChange={(e) => setDpi(Number(e.target.value))}>
-                  <option value={150}>150 DPI（省墨）</option>
-                  <option value={200}>200 DPI（标准）</option>
-                  <option value={300}>300 DPI（高清）</option>
+                  <option value={300}>300 DPI（标准）</option>
+                  <option value={600}>600 DPI（高清 · 对齐主流打印机）</option>
+                  <option value={1200}>1200 DPI（超清 · 大文件渲染较慢）</option>
+                  <option value={0}>自定义…</option>
                 </select>
+                {dpi === 0 && (
+                  <input
+                    type="number" min={72} max={2400} step={50} value={customDpi}
+                    onChange={(e) => setCustomDpi(Math.max(72, Number(e.target.value) || 72))}
+                    placeholder="如 480 / 960"
+                  />
+                )}
               </label>
               <label className="print-field">
                 <span>边距 mm</span>
@@ -206,7 +216,7 @@ export default function PrintPage() {
         )}
 
         <p className="count-hint" style={{ marginTop: 10 }}>
-          点击打印会弹出浏览器系统打印对话框，选择本机连接的打印机即可；文件在本地处理，不上传服务器。
+          清晰度档位对齐打印机输出（600 / 1200 DPI 与主流打印机一致）；1200 DPI 渲染开销大，多页大 PDF 建议用 600。点击打印会弹出浏览器系统打印对话框，选择本机连接的打印机即可；文件在本地处理，不上传服务器。
         </p>
       </div>
     </div>
