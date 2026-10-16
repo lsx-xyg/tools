@@ -20,7 +20,7 @@ type BaseToolId =
   | "pdf";
 
 /** 全部工具 id（含第二批新工具） */
-export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "video-convert" | "excel-functions" | "web-nav";
+export type ToolId = BaseToolId | "badge" | "markdown" | "http-parse" | "ws-test" | "vercel-clean" | "github-release-clean" | "recorder" | "ocr" | "video-convert" | "excel-functions" | "web-nav" | "print";
 
 export interface Tool {
   id: ToolId;
@@ -56,7 +56,8 @@ export interface Tool {
     | "ocr"
     | "video"
     | "excel-functions"
-    | "web-nav";
+    | "web-nav"
+    | "print";
   lamp: "ok" | "amber";
   tags: string[];
   soon?: boolean;
@@ -108,6 +109,7 @@ export const TOOL_CATEGORY: Record<ToolId, CategoryId> = {
   mime: "quick",
   "excel-functions": "quick",
   "web-nav": "quick",
+  print: "doc",
   transfer: "share",
   qr: "share",
   "vercel-clean": "cicd",
@@ -460,6 +462,18 @@ export const tools: Tool[] = [
     icon: "web-nav",
     lamp: "ok",
     tags: ["导航", "推荐", "外链", "Smallpdf", "轻松传", "第三方"],
+  },
+  {
+    id: "print",
+    index: "T-41",
+    name: "文件打印",
+    tagline: "上传 PDF / 图片 / Word / 文本，调本机打印机",
+    description:
+      "上传 PDF、图片、Word 或文本文件，预览后用浏览器调用本机连接的打印机直接打印。可选纸张（A4/A5/Letter/Legal）、方向、清晰度与边距；PDF 按所选 DPI 高清栅格化打印。文件在本地处理，不上传服务器。",
+    path: "/tools/print",
+    icon: "print",
+    lamp: "ok",
+    tags: ["打印", "PDF", "图片", "Word", "本机打印机", "纸张", "DPI"],
   },
 ];
 
