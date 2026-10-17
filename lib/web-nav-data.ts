@@ -72,6 +72,7 @@ export const WEB_NAV_CATEGORIES: WebNavCategory[] = [
       { name: "DevDocs", url: "https://devdocs.io/", desc: "聚合开发者文档，离线可查" },
       { name: "JSON.cn", url: "https://www.json.cn/", desc: "JSON 格式化 / 校验 / 转换" },
       { name: "GitHub", url: "https://github.com/", desc: "代码托管与开源协作" },
+      { name: "软仓", url: "https://www.ruancang.net/", desc: "专业软件导航与下载平台：Adobe 全家桶、设计 / 工程 / 影视等软件资源速查" },
     ],
   },
   {
